@@ -27,6 +27,23 @@ def log(msg):
     with open('err.log', 'a') as f:
         f.write(f'{current_time} {msg}\n')
 
+def getWord():
+    with open('words.txt', 'r') as words:
+        lines = words.read().splitlines()
+        return random.choice(lines)
+
+def saveSetting(var, value):
+    newlines = ""
+    with open('settings.cfg', 'r') as file:
+        newlines = file.readlines()
+        for n,line in enumerate(newlines):
+            if var in line:
+                newlines[n] = f'{line.split("=")[0]}={value}\n'
+
+    with open('settings.cfg', 'w') as file:
+        file.writelines(newlines)
+        
+
 #VAR LOAD TODO, put in functions
 if(os.path.isfile(settingsFile) == False): #create file if not exist.
     log("[INFO] il file delle impostazioni non esiste, ne creo uno nuovo.")
@@ -43,7 +60,7 @@ else:   #File exists load vars,
             tokens = line.strip().split('=')
             var = tokens[0]
             number = tokens[1]
-            settings[var] = float(number)
+            settings[var] = int(number) #FIXME str should be allowed
 
     #Controlla se le variabili sono state caricate correttamente
     try:
@@ -93,9 +110,16 @@ async def perc(ctx, arg=''):  ## BOT COMMAND
         return
 
     newPerc = int(arg.strip("%"))
+
+    if (settings['response'] == newPerc):
+        await ctx.send(f"non è cambiato niente.")
+        return
+
     settings["response"] = newPerc
     await ctx.send(f"ok, risponderò il {newPerc}% delle volte")
+
     log(f'(INFO): {ctx.author} set response to {arg}%')
+    saveSetting('response', newPerc)
 
 @bot.command(name='help', help="")
 async def help(ctx):
@@ -111,17 +135,19 @@ async def on_message(message):
     
     if len(message.content.split()) < 2 or message.content[0] == '!':
         return
-    print('detected2')
                                                 #e.g. 40
     if random.randrange(0, 100) > settings["response"]: #40% chance of answering
         return
 
     msg = message.content.split() #["ciao", "prova", "1234"]
-    msg[random.randrange(0, len(msg))] = "culo"
+    msg[random.randrange(0, len(msg))] = getWord()
     msg = " ".join(msg)
 
     await message.channel.send(msg)
-
+    log(f'(INFO): responded to message')
 
 
 bot.run(TOKEN)
+
+#TODO comando per vedere la lista delle parole
+#TODO comando per togliere/aggiungere parole dalla lista
