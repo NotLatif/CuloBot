@@ -70,14 +70,22 @@ def saveSetting(var, value):
         file.writelines(newlines)
         
 
-#VAR LOAD TODO, put in functions
+"""
+settings:
+response = int:         % di probabilità di culificare un messaggio (0 <= int <= 100)
+                        - default: 35, minimo 2 parole
+other_response = int:   % di possibilità di culificare più di una parola   (0 <= int <= 100)
+                        - default: 50, 1 culo ogni due parole
+                        - ogni parola ha il 50% di probabilità di essere cambiata rispetto alla precedente                       
+"""
 def makeSettings():
     """
     If the settings file doesn't exist, create it and write the default settings to it
     """
+    
     log("[INFO] il file delle impostazioni non esiste, ne creo uno nuovo.")
 
-    settings = {"response":35}
+    settings = {"response":35, "other_response": 50}
     with open(settingsFile, 'w') as out:
         for settings,number in settings.items():
             line = settings + '=' + str(number) + '\n'
@@ -96,7 +104,8 @@ def loadSettings():
 
     #Controlla se le variabili sono state caricate correttamente
     try:
-        settings['response'] 
+        settings['response']
+        settings['other_response']
     except KeyError as e:
         #TODO sistema il file automaticamente se mancano alcune variabili
         log(f'[ERROR]: ./{settingsFile} non ha tutte le variabili necessarie: {e.args}')
@@ -197,13 +206,20 @@ async def on_message(message):
 
     #culificazione
     msg = message.content.split() #trasforma messaggio in lista
-    scelta = random.randrange(0, len(msg)) #scegli una parola
-    parola = getWord() #scegli con cosa cambiarla
-    if(msg[scelta].isupper()): #controlla se la parola è maiuscola, o se la prima lettera è maiuscola
-        parola = parola.upper()
-    elif(msg[scelta][0].isupper()):
-        parola = parola[0].upper() + parola[1:]
-    msg[scelta] = parola #sostituisci parola
+    
+    i = 0
+    while (len(msg) // 2 > i): #non cambio più di una parola ogni 2    
+        scelta = random.randrange(0, len(msg)) #scegli una parola
+        parola = getWord() #scegli con cosa cambiarla
+        if(msg[scelta].isupper()): #controlla se la parola è maiuscola, o se la prima lettera è maiuscola
+            parola = parola.upper()
+        elif(msg[scelta][0].isupper()):
+            parola = parola[0].upper() + parola[1:]
+        msg[scelta] = parola #sostituisci parola
+
+        if(random.randrange(0, 100) > settings['other_response']):
+           i+=1
+        i+=1
 
     msg = " ".join(msg) #trasforma messaggio in stringa
 
