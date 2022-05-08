@@ -1,2 +1,2 @@
 # CuloBot
- Discord bot test project
+ Meme bot per gli amici del discord
