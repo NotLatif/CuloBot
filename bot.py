@@ -27,7 +27,7 @@ settings = {"response":35}
 
 def log(msg):
     """
-    It takes a string as an argument, gets the current time, formats it, and writes the message to a file called err.log
+    It takes a string as an argument, gets the current time, formats it, and writes the message to a file
 
     please add [STATE]: before message, e.g: `log('[INFO]: bot reloaded.')`
 
@@ -41,7 +41,7 @@ def log(msg):
 
     now = datetime.now()
     current_time = now.strftime("[%d/%m/%y %H:%M:%S]")
-    with open('err.log', 'a') as f:
+    with open('bot.log', 'a') as f:
         f.write(f'{current_time} {msg}')
 
 def getWord():
@@ -129,19 +129,19 @@ async def on_ready():
 
     members = '\n - '.join([member.name for member in guild.members])
     print(f'Guild Members:\n - {members}')
-    print(guild.members)
 
     #channel = bot.get_channel(972610894930538507)
     #await channel.send("hello world")
 
 @bot.event   ## MEMBER JOIN FIXME
 async def on_member_join(member):
-    ch = member.get_channel()
-    await ch.send(f'A {member.name} piace il culo.')   
+    #await member.send(f'A {member.name} piace il culo.')
+    channel = bot.get_channel(696014103034069015) 
+    await channel.send(f'A {member.name} piace il culo.')   
     print("join detected")
 
 
-@bot.command(name='resp', help="Indica la percentuale (intera) di volte a cui il bot risponde ad un messaggio")
+@bot.command(name='resp')
 async def perc(ctx, arg=''):  ## BOT COMMAND
     if(arg == ''):
         await ctx.send(f'Rispondo il {settings["response"]}% delle volte')
@@ -159,7 +159,7 @@ async def perc(ctx, arg=''):  ## BOT COMMAND
     log(f'[INFO]: {ctx.author} set response to {arg}%')
     saveSetting('response', newPerc)
 
-@bot.command(name='help', help="")
+@bot.command(name='help')
 async def help(ctx):
     embed = discord.Embed(
         title = 'CuloBot',
@@ -171,8 +171,16 @@ async def help(ctx):
     embed.set_author(name='Help', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     embed.add_field(name='!resp', value='Richiedi la percentuale di risposta', inline=True)
     embed.add_field(name='!resp [x]', value='Imposta la percentuale a (x)', inline=True)
+    embed.add_field(name='!ping', value='Pong!', inline=True)
     embed.set_footer(text='Qualsiasi problema è colpa di @NotLatif')
     await ctx.send(embed=embed)
+
+@bot.command(name='ping')
+async def ping(ctx):
+    await ctx.send(f'Pong! {round(bot.latency*1000)}ms')
+
+
+
 
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message):
@@ -199,7 +207,7 @@ async def on_message(message):
 
     msg = " ".join(msg) #trasforma messaggio in stringa
 
-    await message.channel.send(msg)
+    await message.reply(msg, mention_author=False)
     print('responded')
     log(f'[INFO]: responded to message <resp_rate: {settings["response"]}%>')
 
