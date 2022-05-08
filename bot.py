@@ -105,7 +105,6 @@ async def help(ctx):
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message):
     await bot.process_commands(message)
-    
 
     if message.author == bot.user: #don't respond to self
         return
