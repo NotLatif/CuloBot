@@ -181,12 +181,15 @@ async def help(ctx):
     embed.add_field(name='!resp', value='Richiedi la percentuale di risposta', inline=True)
     embed.add_field(name='!resp [x]', value='Imposta la percentuale a (x)', inline=True)
     embed.add_field(name='!ping', value='Pong!', inline=True)
+    embed.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
     embed.set_footer(text='Qualsiasi problema è colpa di @NotLatif')
     await ctx.send(embed=embed)
 
 @bot.command(name='ping')
 async def ping(ctx):
-    await ctx.send(f'Pong! {round(bot.latency*1000)}ms')
+    pingms = round(bot.latency*1000)
+    await ctx.send(f'Pong! {pingms}ms')
+    log(f'[INFO]: ping detected: {pingms} ms')
 
 
 
