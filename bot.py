@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import random
 from datetime import datetime
 
+import Main
+
 load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 GUILD = os.getenv('DISCORD_GUILD')[1:-1]
@@ -128,16 +130,15 @@ async def on_error(event, *args, **kwargs):
 @bot.event   ## BOT ONLINE
 async def on_ready():
     for guild in bot.guilds:
-        if guild.name == GUILD:
-            break
+        print(
+            f'{bot.user} is connected to the following guild:\n'
+            f'{guild.name}(id: {guild.id})\n'
+        )
 
-    print(
-        f'{bot.user} is connected to the following guild:\n'
-        f'{guild.name}(id: {guild.id})\n'
-    )
+        members = '\n - '.join([member.name for member in guild.members])
+        print(f'Guild Members:\n - {members}')
 
-    members = '\n - '.join([member.name for member in guild.members])
-    print(f'Guild Members:\n - {members}')
+    
 
     #channel = bot.get_channel(972610894930538507)
     #await channel.send("hello world")
