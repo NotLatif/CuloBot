@@ -5,6 +5,9 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import random
 from datetime import datetime
+from discord_slash.utils import manage_components
+# from discord_slash.model import ButtonStyle
+# from discord_slash import SlashCommand
 
 import Main
 
@@ -15,12 +18,13 @@ GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 intents = discord.Intents.default()
 intents.members = True
 intents.messages = True
-#bot = commands.Bot(command_prefix='!', intents=intents)
 bot = commands.Bot(
     command_prefix=commands.when_mentioned_or('!'),
     intents=intents,
     owner_id=348199387543109654
 )
+# slash = SlashCommand(bot, sync_commands=True)
+
 
 bot.remove_command("help")
 
@@ -192,23 +196,37 @@ async def ping(ctx):
     await ctx.send(f'Pong! {pingms}ms')
     log(f'[INFO]: ping detected: {pingms} ms')
 
-
-
+"""
+@slash.slash(name="test", description="This is just a test command, nothing more.", guild_ids=guild_ids)
+async def test(ctx):
+    await ctx.send(content="Hello World!")
+"""
 
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message):
     await bot.process_commands(message)
+    user = message.author
+    if message.author == bot.user:
+        return
+    
+    # manage_components.create_button(style=ButtonStyle.URL, label="Your channel", url=f'https://discord.com/channels/{user.guild.id}/{user.id}')
+    # action_row = manage_components.create_actionrow(button)
+        
+    # await message.reply('Hello')
+    # return
+    
 
+    if 'word' in message.content: #for future implementation, respond to specific string
+        pass
+
+
+    #culificazione
     if message.author == bot.user or len(message.content.split()) < 2 or message.content[0] == '!':
         return  #don't respond to: self, strings with < 2 words, commands
  
     if random.randrange(0, 100) > settings["response"]: #implement % of answering
         return
 
-    if 'word' in message.content: #for future implementation, respond to specific string
-        pass
-
-    #culificazione
     msg = message.content.split() #trasforma messaggio in lista
     
     i = 0
