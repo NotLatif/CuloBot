@@ -1,3 +1,4 @@
+import Main
 """
 Stores information about the current game, detects legal moves, logs moves, etc
 """
@@ -50,8 +51,7 @@ class GameState():
         moves = []
         for r in range(len(self.board)):  #foreach col
             for c in range(len(self.board[r])): #foreach row (of col)
-                pieceColor = self.board[r][c][0] 
-                #??
+                pieceColor = self.board[r][c][0]
                 if (pieceColor == "B" and self.whiteMoves) or (pieceColor == "N" and not self.whiteMoves):
                     piece = self.board[r][c][1]
                     if piece == "P": #pedone
@@ -65,8 +65,34 @@ class GameState():
             #is the square in front empty?
             if self.board[r+1][c] == "--":
                 moves.append(Move((r, c), (r+1, c), self.board))
-                if r == 1 and self.board[r+2] == "--": #If it's the first move and can go 2 up
+                if r == 1 and self.board[r+2][c] == "--": #If it's the first move and can go 2 up
                     moves.append(Move((r, c), (r+2, c), self.board))
+
+            #FIXME, known: programs enters the loop at first generation crashing the game before first move
+            #gtg I'll fix later. -L
+            if c < len(self.board[r]): #piece is not on the last column
+                if self.board[r+1][c+1] != "--" and self.board[r+1][c+1][0] != "B": #can eat top right if not white (Bianco)
+                    moves.append(Move((r, c), (r+1, c+1)))
+
+            if c > 0: #piece is not on the first column
+                if self.board[r+1][c-1] != "--" and self.board[r+1][c-1][0] != "B": #can eat top left if not white
+                    moves.append(Move((r, c), (r+1, c-1)))      
+
+        if not self.whiteMoves: #pedoni  neri
+            #is the square in front empty?
+            if self.board[r-1][c] == "--":
+                moves.append(Move((r, c), (r-1, c), self.board))
+                if r == 6 and self.board[r-2][c] == "--": #If it's the first move and can go 2 up
+                    moves.append(Move((r, c), (r-2, c), self.board))
+
+            if c < len(self.board[r]): #piece is not on the last column
+                if self.board[r+1][c+1] != "--" and self.board[r+1][c+1][0] != "N": #can eat top right if not black (Nero)
+                    moves.append(Move((r, c), (r-1, c+1)))
+
+            if c > 0: #piece is not on the first column
+                if self.board[r-1][c-1] != "--" and self.board[r-1][c-1][0] != "N": #can eat top left if not black
+                    moves.append(Move((r, c), (r-1, c-1)))  
+
         return moves
 
     def getTMoves(self, r, c, moves):
@@ -81,22 +107,36 @@ class Move():
     colsToFiles = {v: k for k, v in filesToCols.items()}
 
     def __init__(self, startSq, endSq, boardState) -> None:
-        self.startCol = startSq[0]       #A
-        self.startRow = startSq[1]       #1
-        self.endCol = endSq[0]       #B 
-        self.endRow = endSq[1]       #1
+        """
+        Initializes the Move object
+        files: (1->8)   ranks: (A->H)   (1,A)(2,B)
+        :param startSq: (file, rank)
+        :param endSq: (file, rank)
+        :param boardState: a 2D array of the board state
+        """
+        self.startRow = startSq[0]       #1
+        self.startCol = startSq[1]       #A
+        self.endRow = endSq[0]       #2
+        self.endCol = endSq[1]       #B
         self.pieceMoved = boardState[self.startRow][self.startCol]
         self.pieceCaptured = boardState[self.endRow][self.endCol]
-        self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 +self.endCol
-        print(f"moveID: {self.moveID}")
+        self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol
+        Main.mPrint("ENGINE", f"moveID: {self.moveID} ({self.getChessNotation()})")
 
     def __eq__(self, other: object) -> bool:
             if isinstance(other, Move):
                 return self.moveID == other.moveID
-            return false
+            return False
 
-    def getChessNotation(self):
+    def getChessNotation(self) -> str:
+        """Only use of log/printing purposes """
         return self.getRankFile(self.startRow, self.startCol) + self.getRankFile(self.endRow, self.endCol)
 
-    def getRankFile(self, r, c):
+    def getRankFile(self, r, c) -> str:
+        """
+        :param r: the row of the piece
+        :param c: column
+        :return: The rank and file of the piece. "fr"
+        """
         return self.colsToFiles[c] + self.rowsToRanks[r]
+    

@@ -33,6 +33,9 @@ posx = {
     "H" : 433
 }
 
+def mPrint(state, value):
+    print(f"[{state}] : {value}")
+
 def loadSprites() -> None:
     """
         Inizializza la dict sprites con le immagini delle pedine
@@ -63,8 +66,11 @@ def main():
     #ask for move
     while True:
         #moveMade = False
+        mPrint("DEBUG", "Generating board")
         drawGameState(gs.board)
+        
         #if moveMade:
+        mPrint("DEBUG", "Generating possible moves")
         validMoves = gs.getAllPossibleMoves()
         
 
@@ -73,23 +79,24 @@ def main():
             gs.undoMove()
             continue
 
-        playerMoves = [
-            (Engine.Move.filesToCols[userMove[0]], Engine.Move.ranksToRows[userMove[1]]),
-            (Engine.Move.filesToCols[userMove[2]], Engine.Move.ranksToRows[userMove[3]])
+        playerMoves = [#omg this is so confusing
+            #                          rank (1)                              file (A)
+            (Engine.Move.ranksToRows[userMove[1]], Engine.Move.filesToCols[userMove[0]]),
+            (Engine.Move.ranksToRows[userMove[3]], Engine.Move.filesToCols[userMove[2]])
         ]
-        #                   A           2             A             4
+
         print(playerMoves)
         
         move = Engine.Move(playerMoves[0], playerMoves[1], gs.board)
         if move in validMoves:
-            print(move.getChessNotation())
+            print(f"Valid move: {move.getChessNotation()}")
             gs.makeMove(move)
             #moveMade = True
+        else:
+            mPrint("GAME", "Invalid move:")
+            mPrint("GAME", f"your move: {move.moveID} ({move.getChessNotation()})")
 
-        
-
-
-
+    
 
 
 if __name__ == '__main__':
