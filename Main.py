@@ -63,16 +63,18 @@ def mPrint(prefix, value):
 
 	print(f'{style}{col}[{prefix}] {value}{Fore.RESET}')
 
-def loadSprites() -> None:
+def loadSprites() -> dict:
 	"""
 		Inizializza la dict sprites con le immagini delle pedine
 	"""
 	pieces = ["NT", "NA", "NC", "NQ", "NK", "NP", "BT", "BA", "BC", "BQ", "BK", "BP"]
 	for piece in pieces:
 		sprites[piece] = Image.open(f"{spritesFolder}{piece}.png").convert("RGBA")
+	return sprites
 	#possiamo accedere ad uno sprite così e.g.: sprites["BP"]
 
 def drawGameState(boardGS) -> Image:
+	mPrint("DEBUG", "Generating board")
 	"""Responsible for the graphics of the game"""
 	#Drawing the pieces on the board
 	boardImg = Image.open(f"{board_filename}").convert("RGBA")
@@ -82,7 +84,9 @@ def drawGameState(boardGS) -> Image:
 			if (piece != "--"):
 				boardImg.paste(sprites[piece], (posx[x], posy[y]), sprites[piece])
 	boardImg.save(output)
+	mPrint("DEBUG", "Board Generated")
 	return boardImg
+
 
 
 def main():
@@ -93,14 +97,12 @@ def main():
 	#ask for move
 	while True:
 		#moveMade = False
-		mPrint("DEBUG", "Generating board")
+		
 		drawGameState(gs.board)
-		mPrint("DEBUG", "Board Generated")
 		
 		#if moveMade:
-		mPrint("DEBUG", "Generating possible moves")
 		validMoves = gs.getAllPossibleMoves()
-		mPrint('DEBUG', 'Moves generated.')
+		
 		
 
 		userMove = input("Move (A1A1): ").replace('/', '').replace(',','').replace(' ','').lower()

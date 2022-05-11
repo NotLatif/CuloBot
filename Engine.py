@@ -11,8 +11,8 @@ class GameState():
 			["BT", "BC", "BA", "BQ", "BK", "BA", "BC", "BT"], #A Bianco 
 			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #B
 			["--", "--", "--", "--", "--", "--", "--", "--"], #C
-			["--", "--", "--", "--", "--", "--", "--", "BK"], #D
-			["NK", "--", "--", "--", "NQ", "--", "--", "--"], #E
+			["--", "--", "--", "--", "--", "--", "--", "--"], #D
+			["--", "--", "--", "--", "--", "--", "--", "--"], #E
 			["--", "--", "--", "--", "--", "--", "--", "--"], #F
 			["NP", "NP", "NP", "NP", "NP", "NP", "NP", "NP"], #G
 			["NT", "NC", "NA", "NQ", "NK", "NA", "NC", "NT"], #H Nero 
@@ -27,6 +27,7 @@ class GameState():
 			'Q': self.getQMoves,
 			'K': self.getKMoves
 		}
+		self.turnCount = 0
 
 	def makeMove(self, move):
 		"""
@@ -38,6 +39,7 @@ class GameState():
 		self.board[move.startRow][move.startCol] = "--"
 		self.board[move.endRow][move.endCol] = move.pieceMoved
 		self.moveLog.append(move)
+		self.turnCount += 1
 		self.whiteMoves = not self.whiteMoves
 
 	def undoMove(self):
@@ -48,6 +50,7 @@ class GameState():
 			lastMove = self.moveLog.pop()
 			self.board[lastMove.startRow][lastMove.startCol] = lastMove.pieceMoved
 			self.board[lastMove.endRow][lastMove.endCol] = lastMove.pieceCaptured
+			self.turnCount -= 1
 			self.whiteMoves = not self.whiteMoves
 
 	def getValidMoves(self):
@@ -272,6 +275,9 @@ class Move():
 				return self.moveID == other.moveID
 			return False
 
+	def getAlgebraicNotation(self) -> str:
+		pass #TODO implement (use emojis maybe)
+
 	def getChessNotation(self) -> str:
 		"""Only use of log/printing purposes """
 		return self.getRankFile(self.startRow, self.startCol) + self.getRankFile(self.endRow, self.endCol)
@@ -285,7 +291,7 @@ class Move():
 		return self.colsToFiles[c] + self.rowsToRanks[r]
 
 """
-♟️ Chess Pawn
+♟️♟ Chess Pawn
 
 ♛ Black Chess Queen
 ♝ Black Chess Bishop

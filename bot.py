@@ -1,15 +1,15 @@
-from dis import disco
+from ast import arg
+import asyncio
 import os
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 import random
 from datetime import datetime
-from discord_slash.utils import manage_components
 # from discord_slash.model import ButtonStyle
 # from discord_slash import SlashCommand
-
-import Main
+import threading
+import MainIO
 
 load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
@@ -30,6 +30,8 @@ bot.remove_command("help")
 
 settingsFile = "settings.cfg"
 settings = {"response":35}
+
+
 
 def log(msg):
     """
@@ -154,7 +156,6 @@ async def on_member_join(member):
     await channel.send(f'A {member.name} piace il culo.')   
     print("join detected")
 
-
 @bot.command(name='resp')
 async def perc(ctx, arg=''):  ## BOT COMMAND
     if(arg == ''):
@@ -195,6 +196,63 @@ async def ping(ctx):
     pingms = round(bot.latency*1000)
     await ctx.send(f'Pong! {pingms}ms')
     log(f'[INFO]: ping detected: {pingms} ms')
+
+@bot.command(name='user')
+async def user(ctx):
+    await ctx.send(f'User: {bot.user}')
+
+@bot.command(name='game', pass_context=True)
+async def thumb(ctx):
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+    #delete messages: ctx.channel.purge(limit=int(n))
+    embed = discord.Embed(title = 'Cerco giocatori, usa una reazione per unirti ad un team (max 1 per squadra)', color = 0x0a7ace)
+    fetchMsg = await ctx.send(embed=embed)
+    reactions = ('🤍', '🖤')
+    r1, r2 = reactions
+    await fetchMsg.add_reaction(r1)
+    await fetchMsg.add_reaction(r2)
+
+    def check1(reaction, user):
+        print(user)
+        return str(reaction.emoji) in reactions and user != bot.user
+    def check2(reaction, user):
+        print(user)
+        return str(reaction.emoji) in reactions 
+
+    try:
+        r1, player1 = await bot.wait_for('reaction_add', timeout=60.0, check=check1)
+        r2, player2 = await bot.wait_for('reaction_add', timeout=60.0, check=check2)
+
+    except asyncio.TimeoutError:
+        embed = discord.Embed(
+            title = 'Non ci sono abbastanza giocatori.',
+            colour = 0xdc143c
+        )
+        await ctx.send(embed=embed)
+        await fetchMsg.delete()
+    else:
+        embed = discord.Embed(
+            title = f'Giocatori trovati\n🤍 {player1} -VS- {player2} 🖤',
+            colour = 0x27E039
+        )
+        await ctx.send(embed=embed)
+        await fetchMsg.delete()
+
+    #game main
+    await MainIO.loadGame(ctx, bot, (player1, player2))
+
+
+    # async def chessGame(p1, p2):
+    #     reaction1, player1 = await bot.wait_for('reaction_add', timeout=60.0, check=check1)
+    #     print(f"game with {p1} vs {p2}")
+    #     pass
+
+    # game = threading.Thread(target=chessGame, args = (player1,player2))
+    # game.start()
+
 
 """
 @slash.slash(name="test", description="This is just a test command, nothing more.", guild_ids=guild_ids)
