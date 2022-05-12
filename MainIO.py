@@ -1,33 +1,33 @@
 import discord
 import Main as chessGame
 
-async def loadGame(ctx, bot, players):
+async def loadGame(thread, bot, players, ctx, fetchThread):
+	
 	p1,p2 = players #p1 is white, p2 is black
 	emojis = ('🤍', '🖤')
-	gs = chessGame.Engine.GameState()
+	gs = chessGame.Engine.GameState(thread.id)
 	chessGame.loadSprites()
 	didIllegalMove = [False, ''] #[bool, str]
 
-
 	boardMessages = [] #needed to delete the last edited board and avoid chat clutter
 
-	chessGame.drawGameState(gs.board)	#Don't really like this mess, will clean later
+	chessGame.drawGameState(gs.board, gs.gameID)	#Don't really like this mess, will clean later
 	validMoves = gs.getAllPossibleMoves()
-	with open(chessGame.output, "rb") as fh:
-		f = discord.File(fh, filename=chessGame.output)
-		boardMessages.append(await ctx.send(file=f))
+	with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
+		f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
+		boardMessages.append(await thread.send(file=f))
 
 	while True: #gameloop
 		p1turn = gs.whiteMoves
 		#generate board and moves
 		if not didIllegalMove[0] or gs.turnCount == 0: #no need to regenerate if move did not go trhu
-			chessGame.drawGameState(gs.board)
+			chessGame.drawGameState(gs.board, gs.gameID)
 			validMoves = gs.getAllPossibleMoves()
 		
 		if gs.turnCount != 0: #Don't resend the first image
-			with open(chessGame.output, "rb") as fh:
-				f = discord.File(fh, filename=chessGame.output)
-				boardMessages.append(await ctx.send(file=f))
+			with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
+				f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
+				boardMessages.append(await thread.send(file=f))
 				await boardMessages[0].delete()
 				del boardMessages[0]
 		
@@ -50,19 +50,20 @@ async def loadGame(ctx, bot, players):
 
 		embed.set_footer(text=f'È il turno di {players[not gs.whiteMoves]} {emojis[not gs.whiteMoves]}')#I'm too good at this shit #godcomplex
 		
-		#3. send the embed and wait for user input
-		inputAsk = await ctx.send(embed=embed)
-		async def check(m):
-			if not (m.author in players):
-				await m.delete()
-				return False
-			if p1turn and m.author != p1:
-				await m.delete()
-				return False
-			return m.channel == ctx.channel and m.author in players
+		#3. send the embed
+		inputAsk = await thread.send(embed=embed)
+
+		#4. await for input
+		def check(m):	#check if message was sent in thread using ID
+			return m.channel.id == thread.id and m.author in players
 
 		userMessage = await bot.wait_for('message', check=check)
-		#4. delete the embed to avoid clutter
+
+		if p1turn and userMessage.author != p1:
+			await userMessage.delete()
+			return False
+		
+		#5. delete the embed to avoid clutter
 		await inputAsk.delete()
 		chessGame.mPrint("USER", f'{userMessage.author}, comando: {userMessage.content}')
 		
@@ -75,6 +76,14 @@ async def loadGame(ctx, bot, players):
 			gs.undoMove()
 			
 		if(userMove == "stop"):
+			#send embed to thread
+			embed = discord.Embed(title='❌ Partita annullata ❌')
+			await thread.send(embed=embed)
+			#edit and send the main channel embed
+			embed = fetchThread[1]
+			embed.description = '❌ Partita annullata ❌'
+			embed.set_footer(text=f'ID: {thread.id}')
+			await fetchThread[0].edit(embed=embed)
 			break
 		
 		#3. Parse user input
@@ -82,6 +91,7 @@ async def loadGame(ctx, bot, players):
 		chessGame.mPrint('DEBUG', f'userMove: {userMove}')
 
 		#4. Check if user input has valid values
+		#FIXME 'A', 'A1', 'A1A' will throw IndexError
 		if (userMove[0] not in 'abcdefgh' or userMove[2] not in 'abcdefgh' or 
 			userMove[1] not in '12345678' or userMove[3] not in '12345678'):
 			didIllegalMove = [True, f'Input invalido formato: A1A1, riprova\nHai inserito: {userMove}\n']

@@ -4,7 +4,7 @@ import Main as Main
 Stores information about the current game, detects legal moves, logs moves, etc
 """
 class GameState():
-	def __init__(self) -> None:
+	def __init__(self, gameID) -> None:
 		#board: 8x8 2d list of str (2chr)
 		#N = Nero, B = Bianco, Torre Alfiere Cavallo Queen King Pedone
 		self.board = [
@@ -28,7 +28,11 @@ class GameState():
 			'K': self.getKMoves
 		}
 		self.turnCount = 0
+		self.gameID = gameID
 
+	def getMoveHistory(self):
+		pass
+	
 	def makeMove(self, move):
 		"""
 		Makes a move and logs it
@@ -289,7 +293,13 @@ class Move():
 		:return: The rank and file of the piece. "fr"
 		"""
 		return self.colsToFiles[c] + self.rowsToRanks[r]
-
+"""
+K: King
+Q: Queen
+R: Rook		(T torre)
+B: Bishop	(A alfiere)
+N: Knight	(C cavallo)
+P: Pawn (although, by convention, P is usually omitted from notation)"""
 """
 ♟️♟ Chess Pawn
 

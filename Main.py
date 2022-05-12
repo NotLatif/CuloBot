@@ -6,11 +6,12 @@ Input, interacts with engine, makes image
 from PIL import Image
 from colorama import Fore, Style, init
 import Engine as Engine
+import os
 
 
 spritesFolder = "chessGame/sprites/"
 board_filename = f"{spritesFolder}chessboard.png"
-output = "chessGame/out.png"
+outPath = 'chessGame/games/'
 
 dimension = 8 #8 caselle
 sprites = {}
@@ -73,9 +74,14 @@ def loadSprites() -> dict:
 	return sprites
 	#possiamo accedere ad uno sprite così e.g.: sprites["BP"]
 
-def drawGameState(boardGS) -> Image:
-	mPrint("DEBUG", "Generating board")
+def drawGameState(boardGS, id) -> Image:
 	"""Responsible for the graphics of the game"""
+	mPrint("DEBUG", "Generating board")
+	
+	if not os.path.exists(outPath): #make games folder if it does not exist
+		mPrint('DEBUG', f'making path: {outPath}')
+		os.makedirs(outPath)
+
 	#Drawing the pieces on the board
 	boardImg = Image.open(f"{board_filename}").convert("RGBA")
 	for c, x in enumerate(posx):
@@ -83,14 +89,16 @@ def drawGameState(boardGS) -> Image:
 			piece = boardGS[r][c]
 			if (piece != "--"):
 				boardImg.paste(sprites[piece], (posx[x], posy[y]), sprites[piece])
-	boardImg.save(output)
+	boardImg.save(getOutputFile(id))
+	
 	mPrint("DEBUG", "Board Generated")
 	return boardImg
 
+def getOutputFile(id:int) -> str:
+	return f'{outPath}{id}.png'
 
-
-def main():
-	gs = Engine.GameState()
+def main(): 
+	gs = Engine.GameState(1)
 	loadSprites()
 	
 
@@ -99,11 +107,8 @@ def main():
 		#moveMade = False
 		
 		drawGameState(gs.board)
-		
 		#if moveMade:
 		validMoves = gs.getAllPossibleMoves()
-		
-		
 
 		userMove = input("Move (A1A1): ").replace('/', '').replace(',','').replace(' ','').lower()
 		if(userMove == "undo"):
