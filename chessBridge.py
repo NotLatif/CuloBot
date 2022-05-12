@@ -1,18 +1,34 @@
 import discord
 import Main as chessGame
 
+def num2emoji(num : int):
+	words = []
+	for digit in str(num):
+		if digit == '0': words.append('zero')
+		if digit == '1': words.append('one')
+		if digit == '2': words.append('two')
+		if digit == '3': words.append('three')
+		if digit == '4': words.append('four')
+		if digit == '5': words.append('five')
+		if digit == '6': words.append('six')
+		if digit == '7': words.append('seven')
+		if digit == '8': words.append('eight')
+		if digit == '9': words.append('nine')
+	return f':{"::".join(words)}:'
+
 async def loadGame(thread : discord.Thread, bot, players : tuple[discord.Member], fetchThread : tuple[discord.Thread, discord.Embed], ctx):
 	"""links bot.py with chess game (Main.py)"""
 	p1,p2 = players #p1 is white, p2 is black
+	score = [0, 0]
 	emojis = ('⚪', '🌑') #('🤍', '🖤') (white, black) 	< order matters it's a tuple afterall
-	gs = chessGame.Engine.GameState(thread.id)
-	chessGame.loadSprites()
 	didIllegalMove = [False, ''] #[bool, str]
-
 	boardMessages = [] #needed to delete the last edited board and avoid chat clutter
 
+	gs = chessGame.Engine.GameState(thread.id)
+	chessGame.loadSprites()
 	chessGame.drawGameState(gs.board, gs.gameID)	#Don't really like this mess, will clean later
 	validMoves = gs.getValidMoves()
+
 	with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
 		f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
 		boardMessages.append(await thread.send(file=f))
@@ -62,25 +78,30 @@ async def loadGame(thread : discord.Thread, bot, players : tuple[discord.Member]
 		async def roundOverEditEmbed(reason, winner):
 			#edit and send the main channel embed
 			embed = fetchThread[1]
-			embed.title = f'{emojis[gs.whiteMoves]} {reason}\n{emojis[0]} {players[0]} :one: :vs: :zero: {players[1]} {emojis[1]}'
+			embed.title = f'{reason}\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
 			embed.description = f'Winner: {winner} {emojis[gs.whiteMoves]}' #FIXME actually keep track of score
 			embed.set_footer(text=f'ID: {thread.id}')
+			embed.color = 0xf2f2f2 if not gs.getWinner() == 'N' else 0x030303 
 			await fetchThread[0].edit(embed=embed)
 			chessGame.mPrint('GAME', f'Game won by {winner}, <gameID:{gs.gameID}>')
 
 		if gs.checkMate:
+			score[gs.whiteMoves] += 1
 			embed.title = 'CHECKMATE!'
 			embed.description = f'Congratulazioni {players[gs.whiteMoves]} {emojis[gs.whiteMoves]}'
 			embed.color = 0xf2f2f2 if not gs.getWinner() == 'N' else 0x030303 
 			embed.set_footer(text='Rivincita?') #TODO add reaction to vote for a rematch: switch teams and keep track of the score (update the embed)
+			await thread.send(embed=embed)
 			await roundOverEditEmbed('CHECKMATE', players[gs.whiteMoves])
 			break #TODO add scoring system for rematch (after 60 seconds declare game over)
 
 		elif gs.staleMate:
+			score[gs.whiteMoves] += 1
 			embed.title = 'Stalemate!'
 			embed.description = f'Congratulazioni {players[gs.whiteMoves]}'
 			embed.color = 0xf2f2f2 if not gs.getWinner() == 'N' else 0x030303
 			embed.set_footer(text='Rivincita?')
+			await thread.send(embed=embed)
 			await roundOverEditEmbed('Stalemate!', players[gs.whiteMoves])
 			break #TODO add scoring system for rematch (after 60 seconds declare game over)
 
