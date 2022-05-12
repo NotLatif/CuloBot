@@ -38,23 +38,27 @@ posx = {
 	"H" : 433
 }
 
-def mPrint(prefix, value):
+def mPrint(prefix, value, p2 = ''):
+	#p2 is only used by engine
 	style = Style.RESET_ALL
+	if p2 != '':
+		p2 = f'{Fore.YELLOW}{p2}{Fore.RESET} '
 
 	if prefix == 'GAME':
 		col = Fore.GREEN
 	elif prefix == 'WARN':
 		col = Fore.YELLOW
+		style = Style.BRIGHT
 	elif prefix == 'ERROR' or prefix == 'FATAL' or prefix == 'GAMEErr':
 		col = Fore.RED
 		style = Style.BRIGHT
 	elif prefix == 'DEBUG':
 		col = Fore.MAGENTA
-	elif prefix == 'ENGINE':
+	elif prefix == 'VARS':
 		col = Fore.YELLOW
 		style = Style.DIM
 	elif prefix == 'FUNC':
-		col = Fore.BLACK
+		col = Fore.LIGHTBLACK_EX
 		reqlog = True
 	elif prefix == 'USER':
 		col = Fore.CYAN
@@ -62,7 +66,7 @@ def mPrint(prefix, value):
 		col = Fore.WHITE	
 	
 
-	print(f'{style}{col}[{prefix}] {value}{Fore.RESET}')
+	print(f'{style}{col}[{p2}{col}{prefix}] {value}{Fore.RESET}')
 
 def loadSprites() -> dict:
 	"""
@@ -74,7 +78,7 @@ def loadSprites() -> dict:
 	return sprites
 	#possiamo accedere ad uno sprite così e.g.: sprites["BP"]
 
-def drawGameState(boardGS, id) -> Image:
+def drawGameState(boardGS, id) -> Image: #TODO if isCheck draw red square
 	"""Responsible for the graphics of the game"""
 	mPrint("DEBUG", "Generating board")
 	
@@ -109,6 +113,13 @@ def main():
 		drawGameState(gs.board, 1)
 		#if moveMade:
 		validMoves = gs.getValidMoves()
+
+		if gs.checkMate:
+			mPrint('GAME', 'CHECKMATE!')
+			break
+		elif gs.staleMate:
+			mPrint('GAME', 'StaleMate!')
+			break
 
 		userMove = input("Move (A1A1): ").replace('/', '').replace(',','').replace(' ','').lower()
 		if(userMove == "undo"):

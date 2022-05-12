@@ -257,7 +257,7 @@ async def chessGame(ctx):
     #delete messages: ctx.channel.purge(limit=int(n))
     embed = discord.Embed(title = 'Cerco giocatori, usa una reazione per unirti ad un team (max 1 per squadra)', color = 0x0a7ace)
     playerFetchMsg = await ctx.send(embed=embed)
-    reactions = ('🤍', '🖤')
+    reactions = ('⚪', '🌑') #('🤍', '🖤')
     r1, r2 = reactions
     await playerFetchMsg.add_reaction(r1)
     await playerFetchMsg.add_reaction(r2)
@@ -290,7 +290,7 @@ async def chessGame(ctx):
 
         
         embed = discord.Embed(
-            title = f'Giocatori trovati\n🤍{player1} :vs: {player2} 🖤',
+            title = f'Giocatori trovati\n{r1} {player1} :vs: {player2} {r2}',
             colour = 0x27E039
         )
         

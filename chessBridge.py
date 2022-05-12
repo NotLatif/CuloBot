@@ -1,10 +1,10 @@
 import discord
 import Main as chessGame
 
-async def loadGame(thread : discord.Thread, bot, players, fetchThread : tuple[discord.Thread, discord.Embed], ctx):
+async def loadGame(thread : discord.Thread, bot, players : tuple[discord.Member], fetchThread : tuple[discord.Thread, discord.Embed], ctx):
 	"""links bot.py with chess game (Main.py)"""
 	p1,p2 = players #p1 is white, p2 is black
-	emojis = ('🤍', '🖤')
+	emojis = ('⚪', '🌑') #('🤍', '🖤') (white, black) 	< order matters it's a tuple afterall
 	gs = chessGame.Engine.GameState(thread.id)
 	chessGame.loadSprites()
 	didIllegalMove = [False, ''] #[bool, str]
@@ -17,13 +17,15 @@ async def loadGame(thread : discord.Thread, bot, players, fetchThread : tuple[di
 		f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
 		boardMessages.append(await thread.send(file=f))
 
+	winner = None
 	while True: #gameloop
 		p1turn = gs.whiteMoves
 		#generate board and moves
 		if not didIllegalMove[0] or gs.turnCount == 0: #no need to regenerate if move did not go trhu
 			chessGame.drawGameState(gs.board, gs.gameID)
 			validMoves = gs.getValidMoves()
-		
+
+		#send board imga to discord
 		if gs.turnCount != 0: #Don't resend the first image
 			with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
 				f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
@@ -40,15 +42,49 @@ async def loadGame(thread : discord.Thread, bot, players, fetchThread : tuple[di
 			color = 0xf2f2f2 if gs.whiteMoves else 0x030303
 		)
 		
-		#2. if previous move was illegal modify the embed with the info
+		#2a. if previous move was illegal modify the embed with the info
 		if didIllegalMove[0]:
 			embed.title = 'Mossa non valida'
 			embed.description = didIllegalMove[1]
 			embed.color = 0xdc143c
 
 			didIllegalMove = [False, '']
+		
+		#2b. if previous move resulted in check modify the embed with the info
+		elif gs.inCheck: #using elif, because last move cannot be illegal, so if it is, the player currently in check made an illegal move and should be notified
+			embed.title = 'Scacco!'
+			embed.description = 'Fai una mossa per difendere il tuo Re'
+			embed.color = 0xf88070
 
 		embed.set_footer(text=f'È il turno di {players[not gs.whiteMoves]} {emojis[not gs.whiteMoves]}')#I'm too good at this shit #godcomplex
+
+		#2c. if checkmate or stalemate modify the embed and end the game
+		async def roundOverEditEmbed(reason, winner):
+			#edit and send the main channel embed
+			embed = fetchThread[1]
+			embed.title = f'{emojis[gs.whiteMoves]} {reason}\n{emojis[0]} {players[0]} :one: :vs: :zero: {players[1]} {emojis[1]}'
+			embed.description = f'Winner: {winner} {emojis[gs.whiteMoves]}' #FIXME actually keep track of score
+			embed.set_footer(text=f'ID: {thread.id}')
+			await fetchThread[0].edit(embed=embed)
+			chessGame.mPrint('GAME', f'Game won by {winner}, <gameID:{gs.gameID}>')
+
+		if gs.checkMate:
+			embed.title = 'CHECKMATE!'
+			embed.description = f'Congratulazioni {players[gs.whiteMoves]} {emojis[gs.whiteMoves]}'
+			embed.color = 0xf2f2f2 if not gs.getWinner() == 'N' else 0x030303 
+			embed.set_footer(text='Rivincita?') #TODO add reaction to vote for a rematch: switch teams and keep track of the score (update the embed)
+			await roundOverEditEmbed('CHECKMATE', players[gs.whiteMoves])
+			break #TODO add scoring system for rematch (after 60 seconds declare game over)
+
+		elif gs.staleMate:
+			embed.title = 'Stalemate!'
+			embed.description = f'Congratulazioni {players[gs.whiteMoves]}'
+			embed.color = 0xf2f2f2 if not gs.getWinner() == 'N' else 0x030303
+			embed.set_footer(text='Rivincita?')
+			await roundOverEditEmbed('Stalemate!', players[gs.whiteMoves])
+			break #TODO add scoring system for rematch (after 60 seconds declare game over)
+
+		
 		
 		#3. send the embed
 		inputAsk = await thread.send(embed=embed)

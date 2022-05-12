@@ -1,4 +1,7 @@
 import Main as Main
+def mPrint(prefix, value):
+	Main.mPrint(prefix, value, 'ENGINE')
+
 class GameState():
 	"""
 	Stores information about the current game, detects legal moves, logs moves, etc
@@ -10,10 +13,10 @@ class GameState():
 			["BT", "BC", "BA", "BQ", "BK", "BA", "BC", "BT"], #A Bianco 
 			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #B
 			["--", "--", "--", "--", "--", "--", "--", "--"], #C
-			["--", "--", "--", "--", "--", "--", "--", "--"], #D
+			["--", "--", "--", "--", "BC", "--", "--", "--"], #D
 			["--", "--", "--", "--", "--", "--", "--", "--"], #E
-			["--", "--", "--", "--", "--", "--", "--", "--"], #F
-			["NP", "NP", "NP", "NP", "NP", "NP", "NP", "NP"], #G
+			["--", "--", "--", "--", "--", "BC", "--", "--"], #F
+			["NP", "NP", "NP", "--", "NP", "NP", "NP", "NP"], #G
 			["NT", "NC", "NA", "NQ", "NK", "NA", "NC", "NT"], #H Nero 
 		]
 		self.whiteKpos = (0, 4)
@@ -36,6 +39,11 @@ class GameState():
 		self.inCheck = False
 		self.pins = [] #pieces that are protecting the king
 		self.checks = [] #pieces that are checking the king
+
+	def getWinner(self):
+		if self.checkMate or self.staleMate:
+			return 'N' if self.whiteMoves else 'B'
+		return None
 
 	def getMoveHistory(self):
 		pass
@@ -73,12 +81,21 @@ class GameState():
 				self.blackKpos = (lastMove.startRow, lastMove.startCol)
 
 	def getValidMoves(self) -> list:
+		mPrint('VARS', f"Turn: {'White' if self.whiteMoves else 'Black'}")
 		#return self.getValidMovesNaive() #not very good but should work
-		return self.getValidMovesComplicated() #better but has bugs currently 
+		moves =  self.getValidMovesComplicated() #better but has bugs currently 
+		for m in moves:
+			mPrint("DEBUG", f"moveID: {m.moveID} ({m.getChessNotation()})")
+		return moves
 
 	def getValidMovesComplicated(self) -> list: #more efficient but complicated algorithm
+		mPrint('INFO', 'using the complicate algorithm to generate moves')
 		moves = []
 		self.inCheck, self.pins, self.checks = self.checkForPinsAndChecks()
+		mPrint('VARS', f'inCheck: {self.inCheck}')
+		for p in self.pins: mPrint('VARS', f'pin[x]: {p}')
+		for c in self.checks: mPrint('VARS', f'check[x]: {c}')
+
 		if self.whiteMoves:
 			kingRow = self.whiteKpos[0]
 			kingCol = self.whiteKpos[1]
@@ -86,32 +103,43 @@ class GameState():
 			kingRow = self.blackKpos[0]
 			kingCol = self.blackKpos[1]
 
-		if self.inCheck:
+		if self.inCheck: #remove moves that expose the king
 			if len(self.checks) == 1: #only 1 check, block the check or move the king
-				move = self.getAllPossibleMoves()
+				moves = self.getAllPossibleMoves()
 				#to block a check put a piece in between king and enemy
 				check = self.checks[0]
 				checkRow = check[0]
 				checkCol = check[1]
 				pieceChecking = self.board[checkRow][checkCol]
-				validSquares = []
+				validSquares = [] #pieces can move here
 				if pieceChecking[1] == 'C': #Cavallo
-					validSquares = [(checkRow, checkCol)]
+					validSquares = [(checkRow, checkCol)] #piece can only move where the knight is
 				else:
 					for i in range(1, len(self.board)): #generates where piece can move to and block the check
-						validSquare = (kingRow + check[2] * i, kingCol + check[3] * i) #check2 and check3 are the check directions
-						validSquares.append(validSquare)
-						if validSquare[0] == checkRow and validSquare[1] == checkCol:
+						oneValidSquare = (kingRow + check[2] * i, kingCol + check[3] * i) #check2 and check3 are the check directions
+						validSquares.append(oneValidSquare)
+						if oneValidSquare[0] == checkRow and oneValidSquare[1] == checkCol:
 							break
 				#get rid of any moves that don't block check or move the king
 				for i in range(len(moves)-1, -1, -1): #will delete stuff from list so go backwards
 					if moves[i].pieceMoved[1] != 'K': #move does not move king so it is check or capture
-						if not (moves[i].endRow, moves[i].endCol): #move dsen't block check or capture piece
+						if not (moves[i].endRow, moves[i].endCol) in validSquares: #move dsen't block check or capture piece
 							moves.remove(moves[i])
+
 			else: #'double check' king has to move
 				self.getKMoves(kingRow, kingCol, moves)
 		else: #not in check so all moves are ok
 			moves = self.getAllPossibleMoves()
+
+		if len(moves) == 0:
+			if self.isInCheck():
+				self.checkMate = True
+			else:
+				self.staleMate = True
+		else:
+			self.checkMate = False #in case of undo
+			self.staleMate = False
+
 		return moves
 
 	def checkForPinsAndChecks(self) -> tuple[bool, list, list]:
@@ -176,12 +204,14 @@ class GameState():
 			if 0 <= endRow < len(self.board[0]) and 0 <= endCol < len(self.board):
 				endPiece = self.board[endRow][endCol]
 				if endPiece[0] == enemyColor and endPiece[1] == 'C': #Cavallo
-					isCheck = True
+					inCheck = True
 					checks.append((endRow, endCol, m[0], m[1]))
 
 		return inCheck, pins, checks
 
 	def getValidMovesNaive(self) -> list:
+		mPrint('INFO', 'using the naive algorithm to generate moves')
+
 		#All moves considering checks (if you move a piece do you expose the K?)
 		#1. generate all the moves
 		moves = self.getAllPossibleMoves() #temp.
@@ -216,7 +246,7 @@ class GameState():
 
 	def squareUnderAttack(self, r, c) -> bool:
 		"""Determines if enemy can attack (r, c)"""
-		Main.mPrint('DEBUG', f'(ENGINE) generating opponent moves')
+		mPrint('DEBUG', f'generating opponent moves')
 		self.whiteMoves = not self.whiteMoves #I want opponent moves
 		opponentMoves = self.getAllPossibleMoves()
 		self.whiteMoves = not self.whiteMoves #reset turn
@@ -226,7 +256,7 @@ class GameState():
 		return False #square not under attack
 		
 	def getAllPossibleMoves(self) -> list:
-		Main.mPrint('FUNC', 'Generating moves:')
+		mPrint('FUNC', 'getAllPossibleMoves()')
 		#generating the moves
 		moves = []
 		for r in range(len(self.board)):  #foreach col
@@ -280,7 +310,7 @@ class GameState():
 
 			if c != len(self.board[r]) -1: #piece is not on the last column
 				if not piecePinned or pinDirection == (-1, 1):
-					if self.board[r-1][c+1] != "--" and self.board[r+1][c+1][0] != "N": #can eat top right if not black (Nero)
+					if self.board[r-1][c+1] != "--" and self.board[r-1][c+1][0] != "N": #can eat top right if not black (Nero)
 						moves.append(Move((r, c), (r-1, c+1), self.board))
 
 			if c != 0: #piece is not on the first column
@@ -421,7 +451,7 @@ class Move():
 		self.pieceMoved = boardState[self.startRow][self.startCol]
 		self.pieceCaptured = boardState[self.endRow][self.endCol]
 		self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol
-		Main.mPrint("ENGINE", f"moveID: {self.moveID} ({self.getChessNotation()})")
+		#mPrint("ENGINE", f"moveID: {self.moveID} ({self.getChessNotation()})")
 
 	def __eq__(self, other: object) -> bool:
 			if isinstance(other, Move):
