@@ -1,18 +1,20 @@
 from ast import arg
 import asyncio
 import os
-import discord
+import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
 from dotenv import load_dotenv
 import random
 from datetime import datetime
 # from discord_slash.model import ButtonStyle
 # from discord_slash import SlashCommand
-import threading
-import MainIO
+import chessBridge
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
+
+#TODO single server use? cringe bro. fucking chess can have infinite instances
+#change the stupid settings file and make this work with multiple servers
 
 load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
@@ -67,8 +69,7 @@ def getWord():
 def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, str]:
     #message = 'No voglio il rosso'
     #words = 'il culo, i culi'
-    #TODO if message[i-1].isnumber(): if: message[i-1] > 1: choose plural form else choose singular
-
+    
     article_word = words.split(', ') #['il culo', 'i culi']
     print(article_word)
     #sorry for spaghetti code maybe will reparse later
@@ -80,7 +81,12 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
             return (message[i-1], article_word[0].split()[1]) #eg. words = ['il culo']
         return (article_word[0].split()[0], article_word[0].split()[1]) #eg. words = ['il culo']
 
-    if message[i-1] not in articoli: #don't change the word before
+    if message[i-1] not in articoli: #the word before is not an article
+        if message[i-1].isnumeric(): #e.g. '3 cavolfiori'
+            if message[i-1] == '1':
+                return (message[i-1], article_word[0].split()[1]) #'1 culo'
+            else:
+                return (message[i-1], article_word[1].split()[1]) #'3 culi'
         return (message[i-1], article_word[0].split()[1]) #eg. returns ('ciao', 'culo')
 
     if message[i-1] in ['il', 'lo', 'la']: #eg. returns ('il', 'culo')
@@ -261,11 +267,11 @@ async def chessGame(ctx):
         return str(reaction.emoji) in reactions and user != bot.user
     def check2(reaction, user):
         print(user)
-        return str(reaction.emoji) in reactions 
-
+        return str(reaction.emoji) in reactions and user != bot.user
+    players = [0, 0]
     try:
-        r1, player1 = await bot.wait_for('reaction_add', timeout=60.0, check=check1)
-        r2, player2 = await bot.wait_for('reaction_add', timeout=60.0, check=check2)
+        r1, players[0] = await bot.wait_for('reaction_add', timeout=60.0, check=check1)
+        r2, players[1] = await bot.wait_for('reaction_add', timeout=60.0, check=check2)
 
     except asyncio.TimeoutError:
         embed = discord.Embed(
@@ -275,8 +281,16 @@ async def chessGame(ctx):
         await ctx.send(embed=embed)
         await playerFetchMsg.delete()
     else:
+        if r1 == reactions[0]: #r1 is white TODO check if white is actually p1 and viceversa
+            player1 = players[0]
+            player2 = players[1]
+        else:
+            player1 = players[1]
+            player2 = players[0]
+
+        
         embed = discord.Embed(
-            title = f'Giocatori trovati\n{player1} 🤍VS🖤 {player2}',
+            title = f'Giocatori trovati\n🤍{player1} :vs: {player2} 🖤',
             colour = 0x27E039
         )
         
@@ -288,7 +302,7 @@ async def chessGame(ctx):
         mainThreadEmbed = (thread, embed)
 
     #game main
-    await MainIO.loadGame(gameThread, bot, (player1, player2), ctx, mainThreadEmbed)
+    await chessBridge.loadGame(gameThread, bot, (player1, player2), mainThreadEmbed, ctx)
 
 
 @bot.event   ## DETECT AND RESPOND TO MSG

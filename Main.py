@@ -106,9 +106,9 @@ def main():
 	while True:
 		#moveMade = False
 		
-		drawGameState(gs.board)
+		drawGameState(gs.board, 1)
 		#if moveMade:
-		validMoves = gs.getAllPossibleMoves()
+		validMoves = gs.getValidMoves()
 
 		userMove = input("Move (A1A1): ").replace('/', '').replace(',','').replace(' ','').lower()
 		if(userMove == "undo"):

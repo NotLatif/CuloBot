@@ -1,8 +1,9 @@
+from re import S
 import Main as Main
+"""
+Stores information about the current game, detects legal moves, logs moves, etc
+"""
 class GameState():
-	"""
-	Stores information about the current game, detects legal moves, logs moves, etc
-	"""
 	def __init__(self, gameID) -> None:
 		#board: 8x8 2d list of str (2chr)
 		#N = Nero, B = Bianco, Torre Alfiere Cavallo Queen King Pedone
@@ -40,7 +41,7 @@ class GameState():
 	def getMoveHistory(self):
 		pass
 	
-	def makeMove(self, move) -> None:
+	def makeMove(self, move):
 		"""
 		Makes a move and logs it
 		
@@ -57,7 +58,7 @@ class GameState():
 		if move.pieceMoved == 'NK':
 			self.blackKpos = (move.endRow, move.endCol)
 
-	def undoMove(self) -> None:
+	def undoMove(self):
 		"""
 		Undo last move
 		"""
@@ -73,8 +74,7 @@ class GameState():
 				self.blackKpos = (lastMove.startRow, lastMove.startCol)
 
 	def getValidMoves(self) -> list:
-		#return self.getValidMovesNaive() #not very good but should work
-		return self.getValidMovesComplicated() #better but has bugs currently 
+		return self.getValidMovesNaive()
 
 	def getValidMovesComplicated(self) -> list: #more efficient but complicated algorithm
 		moves = []
@@ -114,7 +114,7 @@ class GameState():
 			moves = self.getAllPossibleMoves()
 		return moves
 
-	def checkForPinsAndChecks(self) -> tuple[bool, list, list]:
+	def checkForPinsAndChecks(self):
 		pins = []
 		checks = []
 		inCheck = False
@@ -139,7 +139,7 @@ class GameState():
 				endCol = startCol + d[1] * i
 				if 0 <= endRow < len(self.board[i]) and 0 <= endCol < len(self.board):
 					endPiece = self.board[endRow][endCol]
-					if endPiece[0] == allyColor and endPiece[1] != 'K':
+					if endPiece[0] == allyColor:
 						if possiblePin == (): #piece could be pinned
 							possiblePin = (endRow, endCol, d[0], d[1])
 						else: #second allied piece in a row (no pins)
@@ -207,7 +207,7 @@ class GameState():
 			self.staleMate = False
 		return moves
 
-	def isInCheck(self) -> bool:
+	def isInCheck(self):
 		"""Determines if player is in check"""
 		if self.whiteMoves:
 			return self.squareUnderAttack(self.whiteKpos[0], self.whiteKpos[1])
@@ -225,7 +225,7 @@ class GameState():
 				return True #square under attack
 		return False #square not under attack
 		
-	def getAllPossibleMoves(self) -> list:
+	def getAllPossibleMoves(self):
 		Main.mPrint('FUNC', 'Generating moves:')
 		#generating the moves
 		moves = []
@@ -240,7 +240,7 @@ class GameState():
 	
 	#oh boy here we go
 
-	def getPMoves(self, r, c, moves) -> list:
+	def getPMoves(self, r, c, moves):
 		#FIXME when pawn reaches end of the board it throws IndexOutOfRange, fix adding pawn promotions
 		#TODO promotion, castling, en passant
 		piecePinned = False
@@ -290,7 +290,7 @@ class GameState():
 
 		return moves
 
-	def getTMoves(self, r, c, moves) -> list:
+	def getTMoves(self, r, c, moves):
 		piecePinned = False
 		pinDirection = ()
 		for i in range(len(self.pins)-1, -1, -1):
@@ -303,100 +303,140 @@ class GameState():
 
 		enemy = 'N' if self.whiteMoves else 'B'
 
-		directions = ((-1, 0), (0, -1), (1, 0), (0, 1))
-		for d in directions:
-			for i in range(1, 8):
-				endRow = r + d[0] * i
-				endCol = c + d[1] * i
-				if 0 <= endRow < 8 and 0 <= endCol < 8:
-					if not piecePinned or pinDirection == d or pinDirection == (-d[0], -d[1]):
-						endPiece = self.board[endRow][endCol]
-						if endPiece == "--": #empty space valid
-							moves.append(Move((r, c), (endRow, endCol), self.board))
-						elif endPiece[0] == enemy: #eats enemy
-							moves.append(Move((r, c), (endRow, endCol), self.board))
-							break
-						else: #friendly piece (invalid move)
-							break
-				else: #off board
-					break
-
-	def getAMoves(self, r, c, moves) -> list:
-		piecePinned = False
-		pinDirection = ()
-		for i in range(len(self.pins)-1, -1, -1):
-			if self.pins[i][0] == r and self.pins[i][1] == c:
-				piecePinned = True
-				pinDirection = (self.pins[i][2], self.pins[i][3])
-				self.pins.remove(self.pins[i])
+		for up in range(r+1, len(self.board)):
+			if self.board[up][c] == "--": #if next up is empty
+				moves.append(Move((r, c), (up, c), self.board))
+			elif self.board[up][c][0] == enemy: #if next is enemy
+				moves.append(Move((r, c), (up, c), self.board))
+				break
+			else: #if next up is a friend piece
+				break
+		for down in range(r-1, -1, -1):
+			if self.board[down][c] == "--": #if next down is empty
+				moves.append(Move((r, c), (down, c), self.board))
+			elif self.board[down][c][0] == enemy: #if next is enemy
+				moves.append(Move((r, c), (down, c), self.board))
+				break
+			else: #if next down is a friend piece
+				break
+		for right in range(c+1, len(self.board[r])):
+			if self.board[r][right] == "--": #if next right is empty
+				moves.append(Move((r, c), (r, right), self.board))
+			elif self.board[r][right][0] == enemy: #if next is enemy
+				moves.append(Move((r, c), (r, right), self.board))
+				break
+			else: #if next right is a friend piece
+				break
+		for left in range(c-1, -1, -1):
+			if self.board[r][left] == "--": #if next left is empty
+				moves.append(Move((r, c), (r, left), self.board))
+			elif self.board[r][left][0] == enemy: #if next is enemy
+				moves.append(Move((r, c), (r, left), self.board))
+				break
+			else: #if next left is a friend piece
 				break
 
+	def getAMoves(self, r, c, moves):
 		enemy = 'N' if self.whiteMoves else 'B'
-
-		directions = ((-1, -1), (-1, 1), (1, -1), (1, 1))
-		for d in directions:
-			for i in range(1, 8):
-				endRow = r + d[0] * i
-				endCol = c + d[1] * i
-				if 0 <= endRow < 8 and 0 <= endCol < 8:
-					if not piecePinned or pinDirection == d or pinDirection == (-d[0], -d[1]):
-						endPiece = self.board[endRow][endCol]
-						if endPiece == "--": #empty space valid
-							moves.append(Move((r, c), (endRow, endCol), self.board))
-						elif endPiece[0] == enemy: #eats enemy
-							moves.append(Move((r, c), (endRow, endCol), self.board))
-							break
-						else: #friendly piece (invalid move)
-							break
-				else: #off board
-					break
-
-	def getCMoves(self, r, c, moves) -> list:
-		piecePinned = False
-		for i in range(len(self.pins)-1, -1, -1):
-			if self.pins[i][0] == r and self.pins[i][1] == c:
-				piecePinned = True
-				self.pins.remove(self.pins[i])
+		#for upRight in zip(range(r+1, len(self.board)), range(c+1, len(self.board[c]))):
+		#up right
+		for (r1,c1) in zip(range(r+1, len(self.board[r])), range(c+1, len(self.board))):
+			if self.board[r1][c1] == "--": #if next is empty
+				moves.append(Move((r, c), (r1, c1), self.board))
+			elif self.board[r1][c1][0] == enemy: #if next is enemy
+				moves.append(Move((r, c), (r1, c1), self.board))
 				break
-		
-		ally = 'B' if self.whiteMoves else 'N'
-		knightMoves = ((-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1))
-		for m in knightMoves:
-			endRow = r + m[0]
-			endCol = c + m[1]
-			if 0 <= endRow < len(self.board) and 0 <= endCol < len(self.board):
-				if not piecePinned:
-					endPiece = self.board[endRow][endCol]
-					if endPiece[0] != ally: #not ally, so enemy or blank
-						moves.append(Move((r, c), (endRow, endCol), self.board))
+			else: #if next up is a friend piece
+				break
+		#up left
+		for (r1,c1) in zip(range(r+1, len(self.board[r])), range(c-1, -1, -1)):
+			if self.board[r1][c1] == "--": #if next is empty
+				moves.append(Move((r, c), (r1, c1), self.board))
+			elif self.board[r1][c1][0] == enemy: #if next is enemy
+				moves.append(Move((r, c), (r1, c1), self.board))
+				break
+			else: #if next up is a friend piece
+				break
+		#down left
+		for (r1,c1) in zip(range(r-1, -1, -1), range(c-1, -1, -1)):
+			if self.board[r1][c1] == "--": #if next is empty
+				moves.append(Move((r, c), (r1, c1), self.board))
+			elif self.board[r1][c1][0] == enemy: #if next is enemy
+				moves.append(Move((r, c), (r1, c1), self.board))
+				break
+			else: #if next up is a friend piece
+				break
+		#down right
+		for (r1,c1) in zip(range(r-1, -1, -1), range(c+1, len(self.board))):
+			if self.board[r1][c1] == "--": #if next is empty
+				moves.append(Move((r, c), (r1, c1), self.board))
+			elif self.board[r1][c1][0] == enemy: #if next is enemy
+				moves.append(Move((r, c), (r1, c1), self.board))
+				break
+			else: #if next up is a friend piece
+				break
 
-	def getQMoves(self, r, c, moves) -> list:
+	def getCMoves(self, r, c, moves):
+		enemy = 'N' if self.whiteMoves else 'B'
+		if r < 6: 
+			if c < 7 and (self.board[r+2][c+1] == "--" or self.board[r+2][c+1][0] == enemy): #top right
+				moves.append(Move((r, c), (r+2, c+1), self.board))
+			if c > 0 and (self.board[r+2][c-1] == "--" or self.board[r+2][c-1][0] == enemy): #top left
+				moves.append(Move((r, c), (r+2, c-1), self.board))
+		if r > 1: 
+			if c < 7 and (self.board[r-2][c+1] == "--" or self.board[r-2][c+1][0] == enemy): #bottom right
+				moves.append(Move((r, c), (r-2, c+1), self.board))
+			if c > 0 and (self.board[r-2][c-1] == "--" or self.board[r-2][c-1][0] == enemy): #bottom left
+				moves.append(Move((r, c), (r-2, c-1), self.board))
+		if c < 6:
+			if r < 7 and (self.board[r+1][c+2] == "--" or self.board[r+1][c+2][0] == enemy): #right top
+				moves.append(Move((r, c), (r+1, c+2), self.board))
+			if r > 0 and (self.board[r-1][c+2] == "--" or self.board[r-1][c+2][0] == enemy): #right bottom
+				moves.append(Move((r, c), (r-1, c+2), self.board))
+		if c > 1:
+			if r < 7 and (self.board[r+1][c-2] == "--" or self.board[r+1][c-2][0] == enemy): #left top
+				moves.append(Move((r, c), (r+1, c-2), self.board))
+			if r > 0 and (self.board[r-1][c-2] == "--" or self.board[r-1][c-2][0] == enemy): #left bottom
+				moves.append(Move((r, c), (r-1, c-2), self.board))
+
+	def getQMoves(self, r, c, moves):
 		self.getAMoves(r, c, moves)
 		self.getTMoves(r, c, moves)
 
-	def getKMoves(self, r, c, moves) -> list:
-		allyColor = 'B' if self.whiteMoves else 'N'
-		rowMoves = (-1, -1, -1, 0, 0, 1, 1, 1)
-		colMoves = (-1,  0,  1,-1, 1,-1, 0, 1)
-		for i in range(8):
-			endRow = r + rowMoves[i]
-			endCol = c + colMoves[i]
-			if 0 <= endRow < 8 and 0 <= endCol < 8:
-				endPiece = self.board[endRow][endCol]
-				if endPiece[0] != allyColor: #it's blank or enemy
-					if allyColor == 'B':
-						self.whiteKpos = (endRow, endCol)
-					else:
-						self.blackKpos = (endRow, endCol)
-					inCheck, pins, checks = self.checkForPinsAndChecks()
-					if not inCheck:
-						moves.append(Move((r, c), (endRow, endCol), self.board))
-					#place king back on original location
-					if allyColor == 'B':
-						self.whiteKpos = (r, c)
-					else:
-						self.blackKpos = (r, c)
-
+	def getKMoves(self, r, c, moves):
+		enemy = 'N' if self.whiteMoves else 'B'
+		#top L
+		if c > 0 and r < len(self.board)-1:
+			if self.board[r+1][c-1] == '--' or self.board[r+1][c-1][0] == enemy: 
+				moves.append(Move((r, c), (r+1, c-1), self.board))
+		#top
+		if r < len(self.board)-1:
+			if self.board[r+1][c] == '--' or self.board[r+1][c][0] == enemy: 
+				moves.append(Move((r, c), (r+1, c), self.board))
+		#top R
+		if c < len(self.board[r])-1 and r < len(self.board)-1:
+			if self.board[r+1][c+1] == '--' or self.board[r+1][c+1][0] == enemy: 
+				moves.append(Move((r, c), (r+1, c+1), self.board))
+		#R
+		if c < len(self.board[r])-1 :
+			if self.board[r][c+1] == '--' or self.board[r][c+1][0] == enemy:
+				moves.append(Move((r, c), (r, c+1), self.board))
+		#bottom R
+		if r > 0 and c < len(self.board[r])-1: 
+			if self.board[r-1][c+1] == '--' or self.board[r-1][c+1][0] == enemy: 
+				moves.append(Move((r, c), (r-1, c+1), self.board))
+		#bottom
+		if r > 0:	
+			if self.board[r-1][c] == '--' or self.board[r-1][c][0] == enemy: 
+				moves.append(Move((r, c), (r-1, c), self.board))
+		#bottom L
+		if r > 0 and c > 0:
+			if self.board[r-1][c-1] == '--' or self.board[r-1][c-1][0] == enemy: 
+				moves.append(Move((r, c), (r-1, c-1), self.board))
+		#L
+		if c > 0:
+			if self.board[r][c-1] == '--' or self.board[r][c-1][0] == enemy: 
+				moves.append(Move((r, c), (r, c-1), self.board))
 
 	#just collapse this ^ and forget about it
 
@@ -464,4 +504,36 @@ P: Pawn (although, by convention, P is usually omitted from notation)"""
 ♗ White Chess Bishop
 ♘ White Chess Knight
 ♖ White Chess Rook
+
+
+def getTMoves(self, r, c, moves):
+		piecePinned = False
+		pinDirection = ()
+		for i in range(len(self.pins)-1, -1, -1):
+			if self.pins[i][0] == r and self.pins[i][1] == c:
+				piecePinned = True
+				pinDirection = (self.pins[i][2], self.pins[i][3])
+				if self.board[r][c][1] != 'Q': #can't remove queen from pin on rook moves, only remove it on bishop moves
+					self.pins.remove(self.pins[i])
+				break
+
+		enemy = 'N' if self.whiteMoves else 'B'
+
+		directions = ((-1, 0), (0, -1), (1, 0), (0, 1))
+		for d in directions:
+			for i in range(1, 8):
+				endRow = r + d[0] * i
+				endCol = c + d[1] * i
+				if 0 <= endRow < 8 and 0 <= endCol <= 8:
+					if not piecePinned or pinDirection == d or pinDirection == (-d[0], -d[1]):
+						endPiece = self.board[endRow][endCol]
+						if endPiece == "--": #empty space valid
+							moves.append(Move((r, c), (endRow, endCol), self.board))
+						elif endPiece[0] == enemy: #eats enemy
+							moves.append(Move((r, c), (endRow, endCol), self.board))
+							break
+						else: #friendly piece (invalid move)
+							break
+				else: #off board
+					break
 """

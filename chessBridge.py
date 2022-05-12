@@ -1,8 +1,8 @@
 import discord
 import Main as chessGame
 
-async def loadGame(thread, bot, players, ctx, fetchThread):
-	
+async def loadGame(thread : discord.Thread, bot, players, fetchThread : tuple[discord.Thread, discord.Embed], ctx):
+	"""links bot.py with chess game (Main.py)"""
 	p1,p2 = players #p1 is white, p2 is black
 	emojis = ('🤍', '🖤')
 	gs = chessGame.Engine.GameState(thread.id)
@@ -12,7 +12,7 @@ async def loadGame(thread, bot, players, ctx, fetchThread):
 	boardMessages = [] #needed to delete the last edited board and avoid chat clutter
 
 	chessGame.drawGameState(gs.board, gs.gameID)	#Don't really like this mess, will clean later
-	validMoves = gs.getAllPossibleMoves()
+	validMoves = gs.getValidMoves()
 	with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
 		f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
 		boardMessages.append(await thread.send(file=f))
@@ -22,7 +22,7 @@ async def loadGame(thread, bot, players, ctx, fetchThread):
 		#generate board and moves
 		if not didIllegalMove[0] or gs.turnCount == 0: #no need to regenerate if move did not go trhu
 			chessGame.drawGameState(gs.board, gs.gameID)
-			validMoves = gs.getAllPossibleMoves()
+			validMoves = gs.getValidMoves()
 		
 		if gs.turnCount != 0: #Don't resend the first image
 			with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
@@ -82,8 +82,10 @@ async def loadGame(thread, bot, players, ctx, fetchThread):
 			#edit and send the main channel embed
 			embed = fetchThread[1]
 			embed.description = '❌ Partita annullata ❌'
+			embed.color = 0xd32c41
 			embed.set_footer(text=f'ID: {thread.id}')
 			await fetchThread[0].edit(embed=embed)
+			chessGame.mPrint('INFO', f'Game stopped by user, <gameID:{gs.gameID}>')
 			break
 		
 		#3. Parse user input
