@@ -1,4 +1,5 @@
 import Main as Main
+import chessGame.chessboards
 def mPrint(prefix, value):
 	Main.mPrint(prefix, value, 'ENGINE')
 
@@ -13,10 +14,10 @@ class GameState():
 			["BT", "BC", "BA", "BQ", "BK", "BA", "BC", "BT"], #A Bianco 
 			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #B
 			["--", "--", "--", "--", "--", "--", "--", "--"], #C
-			["--", "--", "--", "--", "BC", "--", "--", "--"], #D
+			["--", "--", "--", "--", "--", "--", "--", "--"], #D
 			["--", "--", "--", "--", "--", "--", "--", "--"], #E
-			["--", "--", "--", "--", "--", "BC", "--", "--"], #F
-			["NP", "NP", "NP", "--", "NP", "NP", "NP", "NP"], #G
+			["--", "--", "--", "--", "--", "--", "--", "--"], #F
+			["NP", "NP", "NP", "NP", "NP", "NP", "NP", "NP"], #G
 			["NT", "NC", "NA", "NQ", "NK", "NA", "NC", "NT"], #H Nero 
 		]
 		self.whiteKpos = (0, 4)
