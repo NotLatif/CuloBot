@@ -258,7 +258,8 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					embed.set_footer(text=f'ID: {threadChannel.id}')
 					await fetchThread[0].edit(embed=embed)
 					await threadChannel.edit(reason='Partita annullata', locked=True, archived=True)
-					chessGame.mPrint('INFO', f'Game stopped by user, <gameID:{gs.gameID}>')
+					chessGame.mPrint('GAME', f'Game stopped by user, <gameID:{gs.gameID}, user:{userMessage.author}>')
+					chessGame.mPrint('GAME', f'Game stats: <{gs.getStats()}>')
 					return -1
 				
 				elif(userMessage.content == "undo"): #ctrl-z

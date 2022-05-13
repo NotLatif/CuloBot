@@ -14,7 +14,7 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 		self.spritesFolder = "chessGame/sprites/"
 		self.board_filename = f"{self.spritesFolder}chessboard.png"
 		self.outPath = 'chessGame/games/'
-		self.logFile = f'{self.outPath}\logs\{self.gameID}.log'
+		self.logFile = f'{self.outPath}/logs/{self.gameID}.log'
 		self.dimension = 8 #8 caselle
 		self.sprites = {}
 		self.posy = {

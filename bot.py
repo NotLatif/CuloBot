@@ -1,4 +1,3 @@
-from ast import arg
 import asyncio
 import os
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
@@ -14,7 +13,8 @@ import chessBridge
 #I'm  not reorganizing the code for now (maybe willdo)
 
 #TODO single server use? cringe bro. fucking chess can have infinite instances
-#change the stupid settings file and make this work with multiple servers
+    #change the stupid settings file and make this work with multiple servers
+    #settings based on guild.id (maybe use json idk)
 
 load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
@@ -219,7 +219,7 @@ async def perc(ctx, arg=''):  ## BOT COMMAND
 async def help(ctx):
     embed = discord.Embed(
         title = 'CuloBot',
-        description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza digitale',
+        description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza artificiale',
         colour = 0xf39641
     )
     embed.set_footer(text = 'Developed by NotLatif')
@@ -228,6 +228,8 @@ async def help(ctx):
     embed.add_field(name='!resp', value='Richiedi la percentuale di risposta', inline=True)
     embed.add_field(name='!resp [x]', value='Imposta la percentuale a (x)', inline=True)
     embed.add_field(name='!ping', value='Pong!', inline=True)
+    embed.add_field(name='!chess', value='Gioca a scacchi contro un amico', inline=True)
+    embed.add_field(name='!chess [@mention]', value='Sfida una persona a scacchi!', inline=True)
     embed.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
     embed.set_footer(text='Qualsiasi problema è colpa di @NotLatif')
     await ctx.send(embed=embed)
@@ -248,28 +250,85 @@ async def reload(ctx):
     await ctx.send(f'Impostazioni aggiornate')
     log('[INFO]: settins reloaded')
 
-@bot.command(name='game', pass_context=True)
-async def chessGame(ctx):
-    try:
+@bot.command(name='chess', pass_context=True)
+async def chessGame(ctx, args=''):
+    challenged = None #if challenged is not None, list is not empty
+    whitelist = [] #list of user ids        #and vice-versa
+    print(f'author: {ctx.message.author.id}')
+    if(args != '' and args[:2] == '<@'):
+        if (args[:3] == '<@&'):
+            await ctx.send('Non puoi sfidare un ruolo.')
+            return
+        else:
+            challenged = args[2:-1]
+            whitelist.append(ctx.message.author.id)
+            whitelist.append(challenged)
+            await ctx.send(f'{ctx.message.author} Ha sfidato <@{challenged}> a scacchi!')
+    
+    if whitelist == []:
+        embed = discord.Embed(title = 'Cerco giocatori per una partita di scacchi! ♟,\nUsa una reazione per unirti ad un team (max 1 per squadra)',
+            color = 0x0a7ace).set_footer(text=f'Partita richiesta da {ctx.message.author}')
+    else:
         await ctx.message.delete()
-    except:
-        pass
-    #delete messages: ctx.channel.purge(limit=int(n))
-    embed = discord.Embed(title = 'Cerco giocatori, usa una reazione per unirti ad un team (max 1 per squadra)', color = 0x0a7ace)
+        challengedUser = await bot.fetch_user(challenged)
+        embed = discord.Embed(title = f'@{challengedUser.name}, sei stato sfidato da {ctx.message.author}!\nUsate una reazione per unirti ad un team (max 1 per squadra)',
+            color = 0x0a7ace)
+    
     playerFetchMsg = await ctx.send(embed=embed)
+    
     reactions = ('⚪', '🌑') #('🤍', '🖤') ✅⛔
     r1, r2 = reactions
     await playerFetchMsg.add_reaction(r1)
     await playerFetchMsg.add_reaction(r2)
 
-    def check1(reaction, user):
-        return str(reaction.emoji) in reactions and user != bot.user
-    def check2(reaction, user):
-        return str(reaction.emoji) in reactions and user != bot.user
+    availableTeams = [reactions[0], reactions[1]]
+    def check1(reaction, user) -> bool:
+        print('check1')
+        print(f'Check: {reaction}, {user.id}\nwhitelist: {whitelist}\navailable: {availableTeams}\n--------')
+        if (user == bot.user): #prevent bot from joining teams
+            return False
+
+        #whitelisted join (user mentions someone)
+        if(whitelist != [] and user.id in whitelist): #check if joining player is in list
+            whitelist.remove(user.id) #prevent user from rejoining another team
+            if(str(reaction.emoji) in availableTeams):
+                availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
+                return True
+        else: #no need to check who joins (can also play with yourself)
+            if(str(reaction.emoji) in availableTeams):
+                availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
+                return True
+    
+    def check2(reaction, user) -> bool:
+        print('check2')
+        print(f'Check: {reaction}, {user.id}\nwhitelist: {whitelist}\navailable: {availableTeams}\n--------')
+        if (user == bot.user): #prevent bot from joining teams
+            return False
+
+        #whitelisted join (user mentions someone)
+        if(whitelist != [] and user.id in whitelist): #check if joining player is in list
+            whitelist.remove(user.id) #prevent user from rejoining another team
+            if(str(reaction.emoji) in availableTeams):
+                availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
+                return True
+        else: #no need to check who joins (can also play with yourself)
+            if(str(reaction.emoji) in availableTeams):
+                availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
+                return True
+
     players = [0, 0]
-    try:
+    try:    #I need two wait_for (one for each team)
         r1, players[0] = await bot.wait_for('reaction_add', timeout=60.0, check=check1)
+        embed.description = f'{players[0]} si è unito a {r1}!'
+        await playerFetchMsg.edit(embed=embed)
+
         r2, players[1] = await bot.wait_for('reaction_add', timeout=60.0, check=check2)
+        embed.description += f'\n{players[1]} si è unito a {r2}!\nGenerating game please wait...'
+        embed.set_footer(text = 'tutti i caricamenti sono ovviamente falsissimi.')
+        embed.color = 0x77b255
+        
+        await playerFetchMsg.edit(embed=embed)
+        await asyncio.sleep(random.randrange(2,4))
 
     except asyncio.TimeoutError:
         embed = discord.Embed(
@@ -278,6 +337,7 @@ async def chessGame(ctx):
         )
         await ctx.send(embed=embed)
         await playerFetchMsg.delete()
+        return -1
     else:
         if r1 == reactions[0]: #r1 is white TODO check if white is actually p1 and viceversa
             player1 = players[0] #white
@@ -286,7 +346,6 @@ async def chessGame(ctx):
             player1 = players[1] #white
             player2 = players[0] #black
 
-        
         embed = discord.Embed(
             title = f'Giocatori trovati\n{r1} {player1} :vs: {player2} {r2}',
             colour = 0x27E039

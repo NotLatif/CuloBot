@@ -13,8 +13,10 @@ class GameState():
 			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #B
 			["--", "--", "--", "--", "--", "--", "--", "--"], #C
 			["--", "--", "--", "--", "--", "--", "--", "--"], #D
+			["--", "--", "--", "--", "BC", "--", "--", "--"], #D
 			["--", "--", "--", "--", "--", "--", "--", "--"], #E
 			["--", "--", "--", "--", "--", "--", "--", "--"], #F
+			["--", "--", "--", "--", "--", "BC", "--", "--"], #F
 			["NP", "NP", "NP", "NP", "NP", "NP", "NP", "NP"], #G
 			["NT", "NC", "NA", "NQ", "NK", "NA", "NC", "NT"], #H Nero 
 		]
@@ -38,6 +40,11 @@ class GameState():
 		self.inCheck = False
 		self.pins = [] #pieces that are protecting the king
 		self.checks = [] #pieces that are checking the king
+
+	def getStats(self):
+		return (f'wK:{self.whiteKpos}', f'bK:{self.blackKpos}', f'checkmate: {self.checkMate}',
+				f'stalemate: {self.staleMate}', f'turn: {self.turnCount}', f'inCheck: {self.inCheck}', 
+				f'pins: {self.pins}', f'checks: {self.checks}', f'whiteMoves: {self.whiteMoves}')
 
 	def mPrint(self, prefix, value):
 		self.cg.mPrint(prefix, value, 'ENGINE')
