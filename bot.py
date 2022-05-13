@@ -257,16 +257,14 @@ async def chessGame(ctx):
     #delete messages: ctx.channel.purge(limit=int(n))
     embed = discord.Embed(title = 'Cerco giocatori, usa una reazione per unirti ad un team (max 1 per squadra)', color = 0x0a7ace)
     playerFetchMsg = await ctx.send(embed=embed)
-    reactions = ('⚪', '🌑') #('🤍', '🖤')
+    reactions = ('⚪', '🌑') #('🤍', '🖤') ✅⛔
     r1, r2 = reactions
     await playerFetchMsg.add_reaction(r1)
     await playerFetchMsg.add_reaction(r2)
 
     def check1(reaction, user):
-        print(user)
         return str(reaction.emoji) in reactions and user != bot.user
     def check2(reaction, user):
-        print(user)
         return str(reaction.emoji) in reactions and user != bot.user
     players = [0, 0]
     try:
@@ -302,7 +300,7 @@ async def chessGame(ctx):
         mainThreadEmbed = (thread, embed)
 
     #game main
-    await chessBridge.loadGame(gameThread, bot, (player1, player2), mainThreadEmbed, ctx)
+    await chessBridge.loadGame(gameThread, bot, [player1, player2], mainThreadEmbed, ctx)
 
 
 @bot.event   ## DETECT AND RESPOND TO MSG
