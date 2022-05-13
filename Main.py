@@ -94,7 +94,7 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 		"""
 			Inizializza la dict sprites con le immagini delle pedine
 		"""
-		pieces = ["NT", "NA", "NC", "NQ", "NK", "NP", "BT", "BA", "BC", "BQ", "BK", "BP"]
+		pieces = ["BR", "BB", "BN", "BQ", "BK", "BP", "WR", "WB", "WN", "WQ", "WK", "WP"]
 		for piece in pieces:
 			self.sprites[piece] = Image.open(f"{self.spritesFolder}{piece}.png").convert("RGBA")
 		return self.sprites

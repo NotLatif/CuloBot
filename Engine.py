@@ -8,15 +8,16 @@ class GameState():
 		self.cg = cg
 		#board: 8x8 2d list of str (2chr)
 		#N = Nero, B = Bianco, Torre Alfiere Cavallo Queen King Pedone
-		self.board = [ #TODO (maybe) use english notation
-			["BT", "BC", "BA", "BQ", "BK", "BA", "BC", "--"], #A Bianco 
-			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "--"], #B
-			["--", "--", "--", "--", "--", "--", "--", "NP"], #C
-			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #D
+		#					   Rook  Bishop  kNight  Queen King Pawn
+		self.board = [
+			["WR", "WN", "WB", "WQ", "WK", "WB", "WN", "WR"], #A Bianco 
+			["WP", "WP", "WP", "WP", "WP", "WP", "WP", "WP"], #B
+			["--", "--", "--", "--", "--", "--", "--", "--"], #C
+			["--", "--", "--", "--", "--", "--", "--", "--"], #D
 			["--", "--", "--", "--", "--", "--", "--", "--"], #E
 			["--", "--", "--", "--", "--", "--", "--", "--"], #F
-			["NP", "NP", "NP", "NP", "NP", "NP", "NP", "NP"], #G
-			["NT", "NC", "NA", "NQ", "NK", "NA", "NC", "--"], #H Nero 
+			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #G
+			["BR", "BN", "BB", "BQ", "BK", "BB", "BN", "BR"], #H Nero 
 		]
 		self.whiteKpos = (0, 4)
 		self.blackKpos = (7, 4)
@@ -33,9 +34,9 @@ class GameState():
 		self.moveLog = []
 		self.moveFunctions = {
 			'P': self.getPMoves,
-			'T': self.getTMoves,
-			'C': self.getCMoves,
-			'A': self.getAMoves,
+			'R': self.getRMoves,
+			'N': self.getNMoves,
+			'B': self.getBMoves,
 			'Q': self.getQMoves,
 			'K': self.getKMoves
 		}
@@ -52,7 +53,7 @@ class GameState():
 
 	def getWinner(self):
 		if self.checkMate or self.staleMate:
-			return 'N' if self.whiteMoves else 'B'
+			return 'B' if self.whiteMoves else 'W'
 		return None
 
 	def getMoveHistory(self):
@@ -69,9 +70,9 @@ class GameState():
 		self.moveLog.append(move)
 		self.turnCount += 1
 		self.whiteMoves = not self.whiteMoves
-		if move.pieceMoved == 'BK':
+		if move.pieceMoved == 'WK':
 			self.whiteKpos = (move.endRow, move.endCol)
-		if move.pieceMoved == 'NK':
+		if move.pieceMoved == 'BK':
 			self.blackKpos = (move.endRow, move.endCol)
 		#updating enpassant variable (pawn moves twice)
 		if move.pieceMoved[1] == 'P' and abs(move.startRow - move.endRow) == 2:
@@ -83,8 +84,8 @@ class GameState():
 			self.board[move.startRow][move.endCol] = '--' #the capture is one row behind
 		#pawn promotion
 		if move.pawnPromotion:
-			promotedPiece = input('Promote the piece Q, K, C, A, T: ')
-			self.board[move.endRow][move.endCol] = move.pieceMoved[0] + promotedPiece #Promote to a queen
+			promotedPiece = input('Promote the piece Q, K, B, R, N: ')
+			self.board[move.endRow][move.endCol] = move.pieceMoved[0] + 'Q' #Promote to a queen for now, will figure out later a way
 		
 		
 
@@ -98,9 +99,9 @@ class GameState():
 			self.board[lastMove.endRow][lastMove.endCol] = lastMove.pieceCaptured
 			self.turnCount -= 1
 			self.whiteMoves = not self.whiteMoves
-			if lastMove.pieceMoved == 'BK':
+			if lastMove.pieceMoved == 'WK':
 				self.whiteKpos = (lastMove.startRow, lastMove.startCol)
-			if lastMove.pieceMoved == 'NK':
+			if lastMove.pieceMoved == 'BK':
 				self.blackKpos = (lastMove.startRow, lastMove.startCol)
 			#undo enpassant
 			if lastMove.enPassant:
@@ -146,7 +147,7 @@ class GameState():
 				checkCol = check[1]
 				pieceChecking = self.board[checkRow][checkCol]
 				validSquares = [] #pieces can move here
-				if pieceChecking[1] == 'C': #Cavallo
+				if pieceChecking[1] == 'N': #Cavallo
 					validSquares = [(checkRow, checkCol)] #piece can only move where the knight is
 				else:
 					for i in range(1, len(self.board)): #generates where piece can move to and block the check
@@ -181,13 +182,13 @@ class GameState():
 		checks = []
 		inCheck = False
 		if self.whiteMoves:
-			enemyColor = 'N'
-			allyColor = 'B'
+			enemyColor = 'B'
+			allyColor = 'W'
 			startRow = self.whiteKpos[0]
 			startCol = self.whiteKpos[1]
 		else:
-			enemyColor = 'B'
-			allyColor = 'N'
+			enemyColor = 'W'
+			allyColor = 'B'
 			startRow = self.blackKpos[0]
 			startCol = self.blackKpos[1]
 		
@@ -201,7 +202,7 @@ class GameState():
 				endCol = startCol + d[1] * i
 				if 0 <= endRow < len(self.board[i]) and 0 <= endCol < len(self.board):
 					endPiece = self.board[endRow][endCol]
-					if endPiece[0] == allyColor and endPiece[1] != 'K':
+					if endPiece[0] == allyColor and endPiece[1] != 'K': #king?
 						if possiblePin == (): #piece could be pinned
 							possiblePin = (endRow, endCol, d[0], d[1])
 						else: #second allied piece in a row (no pins)
@@ -214,11 +215,11 @@ class GameState():
 						#3.) 1 square away diagonally from king and piece is pawn
 						#4.) any direction and piece is Queen
 						#5.) any direction 1 sq. away and piece is king
-						if (0 <= j <= 3 and type == 'T') or \
-								(4 <=j <= 7 and type == 'A') or \
-								(i == 1 and type == 'P' and((enemyColor == 'B' and 6 <= j <= 7) or (enemyColor == 'N' and 4 <= j <= 5))) or \
+						if (0 <= j <= 3 and type == 'R') or \
+								(4 <=j <= 7 and type == 'B') or \
+								(i == 1 and type == 'P' and((enemyColor == 'W' and 6 <= j <= 7) or (enemyColor == 'B' and 4 <= j <= 5))) or \
 								(type == 'Q') or\
-								(i == 1 and type == 'K'):
+								(i == 1 and type == 'K'): #king
 							if possiblePin == (): #no piece defending king
 								inCheck = True
 								checks.append((endRow, endCol, d[0], d[1]))
@@ -237,7 +238,7 @@ class GameState():
 			endCol = startCol + m[1]	#   V<- we can assume that all the rows are the same lenght
 			if 0 <= endRow < len(self.board[0]) and 0 <= endCol < len(self.board):
 				endPiece = self.board[endRow][endCol]
-				if endPiece[0] == enemyColor and endPiece[1] == 'C': #Cavallo
+				if endPiece[0] == enemyColor and endPiece[1] == 'N': #Cavallo
 					inCheck = True
 					checks.append((endRow, endCol, m[0], m[1]))
 
@@ -298,7 +299,7 @@ class GameState():
 		for r in range(len(self.board)):  #foreach col
 			for c in range(len(self.board[r])): #foreach row (of col)
 				pieceColor = self.board[r][c][0]
-				if (pieceColor == "B" and self.whiteMoves) or (pieceColor == "N" and not self.whiteMoves):
+				if (pieceColor == "W" and self.whiteMoves) or (pieceColor == 'B' and not self.whiteMoves):
 					piece = self.board[r][c][1]
 					self.moveFunctions[piece](r,c,moves) #calls getXMoves
 		
@@ -320,12 +321,12 @@ class GameState():
 			moveAmount = 1
 			startRow = 1
 			lastRow = 7
-			enemyColor = 'N'
+			enemyColor = 'B'
 		else:
 			moveAmount = -1
 			startRow = 6
 			lastRow = 0
-			enemyColor = 'B'
+			enemyColor = 'W'
 		pawnPromotion = False
 
 		if self.board[r+moveAmount][c] == "--": #1 square move
@@ -356,7 +357,7 @@ class GameState():
 
 		return moves
 
-	def getTMoves(self, r, c, moves) -> list:
+	def getRMoves(self, r, c, moves) -> list:
 		piecePinned = False
 		pinDirection = ()
 		for i in range(len(self.pins)-1, -1, -1):
@@ -367,7 +368,7 @@ class GameState():
 					self.pins.remove(self.pins[i])
 				break
 
-		enemy = 'N' if self.whiteMoves else 'B'
+		enemy = 'B' if self.whiteMoves else 'W'
 
 		directions = ((-1, 0), (0, -1), (1, 0), (0, 1))
 		for d in directions:
@@ -387,7 +388,7 @@ class GameState():
 				else: #off board
 					break
 
-	def getAMoves(self, r, c, moves) -> list:
+	def getBMoves(self, r, c, moves) -> list:
 		piecePinned = False
 		pinDirection = ()
 		for i in range(len(self.pins)-1, -1, -1):
@@ -397,7 +398,7 @@ class GameState():
 				self.pins.remove(self.pins[i])
 				break
 
-		enemy = 'N' if self.whiteMoves else 'B'
+		enemy = 'B' if self.whiteMoves else 'W'
 
 		directions = ((-1, -1), (-1, 1), (1, -1), (1, 1))
 		for d in directions:
@@ -417,7 +418,7 @@ class GameState():
 				else: #off board
 					break
 
-	def getCMoves(self, r, c, moves) -> list:
+	def getNMoves(self, r, c, moves) -> list:
 		piecePinned = False
 		for i in range(len(self.pins)-1, -1, -1):
 			if self.pins[i][0] == r and self.pins[i][1] == c:
@@ -425,7 +426,7 @@ class GameState():
 				self.pins.remove(self.pins[i])
 				break
 		
-		ally = 'B' if self.whiteMoves else 'N'
+		ally = 'W' if self.whiteMoves else 'B'
 		knightMoves = ((-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1))
 		for m in knightMoves:
 			endRow = r + m[0]
@@ -437,11 +438,11 @@ class GameState():
 						moves.append(Move((r, c), (endRow, endCol), self.board))
 
 	def getQMoves(self, r, c, moves) -> list:
-		self.getAMoves(r, c, moves)
-		self.getTMoves(r, c, moves)
+		self.getBMoves(r, c, moves)
+		self.getRMoves(r, c, moves)
 
 	def getKMoves(self, r, c, moves) -> list:
-		allyColor = 'B' if self.whiteMoves else 'N'
+		allyColor = 'W' if self.whiteMoves else 'B'
 		rowMoves = (-1, -1, -1, 0, 0, 1, 1, 1)
 		colMoves = (-1,  0,  1,-1, 1,-1, 0, 1)
 		for i in range(8):
@@ -450,7 +451,7 @@ class GameState():
 			if 0 <= endRow < 8 and 0 <= endCol < 8:
 				endPiece = self.board[endRow][endCol]
 				if endPiece[0] != allyColor: #it's blank or enemy
-					if allyColor == 'B':
+					if allyColor == 'W':
 						self.whiteKpos = (endRow, endCol)
 					else:
 						self.blackKpos = (endRow, endCol)
@@ -458,7 +459,7 @@ class GameState():
 					if not inCheck:
 						moves.append(Move((r, c), (endRow, endCol), self.board))
 					#place king back on original location
-					if allyColor == 'B':
+					if allyColor == 'W':
 						self.whiteKpos = (r, c)
 					else:
 						self.blackKpos = (r, c)
@@ -495,7 +496,7 @@ class Move():
 
 		self.enPassant = enPassant
 		if self.enPassant:
-			self.pieceCaptured = 'NP' if self.pieceMoved == 'BP' else 'BP'
+			self.pieceCaptured = 'BP' if self.pieceMoved == 'WP' else 'WP'
 
 		self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol
 
@@ -507,7 +508,8 @@ class Move():
 				return self.moveID == other.moveID
 			return False
 
-	def getAlgebraicNotation(self) -> str:
+	def getAlgebraicNotation(self, startSq : tuple, endSq : tuple) -> str:
+		#returns algebraic notation starting from coordinates
 		notation = ''
 		pass #TODO implement (use emojis maybe)
 
