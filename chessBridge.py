@@ -38,14 +38,15 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 	- add more info to the mPrint and log the important stuff
 	- [BUG] when voting for a rematch one player can vote 2 times alone and get a rematch
 	- FIXME OH COME ON WTF WHY ARE ALL COLORS BACKWARDS I CAN'T
+	- BUG 'undo' command is not working well
 	"""
 	
 	score = [0, 0]
-	emojis = ('⚪', '🌑') #('🤍', '🖤') (white, black) 	< order matters it's a tuple afterall
+	emojis = ('🌑', '⚪') #('🖤', '🤍') (black, white) 	< order matters
+#	players  [black, white] because: players[False] -> Black, players[True] -> White
+# 									useful for using with gs.whiteMoves
 	
 	while True: #matchloop
-		p1,p2 = players #p1 is white, p2 is black (will switch every match)
-
 		didIllegalMove = [False, ''] #[bool, str]
 		boardMessages = [] #needed to delete the last edited board and avoid chat clutter
 							#this will keep max two boards loaded at a time [board0, board1]
@@ -61,16 +62,10 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
 			boardMessages.append(await threadChannel.send(file=f)) #add first board to list
 
-		while True: #gameloop
-			whitesTurn = not gs.whiteMoves #needed to avoid confusion, because: wM = gs.whiteMoves
-				#if wM == True:  players[not wM] -> p1	(notWm is 0)	equal to players[0] < True = 1
-				#if wM == False: players[not wM] -> p2	(notWm is 1)	equal to players[0] < False = 0
-				#this tripped me up, but basically the players tuple is backwards, wM returns True (1)
-					#but players[1] is Black, so just invert that
-			lastTurn = gs.whiteMoves
-				#needed to avoid confusion when calling checks checkmates etc because, e.g.: 
-				#winner[not whitesTurn] feels weird/wrong and can lead to confusion
-				#TODO reorginize code logic to avoid this variable
+		while True: #gameloop 			TODO remove this comments if switching works
+			turn = gs.whiteMoves #if turn = 1, players[turn] is white, if turn = 0 players[turn is black]
+#									 turn = True						  turn = False
+			lastTurn = not gs.whiteMoves #needed to find winners
 
 			#generate board and moves
 			if not didIllegalMove[0] or gs.turnCount == 0: #no need to regenerate if last move was illegal
@@ -88,9 +83,9 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 		#MACRO TASK: ask for a move or command
 			#1. make an embed with the request
 			embed = discord.Embed(
-				title= f'Fai una mossa {str(players[whitesTurn])[:-5]}!',
+				title= f'Fai una mossa {str(players[turn])[:-5]}!',
 				description = 'Scrivi in chat posizione iniziale e posizione finale del pedone\ne.g.: A2A4\n\nscrivi "undo" per annullare l\'ultima mossa\nscrivi "stop" per fermare la partita',
-				color = 0xf2f2f2 if not whitesTurn else 0x030303
+				color = 0xf2f2f2 if (turn == 1) else 0x030303
 			)
 			
 			#2a. if previous move was illegal modify the embed with the info
@@ -107,7 +102,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				embed.description = 'Fai una mossa per difendere il tuo Re'
 				embed.color = 0xf88070
 
-			embed.set_footer(text=f'È il turno di {players[whitesTurn]} {emojis[whitesTurn]}')#I'm too good at this shit #godcomplex
+			embed.set_footer(text=f'È il turno di {players[turn]} {emojis[turn]}')#I'm too good at this shit #godcomplex
 
 			#2c. if checkmate or stalemate modify the embed and end the game
 			async def roundOverActions(reason : str, players : list[discord.Member], rematchMsg : discord.Message):
@@ -119,7 +114,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				embed.title = f'{reason}\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
 				embed.description = f'Match winner: {str(winner)[:-5]} {emojis[lastTurn]}\nGame winner: {f"{getWinner(players, score)}"}' #FIXME actually keep track of score
 				embed.set_footer(text=f'ID: {threadChannel.id}, now voting for rematch...')
-				embed.color = 0xf2f2f2 if not gs.getWinner() == 'N' else 0x030303 
+				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
 				await fetchThread[0].edit(embed=embed)
 				
 				#ask for another round
@@ -137,12 +132,12 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					newThreadName = f'GG, {str(players[0])[:-5]} {score[0]}-VS-{score[1]} {str(players[1])[:-5]}'
 					embed = discord.Embed(
 						title = 'Non Hanno votato abbastanza giocatori.',
-						colour = 0xbe1931
+						color = 0xbe1931
 					)
 					await rematchMsg.edit(embed = embed)
 					
 					embed.title = f'-- GAME OVER --\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
-					embed.colour = 0xf2f2f2 if not getWinner(players, score) == 'N' else 0x030303
+					embed.color = 0xf2f2f2 if getWinner(players, score) == 'B' else 0x030303
 					embed.set_footer(text=f'ID: {threadChannel.id}')
 					await fetchThread[0].edit(embed=embed)
 					await threadChannel.edit(name = f'{newThreadName}', reason=reason, locked=True, archived=True)
@@ -161,7 +156,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 						
 						embed = discord.Embed(
 							title = 'Rivincita!',
-							colour = 0x77b255
+							color = 0x77b255
 						)
 						embed.set_footer(text = "Generating rematch... please wait!")
 						await rematchMsg.edit(embed = embed)
@@ -199,7 +194,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				score[lastTurn] += 1
 				embed.title = 'CHECKMATE!'
 				embed.description = f'Congratulazioni {players[lastTurn]} {emojis[lastTurn]}'
-				embed.color = 0xf2f2f2 if not gs.getWinner() == 'N' else 0x030303 
+				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
 				embed.set_footer(text='Rivincita? (vota entro 2 minuti)')
 				rematchMsg = await threadChannel.send(embed=embed)
 				resp = await roundOverActions('CHECKMATE', players, rematchMsg)
@@ -214,7 +209,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				score[lastTurn] += 1
 				embed.title = 'Stalemate!'
 				embed.description = f'Congratulazioni {players[lastTurn]}'
-				embed.color = 0xf2f2f2 if not gs.getWinner() == 'N' else 0x030303
+				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303
 				embed.set_footer(text='Rivincita? (vota entro 2 minuti)')
 				rematchMsg = await threadChannel.send(embed=embed)
 				resp = await roundOverActions('Stalemate!', players, rematchMsg)
@@ -253,9 +248,9 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					chessGame.mPrint('INFO', f'Game stopped by user, <gameID:{gs.gameID}>')
 					return -1
 
-				if whitesTurn and userMessage.author == p1: #avoid players making moves for the opposite team
+				if turn == 1 and userMessage.author == players[1]: #avoid players making moves for the opposite team
 					validInput = True #out of the input loop
-				elif not whitesTurn and userMessage.author == p2: #TODO check with friend if this is backwards
+				elif turn == 0 and userMessage.author == players[0]: #TODO check with friend if this is backwards
 					validInput = True
 				else:
 					await userMessage.delete()

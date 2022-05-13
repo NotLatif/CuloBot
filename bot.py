@@ -280,11 +280,11 @@ async def chessGame(ctx):
         await playerFetchMsg.delete()
     else:
         if r1 == reactions[0]: #r1 is white TODO check if white is actually p1 and viceversa
-            player1 = players[0]
-            player2 = players[1]
+            player1 = players[0] #white
+            player2 = players[1] #black
         else:
-            player1 = players[1]
-            player2 = players[0]
+            player1 = players[1] #white
+            player2 = players[0] #black
 
         
         embed = discord.Embed(
@@ -299,8 +299,8 @@ async def chessGame(ctx):
         await playerFetchMsg.delete()
         mainThreadEmbed = (thread, embed)
 
-    #game main
-    await chessBridge.loadGame(gameThread, bot, [player1, player2], mainThreadEmbed)
+    #game main                                  #send them backwards (info on chessBrige.py) [black, white]
+    await chessBridge.loadGame(gameThread, bot, [player2, player1], mainThreadEmbed)
 
 
 @bot.event   ## DETECT AND RESPOND TO MSG
