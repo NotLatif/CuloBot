@@ -192,7 +192,7 @@ async def on_ready():
 
 @bot.event 
 async def on_member_join(member : discord.Member):
-    await member.guild.system_channel(f'A {member.name} piace il culo.')   
+    await member.guild.system_channel.send(f'A {member.name} piace il culo.')   
     print("join detected")
 
 @bot.command(name='resp') #TODO add other settings
@@ -372,11 +372,11 @@ async def chessGame(ctx, args=''):
         return -1
     else:
         if r1 == reactions[0]: #r1 is white TODO check if white is actually p1 and viceversa
-            player1 = players[0] #white
-            player2 = players[1] #black
-        else:
             player1 = players[1] #white
             player2 = players[0] #black
+        else:
+            player1 = players[0] #white
+            player2 = players[1] #black
 
         embed = discord.Embed(
             title = f'Giocatori trovati\n{r1} {player1} :vs: {player2} {r2}',
