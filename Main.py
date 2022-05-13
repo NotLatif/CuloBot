@@ -9,7 +9,7 @@ import Engine as Engine
 import os
 
 class ChessGame: #now a class so it can store the gameID, and for future management
-	def __init__(self, gameID):
+	def __init__(self, gameID, players = [0,0]):
 		self.gameID = gameID
 		self.spritesFolder = "chessGame/sprites/"
 		self.board_filename = f"{self.spritesFolder}chessboard.png"
@@ -51,19 +51,20 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 		with open(f'{self.logFile}', 'w'): #make log file
 			pass
 		#DO NOT USE mPrint BEFORE THIS POINT (may cause errors)
+		self.mPrint('INFO', f'Initializing game {self.gameID}')
+		self.mPrint('INFO', f'players: {players[0]} vs {players[1]}')
 
 
 	def mPrint(self, prefix, value, p2 = ''):
 		#p2 is only used by engine
 		log = False
 		style = Style.RESET_ALL
-		if p2 != '':
-			p2 = f'{Fore.YELLOW}{p2}{Fore.RESET} '
 
+		if prefix == 'INFO':
+			log = True
 		if prefix == 'GAME':
 			log = True
 			col = Fore.GREEN
-			
 		elif prefix == 'WARN':
 			log = True
 			col = Fore.YELLOW
@@ -84,8 +85,8 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 			col = Fore.CYAN
 		else:
 			col = Fore.WHITE	
-
-		print(f'{style}{col}[{p2}{col}{prefix}] {value}{Fore.RESET}')
+#							  p2 is only used for ENGINE
+		print(f'{style}{col}[{Fore.YELLOW}{p2}{Fore.RESET}{col}{prefix}] {value}{Fore.RESET}')
 		if log:
 			self.appendToLog(f'[{p2}{prefix}] {value}')
 

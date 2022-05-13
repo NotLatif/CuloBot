@@ -18,10 +18,10 @@ def num2emoji(num : int):
 		if digit == '9': words.append('nine')
 	return f':{"::".join(words)}:'
 
-def getWinner(players, score) -> bool:
+def getOverallWinnerName(players, score) -> str:
 	if score[0] == score[1]:
 		return "Pareggio"
-	return players[0] if score[0]>score[1] else players[1]
+	return str(players[0]) if score[0]>score[1] else str(players[1])
 
 async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.Member], fetchThread : tuple[discord.Message, discord.Embed]):
 	"""links bot.py with chess game (Main.py)
@@ -39,10 +39,9 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 	- Add support for chess notation input (implement in Engine.py or watever)
 	- keep track of move history between different rounds and don't delete them after each one (maybe also store them in the mini database
 	- (not important): thread.id does not change with each round, so the script will only save the last game output file 
-	- add more info to the mPrint and log the important stuff
 	- [BUG] when voting for a rematch one player can vote 2 times alone and get a rematch
-	- BUG 'undo' command is not working well
-	- BUG if voting throws asyncio error the embed becomes weird
+	- BUG sometimes bot fails to send the board image, possible fix: add 'resend' command to send another one
+	- minor BUG, using undo after the first move does not resend image (since gs.turnCount will decrement to 0)
 	"""
 	
 	score = [0, 0]
@@ -51,7 +50,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 # 									useful for using with gs.whiteMoves
 	# cg = ChessGame(1)
 	# gs = Engine.GameState(1, cg)
-	chessGame = chessMain.ChessGame(threadChannel.id)
+	chessGame = chessMain.ChessGame(threadChannel.id, players)
 	
 	while True: #matchloop
 		gs = chessMain.Engine.GameState(threadChannel.id, chessGame)
@@ -125,7 +124,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				#edit and send the main channel embed
 				embed = fetchThread[1]
 				embed.title = f'{reason}\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
-				embed.description = f'Match winner: {str(winner)[:-5]} {emojis[lastTurn]}\nGame winner: {f"{getWinner(players, score)}"}' #FIXME actually keep track of score
+				embed.description = f'Match winner: {str(winner)[:-5]} {emojis[lastTurn]}\Overall winner: {f"{getOverallWinnerName(players, score)}"}' #FIXME actually keep track of score
 				embed.set_footer(text=f'ID: {threadChannel.id}, now voting for rematch...')
 				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
 				await fetchThread[0].edit(embed=embed)
@@ -139,7 +138,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					return str(reaction.emoji) in reactions and user != bot.user
 				def check2(reaction, user):
 					return str(reaction.emoji) in reactions and user != bot.user
-				players = [0, 0]
+				votingPlayers = [0, 0]
 				
 				async def notEnoughVotes():
 					newThreadName = f'GG, {str(players[0])[:-5]} {score[0]}-VS-{score[1]} {str(players[1])[:-5]}'
@@ -150,14 +149,14 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					await rematchMsg.edit(embed = embed)
 					
 					embed.title = f'-- GAME OVER --\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
-					embed.color = 0xf2f2f2 if getWinner(players, score) == 'B' else 0x030303
+					embed.color = 0xf2f2f2 if players[lastTurn] else 0x030303
 					embed.set_footer(text=f'ID: {threadChannel.id}')
 					await fetchThread[0].edit(embed=embed)
 					await threadChannel.edit(name = f'{newThreadName}', reason=reason, locked=True, archived=True)
 
 				try:
-					r1, players[0] = await bot.wait_for('reaction_add', timeout=120.0, check=check1)
-					r2, players[1] = await bot.wait_for('reaction_add', timeout=120.0, check=check2)
+					r1, votingPlayers[0] = await bot.wait_for('reaction_add', timeout=120.0, check=check1)
+					r2, votingPlayers[1] = await bot.wait_for('reaction_add', timeout=120.0, check=check2)
 				except asyncio.TimeoutError:
 					await notEnoughVotes()
 					return 0
@@ -238,6 +237,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 
 			#a little stupid but loop until get a good message (from the right player)
 			validInput = False
+			command = ''
 			while not validInput: #input loop
 				#4. await for input
 				def check(m):	#check if message was sent in thread using ID
@@ -260,6 +260,10 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					await threadChannel.edit(reason='Partita annullata', locked=True, archived=True)
 					chessGame.mPrint('INFO', f'Game stopped by user, <gameID:{gs.gameID}>')
 					return -1
+				
+				elif(userMessage.content == "undo"): #ctrl-z
+					gs.undoMove()
+					break
 
 				if turn == 1 and userMessage.author == players[1]: #avoid players making moves for the opposite team
 					validInput = True #out of the input loop
@@ -271,14 +275,18 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			#5. delete the embed to avoid clutter
 			await inputAsk.delete()
 			chessGame.mPrint("USER", f'{userMessage.author}, comando: {userMessage.content}')
+
+			if(userMessage.content == 'undo'):
+				continue
 			
 		#MACRO TASK: parse user input
 			#1. create distinction between input (str) and message (discord.Message)
 			userMove = userMessage.content
 
 			#2. Detect if user wants to perform a command
-			if(userMove == "undo"): #ctrl-z
-				gs.undoMove()
+			#		Commands below here can only be performed by the player that has the turn
+			if(userMove == "command"): #ctrl-z
+				pass
 			
 			#3. Parse user input
 			userMove = userMove.replace('/', '').replace(',','').replace(' ','').lower()
