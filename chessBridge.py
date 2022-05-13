@@ -48,15 +48,18 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 
 		didIllegalMove = [False, ''] #[bool, str]
 		boardMessages = [] #needed to delete the last edited board and avoid chat clutter
+							#this will keep max two boards loaded at a time [board0, board1]
+							#will delete the last -> [board1, board2]
 
 		gs = chessGame.Engine.GameState(threadChannel.id)
 		chessGame.loadSprites()
 		chessGame.drawGameState(gs.board, gs.gameID)	#Don't really like this mess, will clean later
 		validMoves = gs.getValidMoves()
 
+		#send first board
 		with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
 			f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
-			boardMessages.append(await threadChannel.send(file=f))
+			boardMessages.append(await threadChannel.send(file=f)) #add first board to list
 
 		while True: #gameloop
 			whitesTurn = not gs.whiteMoves #needed to avoid confusion, because: wM = gs.whiteMoves
@@ -64,24 +67,23 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				#if wM == False: players[not wM] -> p2	(notWm is 1)	equal to players[0] < False = 0
 				#this tripped me up, but basically the players tuple is backwards, wM returns True (1)
 					#but players[1] is Black, so just invert that
-			lastTurn = gs.whiteKpos
+			lastTurn = gs.whiteMoves
 				#needed to avoid confusion when calling checks checkmates etc because, e.g.: 
 				#winner[not whitesTurn] feels weird/wrong and can lead to confusion
 				#TODO reorginize code logic to avoid this variable
 
 			#generate board and moves
-			if not didIllegalMove[0] or gs.turnCount == 0: #no need to regenerate if move did not go trhu
-				chessGame.drawGameState(gs.board, gs.gameID)
+			if not didIllegalMove[0] or gs.turnCount == 0: #no need to regenerate if last move was illegal
+				chessGame.drawGameState(gs.board, gs.gameID) #will check below in the code for illegal moves
 				validMoves = gs.getValidMoves()
 
-			#send board imga to discord
+			#send board img to discord
 			if gs.turnCount != 0: #Don't resend the first image
 				with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
 					f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
 					boardMessages.append(await threadChannel.send(file=f))
-					await boardMessages[0].delete()
-					del boardMessages[0]
-			
+					await boardMessages[0].delete() #delete last board
+					del boardMessages[0] #remove last board from list -> the current one will be at boardMessages[0]
 			
 		#MACRO TASK: ask for a move or command
 			#1. make an embed with the request
