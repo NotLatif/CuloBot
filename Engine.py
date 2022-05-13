@@ -1,13 +1,11 @@
 import Main as Main
-import chessGame.chessboards
-def mPrint(prefix, value):
-	Main.mPrint(prefix, value, 'ENGINE')
 
 class GameState():
 	"""
 	Stores information about the current game, detects legal moves, logs moves, etc
 	"""
-	def __init__(self, gameID) -> None:
+	def __init__(self, gameID, cg) -> None:
+		self.cg = cg
 		#board: 8x8 2d list of str (2chr)
 		#N = Nero, B = Bianco, Torre Alfiere Cavallo Queen King Pedone
 		self.board = [ #TODO (maybe) use english notation
@@ -40,6 +38,9 @@ class GameState():
 		self.inCheck = False
 		self.pins = [] #pieces that are protecting the king
 		self.checks = [] #pieces that are checking the king
+
+	def mPrint(self, prefix, value):
+		self.cg.mPrint(prefix, value, 'ENGINE')
 
 	def getWinner(self):
 		if self.checkMate or self.staleMate:
@@ -82,20 +83,20 @@ class GameState():
 				self.blackKpos = (lastMove.startRow, lastMove.startCol)
 
 	def getValidMoves(self) -> list:
-		mPrint('VARS', f"Turn: {'White' if self.whiteMoves else 'Black'}")
+		self.mPrint('VARS', f"Turn: {'White' if self.whiteMoves else 'Black'}")
 		#return self.getValidMovesNaive() #not very good but should work
 		moves =  self.getValidMovesComplicated() #better but has bugs currently 
 		for m in moves:
-			mPrint("DEBUG", f"moveID: {m.moveID} ({m.getChessNotation()})")
+			self.mPrint("DEBUG", f"moveID: {m.moveID} ({m.getChessNotation()})")
 		return moves
 
 	def getValidMovesComplicated(self) -> list: #more efficient but complicated algorithm
-		mPrint('INFO', 'using the complicate algorithm to generate moves')
+		self.mPrint('INFO', 'using the complicate algorithm to generate moves')
 		moves = []
 		self.inCheck, self.pins, self.checks = self.checkForPinsAndChecks()
-		mPrint('VARS', f'inCheck: {self.inCheck}')
-		for p in self.pins: mPrint('VARS', f'pin[x]: {p}')
-		for c in self.checks: mPrint('VARS', f'check[x]: {c}')
+		self.mPrint('VARS', f'inCheck: {self.inCheck}')
+		for p in self.pins: self.mPrint('VARS', f'pin[x]: {p}')
+		for c in self.checks: self.mPrint('VARS', f'check[x]: {c}')
 
 		if self.whiteMoves:
 			kingRow = self.whiteKpos[0]
@@ -211,7 +212,7 @@ class GameState():
 		return inCheck, pins, checks
 
 	def getValidMovesNaive(self) -> list:
-		mPrint('INFO', 'using the naive algorithm to generate moves')
+		self.mPrint('INFO', 'using the naive algorithm to generate moves')
 
 		#All moves considering checks (if you move a piece do you expose the K?)
 		#1. generate all the moves
@@ -247,7 +248,7 @@ class GameState():
 
 	def squareUnderAttack(self, r, c) -> bool:
 		"""Determines if enemy can attack (r, c)"""
-		mPrint('DEBUG', f'generating opponent moves')
+		self.mPrint('DEBUG', f'generating opponent moves')
 		self.whiteMoves = not self.whiteMoves #I want opponent moves
 		opponentMoves = self.getAllPossibleMoves()
 		self.whiteMoves = not self.whiteMoves #reset turn
@@ -257,7 +258,7 @@ class GameState():
 		return False #square not under attack
 		
 	def getAllPossibleMoves(self) -> list:
-		mPrint('FUNC', 'getAllPossibleMoves()')
+		self.mPrint('FUNC', 'getAllPossibleMoves()')
 		#generating the moves
 		moves = []
 		for r in range(len(self.board)):  #foreach col
@@ -452,7 +453,7 @@ class Move():
 		self.pieceMoved = boardState[self.startRow][self.startCol]
 		self.pieceCaptured = boardState[self.endRow][self.endCol]
 		self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol
-		#mPrint("ENGINE", f"moveID: {self.moveID} ({self.getChessNotation()})")
+		#self.mPrint("ENGINE", f"moveID: {self.moveID} ({self.getChessNotation()})")
 
 	def __eq__(self, other: object) -> bool:
 			if isinstance(other, Move):

@@ -1,7 +1,7 @@
 import asyncio
 import random
 import discord
-import Main as chessGame
+import Main as chessMain
 
 def num2emoji(num : int):
 	words = []
@@ -23,9 +23,13 @@ def getWinner(players, score) -> bool:
 		return "Pareggio"
 	return players[0] if score[0]>score[1] else players[1]
 
-async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.Member], fetchThread : tuple[discord.Thread, discord.Embed]):
+async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.Member], fetchThread : tuple[discord.Message, discord.Embed]):
 	"""links bot.py with chess game (Main.py)
 		
+		:param threadChannel: the thread where the bot will send messages about the game.
+		:param bot: the discord bot client.
+		:param players: the chess game players(`discord.Member`) IN THIS ORDER > `[black, white]`
+		:param fetchThread: list containing `[the message that created the thread, the embed of the message]`
 	"""
 	"""TODO
 	- Mini database of games won / games lost
@@ -37,22 +41,26 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 	- (not important): thread.id does not change with each round, so the script will only save the last game output file 
 	- add more info to the mPrint and log the important stuff
 	- [BUG] when voting for a rematch one player can vote 2 times alone and get a rematch
-	- FIXME OH COME ON WTF WHY ARE ALL COLORS BACKWARDS I CAN'T
 	- BUG 'undo' command is not working well
+	- BUG if voting throws asyncio error the embed becomes weird
 	"""
 	
 	score = [0, 0]
 	emojis = ('🌑', '⚪') #('🖤', '🤍') (black, white) 	< order matters
 #	players  [black, white] because: players[False] -> Black, players[True] -> White
 # 									useful for using with gs.whiteMoves
+	# cg = ChessGame(1)
+	# gs = Engine.GameState(1, cg)
+	chessGame = chessMain.ChessGame(threadChannel.id)
 	
 	while True: #matchloop
+		gs = chessMain.Engine.GameState(threadChannel.id, chessGame)
+
 		didIllegalMove = [False, ''] #[bool, str]
 		boardMessages = [] #needed to delete the last edited board and avoid chat clutter
 							#this will keep max two boards loaded at a time [board0, board1]
 							#will delete the last -> [board1, board2]
 
-		gs = chessGame.Engine.GameState(threadChannel.id)
 		chessGame.loadSprites()
 		chessGame.drawGameState(gs.board, gs.gameID)	#Don't really like this mess, will clean later
 		validMoves = gs.getValidMoves()
@@ -84,14 +92,19 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			#1. make an embed with the request
 			embed = discord.Embed(
 				title= f'Fai una mossa {str(players[turn])[:-5]}!',
-				description = 'Scrivi in chat posizione iniziale e posizione finale del pedone\ne.g.: A2A4\n\nscrivi "undo" per annullare l\'ultima mossa\nscrivi "stop" per fermare la partita',
+				description = '''
+					Scrivi in chat posizione iniziale e posizione finale del pedone
+					e.g.: A2A4\n
+					scrivi "undo" per annullare l'ultima mossa
+					scrivi "stop" per fermare la partita
+				''',
 				color = 0xf2f2f2 if (turn == 1) else 0x030303
 			)
 			
 			#2a. if previous move was illegal modify the embed with the info
 			if didIllegalMove[0]:
 				embed.title = 'Mossa non valida'
-				embed.description = didIllegalMove[1]
+				embed.description += f'\n{didIllegalMove[1]}'
 				embed.color = 0xdc143c
 
 				didIllegalMove = [False, '']
@@ -283,12 +296,12 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			#1. create a structure to hold the data 	
 			userMove = [#omg this is so confusing wth #impostorsyndrome
 				#                       rank (1->8)                              file (A->H)
-				(chessGame.Engine.Move.ranksToRows[userMove[1]], chessGame.Engine.Move.filesToCols[userMove[0]]),
-				(chessGame.Engine.Move.ranksToRows[userMove[3]], chessGame.Engine.Move.filesToCols[userMove[2]])
+				(chessMain.Engine.Move.ranksToRows[userMove[1]], chessMain.Engine.Move.filesToCols[userMove[0]]),
+				(chessMain.Engine.Move.ranksToRows[userMove[3]], chessMain.Engine.Move.filesToCols[userMove[2]])
 			]
 			
 			#2. send the move to the engine for elaboration
-			move = chessGame.Engine.Move(userMove[0], userMove[1], gs.board)
+			move = chessMain.Engine.Move(userMove[0], userMove[1], gs.board)
 
 			#3. detect if move is valid
 			if move in validMoves:
