@@ -235,17 +235,17 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			#3. send the embed
 			inputAsk = await threadChannel.send(embed=embed)
 
-			#a little stupid but loop until get a good message (from the right player)
+			#4. a little stupid but loop until get a good message (from the right player)
 			validInput = False
 			command = ''
 			while not validInput: #input loop
-				#4. await for input
+				#a. await for input
 				def check(m):	#check if message was sent in thread using ID
 					return m.channel.id == threadChannel.id and m.author in players
 
 				userMessage = await bot.wait_for('message', check=check)
 
-				#process commands that can be made by both players at any point in the game
+				#b. process commands that can be made by both players at any point in the game
 				if(userMessage.content == "stop"):
 					#send embed to thread
 					embed = discord.Embed(title='❌ Partita annullata ❌')
@@ -265,7 +265,8 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				elif(userMessage.content == "undo"): #ctrl-z
 					gs.undoMove()
 					break
-
+				
+				#c. check if message author has the turn
 				if turn == 1 and userMessage.author == players[1]: #avoid players making moves for the opposite team
 					validInput = True #out of the input loop
 				elif turn == 0 and userMessage.author == players[0]: #TODO check with friend if this is backwards

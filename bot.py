@@ -190,11 +190,9 @@ async def on_ready():
     #channel = bot.get_channel(972610894930538507)
     #await channel.send("hello world")
 
-@bot.event   ## MEMBER JOIN FIXME
-async def on_member_join(member):
-    #await member.send(f'A {member.name} piace il culo.')
-    channel = bot.get_channel(696014103034069015) 
-    await channel.send(f'A {member.name} piace il culo.')   
+@bot.event 
+async def on_member_join(member : discord.Member):
+    await member.guild.system_channel(f'A {member.name} piace il culo.')   
     print("join detected")
 
 @bot.command(name='resp') #TODO add other settings
@@ -229,9 +227,11 @@ async def help(ctx):
     embed.add_field(name='!resp [x]', value='Imposta la percentuale a (x)', inline=True)
     embed.add_field(name='!ping', value='Pong!', inline=True)
     embed.add_field(name='!chess', value='Gioca a scacchi contro un amico', inline=True)
-    embed.add_field(name='!chess [@mention]', value='Sfida una persona a scacchi!', inline=True)
+    embed.add_field(name='!chess [@user]', value='Sfida una persona a scacchi!', inline=True)
+    embed.add_field(name='!chess [@role]', value='Sfida un ruolo a scacchi!', inline=True)
     embed.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
-    embed.set_footer(text='Qualsiasi problema è colpa di @NotLatif')
+    embed.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
+    embed.set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
     await ctx.send(embed=embed)
 
 @bot.command(name='ping')
@@ -252,77 +252,109 @@ async def reload(ctx):
 
 @bot.command(name='chess', pass_context=True)
 async def chessGame(ctx, args=''):
-    challenged = None #if challenged is not None, list is not empty
-    whitelist = [] #list of user ids        #and vice-versa
-    print(f'author: {ctx.message.author.id}')
+    challenge = { #need dict otherwise script dumps some of the variables idk
+        'type': 'Everyone', 
+        'challenged' : None, #challenged user/role id
+        'whitelist' : [], #list of user ids (int) (or 1 role id)
+        'authorJoined': False, #Needed when type = 'Role
+    }
+    print(f'chessGame: issued command: chess\nauthor: {ctx.message.author.id}, args: {args}')
+
+    #detect any challenges
     if(args != '' and args[:2] == '<@'):
-        if (args[:3] == '<@&'):
-            await ctx.send('Non puoi sfidare un ruolo.')
-            return
-        else:
-            challenged = args[2:-1]
-            whitelist.append(ctx.message.author.id)
-            whitelist.append(challenged)
-            await ctx.send(f'{ctx.message.author} Ha sfidato <@{challenged}> a scacchi!')
+        if (args[:3] == '<@&'): #user challenged role
+            challenge['type'] = 'Role'
+            challenge['challenged'] = int(args[3:-1])
+            challenge['whitelist'].append(int(challenge['challenged'])) #when checking: Delete if (user != author) so that author has a chance to join when multiple users with the role attempt to join
+            await ctx.send(f'{ctx.message.author} Ha sfidato <@&{challenge["challenged"]}> a scacchi!')
+
+        else:  #user challenged user
+            challenge['type'] = 'User'
+            challenge['challenged'] = int(args[2:-1])
+            challenge['whitelist'].append(int(ctx.message.author.id))
+            challenge['whitelist'].append(int(challenge['challenged'])) #when checking: delete users from here as they join
+            await ctx.send(f'{ctx.message.author} Ha sfidato <@{challenge["challenged"]}> a scacchi!')
     
-    if whitelist == []:
-        embed = discord.Embed(title = 'Cerco giocatori per una partita di scacchi! ♟,\nUsa una reazione per unirti ad un team (max 1 per squadra)',
-            color = 0x0a7ace).set_footer(text=f'Partita richiesta da {ctx.message.author}')
-    else:
+    # Send the embed
+    if challenge['type'] == 'User': #challenge one User
         await ctx.message.delete()
-        challengedUser = await bot.fetch_user(challenged)
+        challengedUser = ctx.guild.get_member(int(challenge['challenged'])) #await bot.fetch_user(challenged)
         embed = discord.Embed(title = f'@{challengedUser.name}, sei stato sfidato da {ctx.message.author}!\nUsate una reazione per unirti ad un team (max 1 per squadra)',
             color = 0x0a7ace)
+        
+    elif challenge['type'] == 'Role': #challenge one Role
+        await ctx.message.delete()
+        challengedRole = ctx.guild.get_role(int(challenge['challenged']))
+        embed = discord.Embed(title = f'@{challengedRole.name}, siete stati sfidati da {ctx.message.author}!\nUno di voi può unirsi alla partita!',
+            color = 0x0a7ace)
+
+    else: #challenge everyone
+        embed = discord.Embed(title = 'Cerco giocatori per una partita di scacchi! ♟,\nUsa una reazione per unirti ad un team (max 1 per squadra)',
+            color = 0x0a7ace).set_footer(text=f'Partita richiesta da {ctx.message.author}')
     
     playerFetchMsg = await ctx.send(embed=embed)
     
-    reactions = ('⚪', '🌑') #('🤍', '🖤') ✅⛔
+    reactions = ('⚪', '🌑') #('🤍', '🖤')
     r1, r2 = reactions
     await playerFetchMsg.add_reaction(r1)
     await playerFetchMsg.add_reaction(r2)
 
     availableTeams = [reactions[0], reactions[1]]
-    def check1(reaction, user) -> bool:
-        print('check1')
-        print(f'Check: {reaction}, {user.id}\nwhitelist: {whitelist}\navailable: {availableTeams}\n--------')
+    print('chessGame: challenge["whitelist"]')
+    print(challenge['whitelist'])
+
+    def fetchChecker(reaction, user) -> bool: #this is one fat checker damn
+        # async def remove(reaction, user): #remove invalid reactions
+        #     await reaction.remove(user)   #will figure out some way
+
+        userID = int(user.id)
+        print('chessGame: check1')
+        print(f'chessGame: Check: {reaction}, {user}\nchallenge["whitelist"]: {challenge["whitelist"]}\navailable: {availableTeams}\n--------')
         if (user == bot.user): #prevent bot from joining teams
             return False
 
-        #whitelisted join (user mentions someone)
-        if(whitelist != [] and user.id in whitelist): #check if joining player is in list
-            whitelist.remove(user.id) #prevent user from rejoining another team
-            if(str(reaction.emoji) in availableTeams):
-                availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
-                return True
-        else: #no need to check who joins (can also play with yourself)
-            if(str(reaction.emoji) in availableTeams):
-                availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
-                return True
-    
-    def check2(reaction, user) -> bool:
-        print('check2')
-        print(f'Check: {reaction}, {user.id}\nwhitelist: {whitelist}\navailable: {availableTeams}\n--------')
-        if (user == bot.user): #prevent bot from joining teams
-            return False
+        #check if color is still available
+        if(str(reaction.emoji) not in availableTeams):
+            return False #remember to remove the reaction before every return True
 
         #whitelisted join (user mentions someone)
-        if(whitelist != [] and user.id in whitelist): #check if joining player is in list
-            whitelist.remove(user.id) #prevent user from rejoining another team
-            if(str(reaction.emoji) in availableTeams):
-                availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
+        if(challenge['type'] == 'User'): #check if joining player is in list
+            if userID not in challenge['whitelist']: return False
+            
+            challenge['whitelist'].remove(userID) #prevent user from rejoining another team
+            availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
+            return True
+
+        elif(challenge['type'] == 'Role'):
+            challengedRole = challenge['challenged'] #the only entry
+            
+            if user == ctx.message.author and challenge['authorJoined'] == False: #the message author can join even if he does not have the role
+                print('chessGame: User is author') #check the user BEFORE the role, so if the user has the role it does not get deleted
+                challenge['authorJoined'] = True #prevent author from joining 2 teams
+                availableTeams.remove(str(reaction.emoji))
+                return True 
+            
+            elif user.get_role(challengedRole) != None: #user has the role  
+                print('chessGame: User has required role')
+                challenge['whitelist'] = [] #delete the role so that message author can join
+                availableTeams.remove(str(reaction.emoji))
                 return True
+
+            print(f'chessGame: User {user.name} is not allowerd to join (Role challenge)')
+            return False
+
         else: #no need to check who joins (can also play with yourself)
-            if(str(reaction.emoji) in availableTeams):
-                availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
-                return True
+            availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
+            return True
+
 
     players = [0, 0]
     try:    #I need two wait_for (one for each team)
-        r1, players[0] = await bot.wait_for('reaction_add', timeout=60.0, check=check1)
+        r1, players[0] = await bot.wait_for('reaction_add', timeout=60.0, check=fetchChecker)
         embed.description = f'{players[0]} si è unito a {r1}!'
         await playerFetchMsg.edit(embed=embed)
 
-        r2, players[1] = await bot.wait_for('reaction_add', timeout=60.0, check=check2)
+        r2, players[1] = await bot.wait_for('reaction_add', timeout=60.0, check=fetchChecker)
         embed.description += f'\n{players[1]} si è unito a {r2}!\nGenerating game please wait...'
         embed.set_footer(text = 'tutti i caricamenti sono ovviamente falsissimi.')
         embed.color = 0x77b255
