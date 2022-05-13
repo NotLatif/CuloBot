@@ -300,7 +300,7 @@ async def chessGame(ctx):
         mainThreadEmbed = (thread, embed)
 
     #game main
-    await chessBridge.loadGame(gameThread, bot, [player1, player2], mainThreadEmbed, ctx)
+    await chessBridge.loadGame(gameThread, bot, [player1, player2], mainThreadEmbed)
 
 
 @bot.event   ## DETECT AND RESPOND TO MSG
