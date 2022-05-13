@@ -39,7 +39,6 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 	- Add support for chess notation input (implement in Engine.py or watever)
 	- keep track of move history between different rounds and don't delete them after each one (maybe also store them in the mini database
 	- (not important): thread.id does not change with each round, so the script will only save the last game output file 
-	- [BUG] when voting for a rematch one player can vote 2 times alone and get a rematch
 	- BUG sometimes bot fails to send the board image, possible fix: add 'resend' command to send another one
 	- minor BUG, using undo after the first move does not resend image (since gs.turnCount will decrement to 0)
 	"""
@@ -69,7 +68,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
 			boardMessages.append(await threadChannel.send(file=f)) #add first board to list
 
-		while True: #gameloop 			TODO remove this comments if switching works
+		while True: #gameloop
 			turn = gs.whiteMoves #if turn = 1, players[turn] is white, if turn = 0 players[turn is black]
 #									 turn = True						  turn = False
 			lastTurn = not gs.whiteMoves #needed to find winners
@@ -116,7 +115,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 
 			embed.set_footer(text=f'È il turno di {players[turn]} {emojis[turn]}')#I'm too good at this shit #godcomplex
 
-			#2c. if checkmate or stalemate modify the embed and end the game
+			#2c. GAMEOVER SCRIPT if checkmate or stalemate modify the embed and end the game
 			async def roundOverActions(reason : str, players : list[discord.Member], rematchMsg : discord.Message):
 				winner = players[lastTurn] #winner is whoever had the turn BEFORE the current one
 				chessGame.mPrint('GAME', f'Game won by {winner}, <gameID:{gs.gameID}>')
@@ -124,7 +123,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				#edit and send the main channel embed
 				embed = fetchThread[1]
 				embed.title = f'{reason}\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
-				embed.description = f'Match winner: {str(winner)[:-5]} {emojis[lastTurn]}\Overall winner: {f"{getOverallWinnerName(players, score)}"}' #FIXME actually keep track of score
+				embed.description = f'Match winner: {str(winner)[:-5]} {emojis[lastTurn]}\nOverall winner: {f"{getOverallWinnerName(players, score)}"}'
 				embed.set_footer(text=f'ID: {threadChannel.id}, now voting for rematch...')
 				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
 				await fetchThread[0].edit(embed=embed)
@@ -134,12 +133,10 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				await rematchMsg.add_reaction(reactions[0])
 				await rematchMsg.add_reaction(reactions[1])
 				
-				def check1(reaction, user): #TODO check if the different reactions are from different user (and not one user reacting 2 times)
-					return str(reaction.emoji) in reactions and user != bot.user
-				def check2(reaction, user):
-					return str(reaction.emoji) in reactions and user != bot.user
-				votingPlayers = [0, 0]
-				
+				votingPlayers = list(players) # < one of the few times learning things in school saved ma A LOT of time 
+				#								for who does not know votingPlayers = players is a reference (like an alias)
+				#								here I am writing things like people will look at my repo 😢
+
 				async def notEnoughVotes():
 					newThreadName = f'GG, {str(players[0])[:-5]} {score[0]}-VS-{score[1]} {str(players[1])[:-5]}'
 					embed = discord.Embed(
@@ -153,14 +150,22 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					embed.set_footer(text=f'ID: {threadChannel.id}')
 					await fetchThread[0].edit(embed=embed)
 					await threadChannel.edit(name = f'{newThreadName}', reason=reason, locked=True, archived=True)
+				
+				def rematchVoteCheck(reaction, user): #TODO check if the different reactions are from different user (and not one user reacting 2 times)
+					chessGame.mPrint('DEBUG', f'CHECK1, {user}, {[v.id for v in votingPlayers]}')
+					if user in votingPlayers:
+						votingPlayers.remove(user)
+						return str(reaction.emoji) in reactions and user != bot.user
+					return False
 
 				try:
-					r1, votingPlayers[0] = await bot.wait_for('reaction_add', timeout=120.0, check=check1)
-					r2, votingPlayers[1] = await bot.wait_for('reaction_add', timeout=120.0, check=check2)
+					r1, temp = await bot.wait_for('reaction_add', timeout=120.0, check=rematchVoteCheck)
+					r2, temp = await bot.wait_for('reaction_add', timeout=120.0, check=rematchVoteCheck)
 				except asyncio.TimeoutError:
 					await notEnoughVotes()
 					return 0
 				else:
+					del temp # don't really need it
 					print(f'reactions: {r1} {r2} == {reactions[1]}')
 					if r1.emoji == reactions[1] and r2.emoji == reactions[1]: #both votes are yes
 						newEmbedTitle = f'{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
@@ -179,8 +184,6 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 						embed.set_footer(text=f'ID: {threadChannel.id}')
 						await fetchThread[0].edit(embed=embed)
 						await threadChannel.edit(name=newThreadName, reason=reason)
-
-						fetchThread[0].edit()
 
 						#switch players
 						p = players[0]
@@ -295,8 +298,8 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			chessGame.mPrint('DEBUG', f'userMove: {userMove}')
 
 			#4. Check if user input has valid values
-			#FIXME 'A', 'A1', 'A1A' will throw IndexError
-			if (userMove[0] not in 'abcdefgh' or userMove[2] not in 'abcdefgh' or 
+			if (len(userMove) != 4 or #TODO add support for algebraic notation
+				userMove[0] not in 'abcdefgh' or userMove[2] not in 'abcdefgh' or 
 				userMove[1] not in '12345678' or userMove[3] not in '12345678'):
 				didIllegalMove = [True, f'Input invalido formato: A1A1, riprova\nHai inserito: {userMove}\n']
 				await userMessage.delete()
@@ -314,12 +317,14 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			move = chessMain.Engine.Move(userMove[0], userMove[1], gs.board)
 
 			#3. detect if move is valid
-			if move in validMoves:
-				chessGame.mPrint("GAME", f"Valid move: {move.getChessNotation()}")
-				gs.makeMove(move)
-			else:
-				#3F. if move is invalid notify the user and ask again for input
-				didIllegalMove = [True, f'Illegal move {move.getChessNotation()}']
-				await userMessage.delete()
-				chessGame.mPrint("GAMEErr", "Invalid move.")
-				chessGame.mPrint("GAME", f"your move: {move.moveID} ({move.getChessNotation()})")
+			for i in range(len(validMoves)):
+				if move == validMoves[i]:
+					chessGame.mPrint("GAME", f"Valid move: {move.getChessNotation()}")
+					gs.makeMove(validMoves[i]) #play the move generated by the engine
+					continue
+			#if move was not made then
+			#3F. if move is invalid notify the user and ask again for input
+			didIllegalMove = [True, f'Illegal move {move.getChessNotation()}']
+			await userMessage.delete()
+			chessGame.mPrint("GAMEErr", "Invalid move.")
+			chessGame.mPrint("GAME", f"your move: {move.moveID} ({move.getChessNotation()})")

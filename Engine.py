@@ -12,7 +12,7 @@ class GameState():
 			["BT", "BC", "BA", "BQ", "BK", "BA", "BC", "BT"], #A Bianco 
 			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #B
 			["--", "--", "--", "--", "--", "--", "--", "--"], #C
-			["--", "--", "--", "--", "--", "--", "--", "--"], #D
+			["--", "--", "--", "--", "BC", "--", "--", "--"], #D
 			["--", "--", "--", "--", "--", "--", "--", "--"], #E
 			["--", "--", "--", "--", "--", "BC", "--", "--"], #F
 			["NP", "NP", "NP", "NP", "NP", "NP", "NP", "NP"], #G
@@ -21,8 +21,14 @@ class GameState():
 		self.whiteKpos = (0, 4)
 		self.blackKpos = (7, 4)
 		self.whiteMoves = True
+
+		self.inCheck = False
 		self.checkMate = False
 		self.staleMate = False
+
+		self.pins = [] #pieces that are protecting the king
+		self.checks = [] #pieces that are checking the king
+
 		self.moveLog = []
 		self.moveFunctions = {
 			'P': self.getPMoves,
@@ -34,10 +40,6 @@ class GameState():
 		}
 		self.turnCount = 0
 		self.gameID = gameID
-
-		self.inCheck = False
-		self.pins = [] #pieces that are protecting the king
-		self.checks = [] #pieces that are checking the king
 
 	def getStats(self):
 		return (f'wK:{self.whiteKpos}', f'bK:{self.blackKpos}', f'checkmate: {self.checkMate}',
