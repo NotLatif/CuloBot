@@ -36,7 +36,8 @@ settingsFile = "settingsData.json"
 settings = {}
 with open(settingsFile, 'a'): pass #make setting file if it does not exist
 
-def updateSettings(id, setting = None, value = None, category = "responseSettings"):
+def updateSettings(id, setting = None, value = None, reset = False, category = "responseSettings"):
+    id = str(id)
     if setting != None:
         for s in settings[id][category]:
             if s == setting:
@@ -46,8 +47,8 @@ def updateSettings(id, setting = None, value = None, category = "responseSetting
             json.dump(settings, f, indent=2)
         return
     
-    else: #if only id is given, we want to append a new server
-        template = {"id": {"responseSettings": {"response":35,"other_response":100,"responsetobots":100},"chessGame": {"test": False}}}
+    elif reset: #if only id is given, we want to append a new server
+        template = {"id": {"responseSettings": {"response":35,"other_response":20,"responsetobots":25,"willRepondToBots":True},"chessGame": {"test": False}}}
         with open(settingsFile, 'r') as f:
             temp = json.load(f)
         temp[id] = template["id"]
@@ -161,7 +162,7 @@ async def on_ready():
         print(f'Guild Members:\n - {members}')
         if (str(guild.id) not in settings):
             print('^ Generating settings for guild')
-            updateSettings(str(guild.id))
+            updateSettings(str(guild.id, reset=True))
 
 
     #channel = bot.get_channel(972610894930538507)
@@ -173,13 +174,44 @@ async def on_member_join(member : discord.Member):
     print("join detected")
 
 @bot.command(name='resp') #TODO add other settings
-async def perc(ctx, arg=''):  ## BOT COMMAND
+async def perc(ctx):  ## BOT COMMAND
+    arg = ctx.message.content.replace('!resp', '')
     setting = settings[str(ctx.guild.id)]["responseSettings"]
+
     if(arg == ''):
         await ctx.send(f'Rispondo il {setting["response"]}% delle volte')
         return
+    
+    arg = arg.lower().split()
 
-    newPerc = int(arg.strip("%"))
+    affirmative = ['true', 'yes', 'si', 'vero']
+    negative = ['false', 'no', 'false']
+    validResponse = False
+    if(arg[0].strip('s') == 'bot'):
+        print(arg)
+        if len(arg) == 1:
+            await ctx.send(f'Risposta ai bot: {setting["willRepondToBots"]}\nRispondo ai bot il {setting["responsetobots"] if setting["willRepondToBots"] else 0}% delle volte')
+            return
+
+        if(arg[1].isnumeric()):
+            await ctx.send(f'Okay, risponderò ai bot il {arg[1]}% delle volte')
+            updateSettings(str(ctx.guild.id), 'responsetobots', int(arg[1]))
+            return
+        
+        if arg[1] in affirmative:
+            response = 'Okay, culificherò anche i bot 🍑'
+            validResponse = True
+        elif arg[1] in negative:
+            response = 'Niente culi per i bot 🤪'
+            validResponse = True
+        else:
+            response = 'Ehm, non ho capito? cosa vuoi fare con i bot?'
+        await ctx.send(response)
+        if validResponse:
+            updateSettings(ctx.guild.id, 'willRepondToBots', arg[1])
+            return
+
+    newPerc = int(arg[0].strip("%"))
 
     if (setting['response'] == newPerc):
         await ctx.send(f"non è cambiato niente.")
@@ -190,27 +222,92 @@ async def perc(ctx, arg=''):  ## BOT COMMAND
 
     log(f'[INFO]: {ctx.author} set response to {arg}%')
     updateSettings(str(ctx.guild.id) , 'response', newPerc)
+    updateSettings(str(ctx.guild.id) , 'other_response', newPerc//2)
 
-@bot.command(name='help')
-async def help(ctx):
-    embed = discord.Embed(
+@bot.command(name = 'help')
+async def embedpages(ctx):
+    page1 = discord.Embed (
         title = 'CuloBot',
         description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza artificiale',
         colour = 0xf39641
-    )
-    embed.set_footer(text = 'Developed by NotLatif')
-    embed.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
-    embed.set_author(name='Help', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    embed.add_field(name='!resp', value='Richiedi la percentuale di risposta', inline=True)
-    embed.add_field(name='!resp [x]', value='Imposta la percentuale a (x)', inline=True)
-    embed.add_field(name='!ping', value='Pong!', inline=True)
-    embed.add_field(name='!chess', value='Gioca a scacchi contro un amico', inline=True)
-    embed.add_field(name='!chess [@user]', value='Sfida una persona a scacchi!', inline=True)
-    embed.add_field(name='!chess [@role]', value='Sfida un ruolo a scacchi!', inline=True)
-    embed.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
-    embed.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
-    embed.set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
-    await ctx.send(embed=embed)
+    ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
+    page2 = discord.Embed(
+        title = 'CuloBot',
+        description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza artificiale',
+        colour = 0xf39641
+    ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
+    page3 = discord.Embed(
+        title = 'CuloBot',
+        description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza artificiale',
+        colour = 0xf39641
+    ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
+    
+
+    page1.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
+    page1.set_author(name='Help', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page2.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
+    page2.set_author(name='Help', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page3.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
+    page3.set_author(name='Help', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    
+    page1.add_field(name='!resp', value='Chiedi al bot la percentuale di culificazione', inline=False)
+    page1.add_field(name='!resp [x]%', value='Imposta la percentuale di culificazione a [x]%', inline=False)
+    page1.add_field(name='!resp bot', value= 'controlla le percentuale di risposta verso gli altri bot', inline=False)
+    page1.add_field(name='!resp bot [x]%', value= 'Imposta la percentuale di culificazione contro altri bot a [x]%', inline=False)
+    page1.add_field(name='!resp bot [True|False]', value= 'abilita/disabilita le culificazioni di messaggi di altri bot', inline=False)
+
+
+
+    page2.add_field(name='!ping', value='Pong!', inline=False)
+    page2.add_field(name='!chess', value='Gioca a scacchi contro un amico', inline=False)
+    page2.add_field(name='!chess [@user]', value='Sfida una persona a scacchi!', inline=False)
+    page2.add_field(name='!chess [@role]', value='Sfida un ruolo a scacchi!', inline=False)
+
+
+    page1.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
+    page1.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
+    
+
+    pages = [page1, page2, page3]
+
+    msg = await ctx.send(embed = page1)
+
+    await msg.add_reaction('⏮')
+    await msg.add_reaction('◀')
+    await msg.add_reaction('▶')
+    await msg.add_reaction('⏭')
+    
+    i = 0
+    emoji = ''
+
+    while True:
+        if str(emoji) == '⏮':
+            i = 0
+            await msg.edit(embed = pages[i])
+        elif str(emoji) == '◀':
+            if i > 0:
+                i -= 1
+                await msg.edit(embed = pages[i])
+        elif str(emoji) == '▶':
+            if i < 2:
+                i += 1
+                await msg.edit(embed = pages[i])
+        elif str(emoji) == '⏭':
+            i = 2
+            await msg.edit(embed = pages[i])
+        
+        def check(reaction, user):
+            return user != bot.user and str(reaction.emoji) in ['⏮', '◀', '▶', '⏭']
+        
+        try:
+            emoji, user = await bot.wait_for('reaction_add', timeout=60.0, check=check)
+            await msg.remove_reaction(str(emoji), user)
+            continue
+        except asyncio.TimeoutError:
+            await msg.clear_reactions()
+            break
+
+    await msg.clear_reactions()
 
 @bot.command(name='ping')
 async def ping(ctx):
