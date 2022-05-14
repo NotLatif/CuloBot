@@ -173,7 +173,7 @@ async def on_member_join(member : discord.Member):
     await member.guild.system_channel.send(f'A {member.name} piace il culo.')   
     print("join detected")
 
-@bot.command(name='resp') #TODO add other settings
+@bot.command(name='resp') 
 async def perc(ctx):  ## BOT COMMAND
     arg = ctx.message.content.replace('!resp', '')
     setting = settings[str(ctx.guild.id)]["responseSettings"]
