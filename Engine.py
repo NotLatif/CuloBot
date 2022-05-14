@@ -1,4 +1,3 @@
-import Main as Main
 #TODO ask choice for pawn promotion
 class GameState():
 	"""
@@ -13,8 +12,8 @@ class GameState():
 			["WR", "WN", "WB", "WQ", "WK", "WB", "WN", "WR"], #A Bianco 
 			["WP", "WP", "WP", "WP", "WP", "WP", "WP", "WP"], #B
 			["--", "--", "--", "--", "--", "--", "--", "--"], #C
-			["--", "--", "--", "--", "--", "BP", "--", "--"], #D
-			["--", "--", "--", "WP", "--", "BP", "--", "--"], #E
+			["--", "--", "--", "--", "--", "--", "--", "--"], #D
+			["--", "--", "--", "--", "--", "--", "--", "--"], #E
 			["--", "--", "--", "--", "--", "--", "--", "--"], #F
 			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #G
 			["BR", "BN", "BB", "BQ", "BK", "BB", "BN", "BR"], #H Nero 
@@ -48,13 +47,8 @@ class GameState():
 	def boardFromFEN(self, FEN : str) -> None:
 		#In order the returns are: (\\
 		self.mPrint('DEBUG', f'requested board FEN: {FEN}')
-		board = []			#1 done
-		enPassant = ()		#4
-		whiteMoves = True	#5
-		castling = ''		#6
-		halfMoves = 0		#7
-		fullMoves = 0		#8
-
+		
+		board = []
 		row = []
 		boardFEN = FEN.split()[0]
 		if('k' not in boardFEN or 'K' not in boardFEN):
@@ -77,10 +71,8 @@ class GameState():
 					if char == 'k':
 						self.blackKPos = (r, c)
 						self.mPrint('DEBUG', f'Found black king @ ({r}, {c})')
-
 			board.append(row)
 			row = []
-
 	
 		FENdata = FEN.split()
 		if len(FENdata) >= 1: #the board was descrbed (this should always be True)
@@ -110,10 +102,6 @@ class GameState():
 				self.fullMoves = int(FENdata[5])
 			else:
 				self.mPrint('WARN', 'FEN fullclock was provived but it\'s not an integer.')
-
-
-
-		#return (board,whiteKPos,blackKPos,enPassant,whiteMoves,castling,halfMoves,fullMoves)
 
 	def getFEN(self) -> str: #TODO: add castling
 		fen = ''
@@ -262,8 +250,8 @@ class GameState():
 		self.mPrint('VARS', f'checks: {self.checks}')
 		self.mPrint('VARS', f'pins: {self.pins}')
 		self.mPrint('VARS', f'enPassant: {self.enpassantPossible}')
-		self.mPrint('VARS', f'whiteK: {self.whiteKPos}')
-		self.mPrint('VARS', f'blackK: {self.blackKPos}')
+		self.mPrint('VARS', f'whiteK: {self.whiteKpos}')
+		self.mPrint('VARS', f'blackK: {self.blackKpos}')
 		self.mPrint('VARS', f'halfMoves: {self.halfMoveClock}')
 		self.mPrint('VARS', f'fullMoves: {self.fullMoves}')
 		self.mPrint('VARS', f'checkmate: {self.checkMate}')

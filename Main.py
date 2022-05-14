@@ -7,6 +7,41 @@ from PIL import Image
 from colorama import Fore, Style, init
 import Engine as Engine
 import os
+import json
+
+
+#helper functions
+def doesBoardExist(b) -> bool:
+	return True if b in getSavedBoards() else False
+
+def getSavedBoards() -> dict[str:str]:
+	try:
+		with open('chessGame/boards.json', 'r') as f:
+			boards = json.load(f)
+	except FileNotFoundError:
+		with open('chessGame/boards.json', 'w') as fp:
+			boards = {"default":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 0"}
+			json.dump(boards, fp , indent=2)
+	return boards
+
+def renderBoard(fen:str, id) -> tuple[str]:
+	if fen.count('/') == 7 and ('k' in fen and 'K' in fen):
+		pass #it's a fen
+	elif doesBoardExist(fen):
+		fen = getSavedBoards()[fen]
+	else:
+		return 'Invalid'
+
+	print('GENERATING BOARD')
+	#a little expensive maybe but whatever nobody will use this code anyways
+	cg = ChessGame(str(f'temprender_{id}'))
+	cg.loadSprites()
+	gs = Engine.GameState(str(f'temprender_{id}'), cg)
+	gs.boardFromFEN(fen)
+	image = cg.drawGameState(gs.board, str(f'temprender_{id}'))
+	return image
+	
+
 
 class ChessGame: #now a class so it can store the gameID, and for future management
 	def __init__(self, gameID, players = [0,0]):
@@ -40,6 +75,8 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 			"H" : 433
 		}
 
+		self.boards = getSavedBoards()
+
 		if not os.path.exists(self.outPath): #make games folder if it does not exist
 			print('making games folder')
 			os.makedirs(self.outPath)
@@ -50,14 +87,15 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 		
 		with open(f'{self.logFile}', 'w'): #make log file
 			pass
+
 		#DO NOT USE mPrint BEFORE THIS POINT (may cause errors)
 		self.mPrint('INFO', f'Initializing game {self.gameID}')
 		self.mPrint('INFO', f'players: {players[0]} vs {players[1]}')
 
-
-	def mPrint(self, prefix, value, p2 = ''):
+	def mPrint(self, prefix, value, p2 = '', ):
 		#p2 is only used by engine
 		log = False
+		
 		style = Style.RESET_ALL
 
 		if prefix == 'INFO':
@@ -106,7 +144,7 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 		with open(f'{self.logFile}', 'a') as f:
 			f.write(f'{text}\n')
 
-	def drawGameState(self, boardGS, id) -> Image: #TODO if isCheck draw red square
+	def drawGameState(self, boardGS, id) -> tuple[str]: #TODO if isCheck draw red square
 		"""Responsible for the graphics of the game"""
 		self.mPrint("DEBUG", "Generating board")
 
@@ -120,26 +158,26 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 		boardImg.save(self.getOutputFile(id))
 		
 		self.mPrint("DEBUG", "Board Generated")
-		return boardImg
+		return (self.outPath, id)
 
 	def getOutputFile(self, id:int) -> str:
 		return f'{self.outPath}{id}.png'
 
 
-
+	
 
 
 ##Only use for testing the engine
 def main(): 
 	cg = ChessGame(1)
 	gs = Engine.GameState(1, cg)
-	gs.boardFromFEN('rrrrkrrr/pp1ppppp/2p4n/3P1p2/5p2/4P2P/PPPP1PP1/RNBQKBNR b - b5 34 2')
+	#gs.boardFromFEN('rrrrkrrr/pp1ppppp/2p4n/3P1p2/5p2/4P2P/PPPP1PP1/RNBQKBNR b - b5 34 2')
+	gs.boardFromFEN(cg.boards['default'])
 	
 	for x in gs.board:
 		print(x)
 
 	cg.loadSprites()
-	
 
 	#ask for move
 	while True:
@@ -157,7 +195,6 @@ def main():
 		elif gs.staleMate:
 			cg.mPrint('GAME', 'StaleMate!')
 			break
-
 		
 		userMove = input("Move (A1A1): ").replace('/', '').replace(',','').replace(' ','').lower()
 		if(userMove == "undo"):
@@ -191,7 +228,6 @@ def main():
 				moveMade = True
 		if not moveMade:
 			cg.mPrint("GAMEErr", "Illegal move.")
-
 
 if __name__ == '__main__':
 	main()

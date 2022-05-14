@@ -23,7 +23,7 @@ def getOverallWinnerName(players, score) -> str:
 		return "Pareggio"
 	return str(players[0]) if score[0]>score[1] else str(players[1])
 
-async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.Member], fetchThread : tuple[discord.Message, discord.Embed]):
+async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.Member], fetchThread : tuple[discord.Message, discord.Embed], selectedBoard : tuple[str,str]):
 	"""links bot.py with chess game (Main.py)
 		
 		:param threadChannel: the thread where the bot will send messages about the game.
@@ -51,10 +51,24 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 # 									useful for using with gs.whiteMoves
 	# cg = ChessGame(1)
 	# gs = Engine.GameState(1, cg)
+	selectedBoard
 	chessGame = chessMain.ChessGame(threadChannel.id, players)
 	
-	while True: #matchloop
+	while True: #matchloop (iterates every round)
 		gs = chessMain.Engine.GameState(threadChannel.id, chessGame)
+		#to use the FEN:
+		
+		#gs.boardFromFEN('rrrrkrrr/pp1ppppp/2p4n/3P1p2/5p2/4P2P/PPPP1PP1/RNBQKBNR b - b5 34 2')
+		#gs.boardFromFEN(chessGame.boards['default'])
+		
+		if(selectedBoard[0] == 'FEN'):
+			gs.boardFromFEN(selectedBoard[1])
+		elif(selectedBoard[0] == 'BOARD'):
+			gs.boardFromFEN(chessGame.boards[selectedBoard[1]])
+
+	
+		roundFEN = gs.getFEN()
+		gs.mPrint('GAME', f'FEN {roundFEN}')
 
 		didIllegalMove = [False, ''] #[bool, str]
 		boardMessages = [] #needed to delete the last edited board and avoid chat clutter
@@ -70,7 +84,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
 			boardMessages.append(await threadChannel.send(file=f)) #add first board to list
 
-		while True: #gameloop
+		while True: #gameloop (iterates every turn)
 			turn = gs.whiteMoves #if turn = 1, players[turn] is white, if turn = 0 players[turn is black]
 #									 turn = True						  turn = False
 			lastTurn = not gs.whiteMoves #needed to find winners
@@ -342,3 +356,13 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				await userMessage.delete()
 				chessGame.mPrint("GAMEErr", "Invalid move.")
 				chessGame.mPrint("GAME", f"your move: {userMove}")
+
+def getBoards() -> list:
+	return chessMain.getSavedBoards()
+
+def doesBoardExist(board : str) -> bool:
+	return chessMain.doesBoardExist(board)
+
+def getBoardImgPath(board, id) -> tuple[str]:
+	print(f'RENDERING {board}')
+	return chessMain.renderBoard(board, id)
