@@ -303,27 +303,31 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			userMove = userMove.replace('/', '').replace(',','').replace(' ','').lower()
 			chessGame.mPrint('DEBUG', f'userMove: {userMove}')
 
-			#4. Check if user input has valid values
-			if (len(userMove) != 4 or #TODO add support for algebraic notation
-				userMove[0] not in 'abcdefgh' or userMove[2] not in 'abcdefgh' or 
-				userMove[1] not in '12345678' or userMove[3] not in '12345678'):
-				didIllegalMove = [True, f'Input invalido formato: A1A1, riprova\nHai inserito: {userMove}\n']
-				await userMessage.delete()
-				continue
-			
 		#MACRO TASK: move the pieces
-			#1. create a structure to hold the data 	
-			userMove = [#omg this is so confusing wth #impostorsyndrome
-				#                       rank (1->8)                              file (A->H)
-				(chessMain.Engine.Move.ranksToRows[userMove[1]], chessMain.Engine.Move.filesToCols[userMove[0]]),
-				(chessMain.Engine.Move.ranksToRows[userMove[3]], chessMain.Engine.Move.filesToCols[userMove[2]])
-			]
+
+			#1. check input type
+			if (len(userMove) == 4 and #this should be enough
+				userMove[0] in 'abcdefgh' and userMove[2] in 'abcdefgh' and 
+				userMove[1] in '12345678' and userMove[3] in '12345678'): #Move is type A2A2
 			
-			#2. send the move to the engine for elaboration
-			move = chessMain.Engine.Move(userMove[0], userMove[1], gs.board)
+				#a. create a structure to hold the data 	
+				userMove = [#omg this is so confusing wth #impostorsyndrome
+					#                       rank (1->8)                              file (A->H)
+					(chessMain.Engine.Move.ranksToRows[userMove[1]], chessMain.Engine.Move.filesToCols[userMove[0]]),
+					(chessMain.Engine.Move.ranksToRows[userMove[3]], chessMain.Engine.Move.filesToCols[userMove[2]])
+				]
+				
+				#b. send the move to the engine for elaboration
+				move = chessMain.Engine.Move(userMove[0], userMove[1], gs.board)
+				chessGame.mPrint("USER", userMove)
+			
+			else: #move was probably written in algebraic notation
+				chessGame.mPrint('DEBUG', 'parsing algebraic')
+				move = chessMain.Engine.Move.findMoveFromAlgebraic(userMove, validMoves)
+				chessGame.mPrint('INFO', f'Correspondence found: {move}')
 
 			moveMade = False
-			#3. detect if move is valid
+			#2. detect if move is valid
 			for i in range(len(validMoves)):
 				if move == validMoves[i]:
 					chessGame.mPrint("GAME", f"Valid move: {move.getChessNotation()}")
@@ -332,7 +336,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			if not moveMade:	
 				#if move was not made then
 				#3F. if move is invalid notify the user and ask again for input
-				didIllegalMove = [True, f'Illegal move {move.getChessNotation()}']
+				didIllegalMove = [True, f'Illegal move {userMove}']
 				await userMessage.delete()
 				chessGame.mPrint("GAMEErr", "Invalid move.")
-				chessGame.mPrint("GAME", f"your move: {move.moveID} ({move.getChessNotation()})")
+				chessGame.mPrint("GAME", f"your move: {userMove}")

@@ -150,20 +150,29 @@ def main():
 			cg.mPrint('GAME', 'StaleMate!')
 			break
 
+		
 		userMove = input("Move (A1A1): ").replace('/', '').replace(',','').replace(' ','').lower()
 		if(userMove == "undo"):
-			gs.undoMove()
-			continue
+				gs.undoMove()
+				continue
 
-		playerMoves = [#omg this is so confusing
-			#                          rank (1)                              file (A)
-			(Engine.Move.ranksToRows[userMove[1]], Engine.Move.filesToCols[userMove[0]]),
-			(Engine.Move.ranksToRows[userMove[3]], Engine.Move.filesToCols[userMove[2]])
-		]
+		if (len(userMove) == 4 and #this should be enough
+				userMove[0] in 'abcdefgh' and userMove[2] in 'abcdefgh' and 
+				userMove[1] in '12345678' and userMove[3] in '12345678'): #Move is type A2A2
+				
+			playerMoves = [#omg this is so confusing
+				#                          rank (1)                              file (A)
+				(Engine.Move.ranksToRows[userMove[1]], Engine.Move.filesToCols[userMove[0]]),
+				(Engine.Move.ranksToRows[userMove[3]], Engine.Move.filesToCols[userMove[2]])
+			]
 
-		cg.mPrint("USER", playerMoves)
+			cg.mPrint("USER", playerMoves)
+			
+			move = Engine.Move(playerMoves[0], playerMoves[1], gs.board)
 		
-		move = Engine.Move(playerMoves[0], playerMoves[1], gs.board)
+		else: #move is probably in algebraic notation (or a typo)
+			move = Engine.Move.findMoveFromAlgebraic(userMove, validMoves)
+
 		moveMade = False
 		for i in range(len(validMoves)):
 			if move == validMoves[i]:
@@ -173,8 +182,7 @@ def main():
 				
 				moveMade = True
 		if not moveMade:
-			cg.mPrint("GAMEErr", "Invalid move.")
-			cg.mPrint("GAME", f"your move: {move.moveID} ({move.getChessNotation()})")
+			cg.mPrint("GAMEErr", "Illegal move.")
 
 
 if __name__ == '__main__':

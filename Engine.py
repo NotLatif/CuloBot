@@ -119,8 +119,10 @@ class GameState():
 		self.mPrint('VARS', f"Turn: {'White' if self.whiteMoves else 'Black'}")
 		#return self.getValidMovesNaive() #not very good but should work
 		moves =  self.getValidMovesComplicated() #better but has bugs currently 
+		
+		Move.setAlgebraicNotation(moves) #pass every move so it can set the notation
 		for m in moves:
-			self.mPrint("DEBUG", f"moveID: {m.moveID} ({m.getChessNotation()})")
+			self.mPrint("DEBUG", f"legalMove {m.moveID}: ({m.getChessNotation()}) ({m.algebraicNotation}{m.algebraicNotationSuffixes})")
 		return moves
 
 	def getValidMovesComplicated(self) -> list: #more efficient but complicated algorithm
@@ -499,6 +501,8 @@ class Move():
 			self.pieceCaptured = 'BP' if self.pieceMoved == 'WP' else 'WP'
 
 		self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol
+		self.algebraicNotation = ''
+		self.algebraicNotationSuffixes = ''
 
 	
 		#self.mPrint("ENGINE", f"moveID: {self.moveID} ({self.getChessNotation()})")
@@ -507,11 +511,79 @@ class Move():
 			if isinstance(other, Move):
 				return self.moveID == other.moveID
 			return False
+	
+	def findMoveFromAlgebraic(algebraic, moves):
+		algebraic = algebraic.lower()
+		for m in moves:	#compare lowercase, I don't believe it makes a difference
+			print(f'testing: {m.algebraicNotation}')
+			if m.algebraicNotation.lower() == algebraic:
+				return m
+			elif 'x' in m.algebraicNotation and (algebraic == m.algebraicNotation.replace('x', '').lower()): #maybe user forgot to add x (Nxd2 == Nd2)
+				return m
+			elif f'{m.algebraicNotation.lower()}{m.algebraicNotationSuffixes.lower()}' == 'algebraic': #maybe user added a '+' to assert dominance
+				return m
+		return None
 
-	def getAlgebraicNotation(self, startSq : tuple, endSq : tuple) -> str:
+	def setAlgebraicNotation(legalMoves : list) -> None:
 		#returns algebraic notation starting from coordinates
-		notation = ''
-		pass #TODO implement (use emojis maybe)
+
+		moves = [] #needed to calculate ambiguities
+		for move in legalMoves:
+			#					0					        1  			                   2
+			moves.append((move.pieceMoved[1], (move.startRow, move.startCol), (move.endRow, move.endCol)))
+			#moves = [(piecemoved, (sR,sC), (eR,eC)), ... for each move]
+		# if piece is not pawn:
+		for x, move in enumerate(moves): #foreach move
+			if move[0] != 'P':
+				#add the prefix
+				legalMoves[x].algebraicNotation += move[0]
+				
+				#if ANY of the moves another piece (of the same type) has the same endSquare:
+				for y in legalMoves: #compare move with every other move
+			#		print(f'y in legalMoves: {y.pieceMoved}')
+			#		print(f'pieceMoved: {y.pieceMoved[1]} - {move[0]}')
+					if y.pieceMoved[1] == move[0]: #it's the same piece
+			#			print(f'startSq: {(y.startRow, y.startCol)} - {move[1]}')
+						if (y.startRow, y.startCol) != move[1]: #check if the startSq is different
+			#				print(f"endSq: {(y.endRow, y.endCol)} - {move[2]}")
+							if (y.endRow, y.endCol) == move[2]: #check if they are going in the same square
+								#ambiguity found add the column to the prefix (e.g. Ncxd2)
+								legalMoves[x].algebraicNotation += Move.colsToFiles[legalMoves[x].startCol]
+								break #no need to check for other ambiguities
+							else:pass #if the endSq is different, there is not ambiguity
+						else:pass #if the startSq is equal, we found the same piece.
+					else:pass #if the piece is different, there is not ambiguity
+				if(legalMoves[x].pieceCaptured != '--'): #add capture after every check (Nx) / (Ncx)
+					legalMoves[x].algebraicNotation += 'x'
+
+				
+			# if piece is pawn:
+			else:
+				if legalMoves[x].pieceCaptured != '--':
+					legalMoves[x].algebraicNotation += f'{Move.colsToFiles[legalMoves[x].startCol]}x'
+			
+			#add endsquare
+			legalMoves[x].algebraicNotation += Move.colsToFiles[legalMoves[x].endCol]
+			legalMoves[x].algebraicNotation += Move.rowsToRanks[legalMoves[x].endRow]
+
+			if move[0] == 'P':
+				#enpassant
+				if legalMoves[x].enPassant:
+					legalMoves[x].algebraicNotationSuffixes += 'e.p.'
+				#promotion
+				if legalMoves[x].pawnPromotion:
+					legalMoves[x].algebraicNotation += legalMoves[x].promotionChoice
+
+		print('Calculated algebraic symbols')
+
+
+		# copy the algorithm already made
+		#detect piece for prefix
+
+
+	
+
+
 
 	def getChessNotation(self) -> str:
 		"""Only use of log/printing purposes """
@@ -525,12 +597,55 @@ class Move():
 		"""
 		return self.colsToFiles[c] + self.rowsToRanks[r]
 """
+
+
+Rank = row 
+File = column
+
 K: King
 Q: Queen
 R: Rook		(T torre)
 B: Bishop	(A alfiere)
 N: Knight	(C cavallo)
-P: Pawn (although, by convention, P is usually omitted from notation)"""
+P: Pawn (although, by convention, P is usually omitted from notation)
+To write a move, give the name of the piece and the square to which it moves.
+If a piece is captured, we include the symbol x for "captures" before the destination square.
+
+e.g.,
+Nc3	  (cavallo->c3) l'unico cavallo che può andare a c3 è b1
+f5	  (pedone->f5)  la P è omessa, pedone nero va avanti di 2
+e4	  (pedone->e4)  pedone bianco va avanti di 2
+fxe4  (P omessa) pedone nella colonna f, mangia(x) pedina in e4
+Nxe4  kNight mangia la pedina in e4 (l'unico cavallo che può farlo è c3)
+Nf6   kNight va in f6
+Nxf6+ kNight mangia in f6 e mette in scacco (+)
+gxf6  (P) pedone nella colonna g mangia in f6
+Qh5#  Regina va in h5 e fa scacco matto
+
+x: captures
+0-0: kingside castle
+0-0-0: queenside castle
++: check (or ch)
+++: double check
+#: checkmate
+!: good move
+?: poor move
+
+# Avoiding Ambiguity
+In situations where regular notation is ambiguous, add an extra letter or number to specify the origin of the piece that moves.
+e.g.
+[R, -, -, -, -, -, -, R]
+Rd1  -> Rook va a d1, ma quale dei due???
+Rad1 -> Notazione corretta. R in colonna a va a d1
+
+When a pawn makes a capture, always include the originating file
+
+capturing by enPassant:
+add "e.p" suffix e.g. exd6e.p.
+
+pawn promotion
+e8Q -> white pawn becomes queen (also (e8=Q))
+"""
 """
 ♟️♟ Chess Pawn
 
@@ -545,4 +660,5 @@ P: Pawn (although, by convention, P is usually omitted from notation)"""
 ♗ White Chess Bishop
 ♘ White Chess Knight
 ♖ White Chess Rook
+
 """
