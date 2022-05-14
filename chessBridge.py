@@ -41,6 +41,8 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 	- (not important): thread.id does not change with each round, so the script will only save the last game output file 
 	- BUG sometimes bot fails to send the board image, possible fix: add 'resend' command to send another one
 	- minor BUG, using undo after the first move does not resend image (since gs.turnCount will decrement to 0)
+	- https://lichess.org/paste send algebraic here when game-over and send the linked
+	- 
 	"""
 	
 	score = [0, 0]
@@ -151,7 +153,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					await fetchThread[0].edit(embed=embed)
 					await threadChannel.edit(name = f'{newThreadName}', reason=reason, locked=True, archived=True)
 				
-				def rematchVoteCheck(reaction, user): #TODO check if the different reactions are from different user (and not one user reacting 2 times)
+				def rematchVoteCheck(reaction, user): #check if the different reactions are from different user (and not one user reacting 2 times)
 					chessGame.mPrint('DEBUG', f'CHECK1, {user}, {[v.id for v in votingPlayers]}')
 					if user in votingPlayers:
 						votingPlayers.remove(user)
@@ -278,7 +280,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				#c. check if message author has the turn
 				if turn == 1 and userMessage.author == players[1]: #avoid players making moves for the opposite team
 					validInput = True #out of the input loop
-				elif turn == 0 and userMessage.author == players[0]: #TODO check with friend if this is backwards
+				elif turn == 0 and userMessage.author == players[0]: 
 					validInput = True
 				else:
 					await userMessage.delete()

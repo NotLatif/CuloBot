@@ -526,6 +526,7 @@ class Move():
 
 	def setAlgebraicNotation(legalMoves : list) -> None:
 		#returns algebraic notation starting from coordinates
+		#TODO add support for check, double-check and other
 
 		moves = [] #needed to calculate ambiguities
 		for move in legalMoves:

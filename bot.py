@@ -1,5 +1,6 @@
 import asyncio
 import os
+import json
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -12,9 +13,7 @@ import chessBridge
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
 
-#TODO single server use? cringe bro. fucking chess can have infinite instances
-    #change the stupid settings file and make this work with multiple servers
-    #settings based on guild.id (maybe use json idk)
+#TODO add "customwords": [,] to settings for server distinct words
 
 load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
@@ -33,10 +32,43 @@ bot = commands.Bot(
 
 bot.remove_command("help")
 
-settingsFile = "settings.cfg"
-settings = {"response":35, 'other_response':100 , 'respondtobots':100}
+settingsFile = "settingsData.json"
+settings = {}
+with open(settingsFile, 'a'): pass #make setting file if it does not exist
 
+def updateSettings(id, setting = None, value = None, category = "responseSettings"):
+    if setting != None:
+        for s in settings[id][category]:
+            if s == setting:
+                settings[id][category][s] = value
+        print('settings updated for ' + str(id))
+        with open(settingsFile, 'w') as f:
+            json.dump(settings, f, indent=2)
+        return
+    
+    else: #if only id is given, we want to append a new server
+        template = {"id": {"responseSettings": {"response":35,"other_response":100,"responsetobots":100},"chessGame": {"test": False}}}
+        with open(settingsFile, 'r') as f:
+            temp = json.load(f)
+        temp[id] = template["id"]
+        with open(settingsFile, 'w') as fp:
+            json.dump(temp, fp , indent=2)
+    
 
+def loadSettings():
+    template = {"id": "placeholder"}
+    global settings
+    try:
+        with open(settingsFile, 'r') as f:
+            settings = json.load(f)
+    except json.JSONDecodeError: #file is empty
+        with open(settingsFile, 'w') as fp:
+            json.dump(template, fp , indent=2)
+        return 0
+
+loadSettings()     
+
+# updateSettings("694106741436186665", 'response', 534) #testing purposes
 
 def log(msg):
     """
@@ -99,25 +131,6 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
 
         
 
-
-def saveSetting(var, value):
-    """
-    Saves a bot setting in file for future usage
-    
-    :param var: The key of the dict
-    :param value: The value you want to set the variable to
-    """
-    newlines = ""
-    with open('settings.cfg', 'r') as file:
-        newlines = file.readlines()
-        for n,line in enumerate(newlines):
-            if var in line:
-                newlines[n] = f'{line.split("=")[0]}={value}\n'
-
-    with open('settings.cfg', 'w') as file:
-        file.writelines(newlines)
-        
-
 """
 settings:
 response = int:         % di probabilità di culificare un messaggio (0 <= int <= 100)
@@ -126,45 +139,7 @@ other_response = int:   % di possibilità di culificare più di una parola   (0 
                         - default: 50, 1 culo ogni due parole
                         - ogni parola ha il 50% di probabilità di essere cambiata rispetto alla precedente                       
 """
-def makeSettings():
-    """
-    If the settings file doesn't exist, create it and write the default settings to it
-    """
     
-    log("[INFO] il file delle impostazioni non esiste, ne creo uno nuovo.")
-
-    settings = {"response":35, "other_response": 50, 'respondtobots':100}
-    with open(settingsFile, 'w') as out:
-        for settings,number in settings.items():
-            line = settings + '=' + str(number) + '\n'
-            out.write(line)
-
-def loadSettings():
-    """
-    It reads the settings file and stores the contents in te settings dict
-    """
-    with open(settingsFile, 'r') as infile:
-        for line in infile:
-            tokens = line.strip().split('=')
-            var = tokens[0]
-            number = tokens[1]
-            settings[var] = int(number) #FIXME str should be allowed
-
-    #Controlla se le variabili sono state caricate correttamente
-    try:
-        settings['response']
-        settings['other_response']
-        settings['respondtobots']
-    except KeyError as e:
-        #TODO sistema il file automaticamente se mancano alcune variabili
-        log(f'[ERROR]: ./{settingsFile} non ha tutte le variabili necessarie: {e.args}')
-
-
-
-if(os.path.isfile(settingsFile) == False): #create file if not exist.
-    makeSettings()
-else:   #File exists load vars,
-   loadSettings()    
 
 #           -----           DISCORD BOT COROUTINES           -----       #
 # @bot.event   ## EXCEPTION LOGGER
@@ -184,8 +159,10 @@ async def on_ready():
 
         members = '\n - '.join([member.name for member in guild.members])
         print(f'Guild Members:\n - {members}')
+        if (str(guild.id) not in settings):
+            print('^ Generating settings for guild')
+            updateSettings(str(guild.id))
 
-    
 
     #channel = bot.get_channel(972610894930538507)
     #await channel.send("hello world")
@@ -197,21 +174,22 @@ async def on_member_join(member : discord.Member):
 
 @bot.command(name='resp') #TODO add other settings
 async def perc(ctx, arg=''):  ## BOT COMMAND
+    setting = settings[str(ctx.guild.id)]["responseSettings"]
     if(arg == ''):
-        await ctx.send(f'Rispondo il {settings["response"]}% delle volte')
+        await ctx.send(f'Rispondo il {setting["response"]}% delle volte')
         return
 
     newPerc = int(arg.strip("%"))
 
-    if (settings['response'] == newPerc):
+    if (setting['response'] == newPerc):
         await ctx.send(f"non è cambiato niente.")
         return
 
-    settings["response"] = newPerc
+    setting["response"] = newPerc
     await ctx.send(f"ok, risponderò il {newPerc}% delle volte")
 
     log(f'[INFO]: {ctx.author} set response to {arg}%')
-    saveSetting('response', newPerc)
+    updateSettings(str(ctx.guild.id) , 'response', newPerc)
 
 @bot.command(name='help')
 async def help(ctx):
@@ -243,12 +221,6 @@ async def ping(ctx):
 @bot.command(name='user')
 async def user(ctx):
     await ctx.send(f'User: {bot.user}')
-
-@bot.command(name='reload')
-async def reload(ctx):
-    loadSettings()
-    await ctx.send(f'Impostazioni aggiornate')
-    log('[INFO]: settins reloaded')
 
 @bot.command(name='chess', pass_context=True)
 async def chessGame(ctx, args=''):
@@ -371,10 +343,10 @@ async def chessGame(ctx, args=''):
         await playerFetchMsg.delete()
         return -1
     else:
-        if r1 == reactions[0]: #r1 is white TODO check if white is actually p1 and viceversa
+        if r1 == reactions[0]: #first player choose white
             player1 = players[1] #white
             player2 = players[0] #black
-        else:
+        else: #first player choose black
             player1 = players[0] #white
             player2 = players[1] #black
 
@@ -395,7 +367,9 @@ async def chessGame(ctx, args=''):
 
 
 @bot.event   ## DETECT AND RESPOND TO MSG
-async def on_message(message):
+async def on_message(message : discord.Message):
+    setting = settings[str(message.guild.id)]["responseSettings"]
+
     await bot.process_commands(message)
     user = message.author
     if message.author == bot.user:
@@ -411,13 +385,13 @@ async def on_message(message):
         pass
         
     if message.author.id == 438269159126859776: #buttbot
-        if random.randrange(1, 100) < settings["respondtobots"]: #implement % of answering
+        if random.randrange(1, 100) < setting["responsetobots"]: #implement % of answering
             await asyncio.sleep(random.randrange(1, 3))
             m = ''
             with open('antiButt.txt', 'r') as lines:
                 m = random.choice(lines.read().splitlines())
             await message.reply(m, mention_author=False)
-            if random.randrange(1, 100) < settings["respondtobots"]/2:
+            if random.randrange(1, 100) < setting["responsetobots"]/2:
                 r = random.choice(['🤣', '😂', '🤢', '🤡'])
                 await message.add_reaction(r)
         return
@@ -427,7 +401,7 @@ async def on_message(message):
     if message.author == bot.user or len(message.content.split()) < 2 or message.content[0] == '!':
         return  #don't respond to: self, strings with < 2 words, commands
  
-    if random.randrange(1, 100) > settings["response"]: #implement % of answering
+    if random.randrange(1, 100) > setting["response"]: #implement % of answering
         return
 
     msg = message.content.split() #trasforma messaggio in lista
@@ -447,7 +421,7 @@ async def on_message(message):
             parola = parola[0].upper() + parola[1:]
         msg[scelta] = parola #sostituisci parola
 
-        if(random.randrange(1, 100) > settings['other_response']):
+        if(random.randrange(1, 100) > setting['other_response']):
            i+=1
         i+=1
 
@@ -455,7 +429,7 @@ async def on_message(message):
 
     await message.reply(msg, mention_author=False)
     print('responded')
-    log(f'[INFO]: responded to message <resp_rate: {settings["response"]}%>')
+    log(f'[INFO]: responded to message <resp_rate: {setting["response"]}%>')
 
 
 bot.run(TOKEN)

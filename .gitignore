@@ -1,5 +1,6 @@
 spotify.py
 chessGame/games/
+settingsData.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
