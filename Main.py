@@ -74,9 +74,11 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 			col = Fore.RED
 			style = Style.BRIGHT
 		elif prefix == 'DEBUG':
-			col = Fore.MAGENTA
+			col = Fore.LIGHTMAGENTA_EX
+		elif prefix == 'MOVE':
+			col = Fore.LIGHTBLACK_EX
 		elif prefix == 'VARS':
-			col = Fore.YELLOW
+			col = Fore.LIGHTYELLOW_EX
 			style = Style.DIM
 		elif prefix == 'FUNC':
 			col = Fore.LIGHTBLACK_EX
@@ -131,7 +133,11 @@ class ChessGame: #now a class so it can store the gameID, and for future managem
 def main(): 
 	cg = ChessGame(1)
 	gs = Engine.GameState(1, cg)
+	gs.boardFromFEN('rrrrkrrr/pp1ppppp/2p4n/3P1p2/5p2/4P2P/PPPP1PP1/RNBQKBNR b - b5 34 2')
 	
+	for x in gs.board:
+		print(x)
+
 	cg.loadSprites()
 	
 
@@ -140,6 +146,8 @@ def main():
 		#moveMade = False
 		
 		cg.drawGameState(gs.board, 1)
+		gs.mPrint('DEBUG', 'Requesting board FEN')
+		cg.mPrint('GAME', f'FEN: {gs.getFEN()}')
 		#if moveMade:
 		validMoves = gs.getValidMoves()
 

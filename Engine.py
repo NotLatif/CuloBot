@@ -13,8 +13,8 @@ class GameState():
 			["WR", "WN", "WB", "WQ", "WK", "WB", "WN", "WR"], #A Bianco 
 			["WP", "WP", "WP", "WP", "WP", "WP", "WP", "WP"], #B
 			["--", "--", "--", "--", "--", "--", "--", "--"], #C
-			["--", "--", "--", "--", "--", "--", "--", "--"], #D
-			["--", "--", "--", "--", "--", "--", "--", "--"], #E
+			["--", "--", "--", "--", "--", "BP", "--", "--"], #D
+			["--", "--", "--", "WP", "--", "BP", "--", "--"], #E
 			["--", "--", "--", "--", "--", "--", "--", "--"], #F
 			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #G
 			["BR", "BN", "BB", "BQ", "BK", "BB", "BN", "BR"], #H Nero 
@@ -22,6 +22,8 @@ class GameState():
 		self.whiteKpos = (0, 4)
 		self.blackKpos = (7, 4)
 		self.whiteMoves = True
+		self.halfMoveClock = 0 #https://www.chessprogramming.org/Halfmove_Clock
+		self.fullMoves = 0 #incremented every time black makes a move
 		self.enpassantPossible = () #coords of enpassant capture
 
 		self.inCheck = False
@@ -42,6 +44,129 @@ class GameState():
 		}
 		self.turnCount = 0
 		self.gameID = gameID
+
+	def boardFromFEN(self, FEN : str) -> None:
+		#In order the returns are: (\\
+		self.mPrint('DEBUG', f'requested board FEN: {FEN}')
+		board = []			#1 done
+		enPassant = ()		#4
+		whiteMoves = True	#5
+		castling = ''		#6
+		halfMoves = 0		#7
+		fullMoves = 0		#8
+
+		row = []
+		boardFEN = FEN.split()[0]
+		if('k' not in boardFEN or 'K' not in boardFEN):
+			self.mPrint('ERROR', f'king is missing from FEN | missing king: {"black" if "k" not in boardFEN else ""} {"white" if "K" not in boardFEN else ""} ')
+			return -1
+		
+		#very hard to read, will probably rewrite at some point
+		for r, line in enumerate(boardFEN.split('/')[::-1]): #Read it backwards
+			for c, char in enumerate(line):
+				if char.isnumeric():
+					for i in range(int(char)):
+						row.append('--')
+				elif char.isupper(): #white
+					row.append(f'W{char}')
+					if char == 'K':
+						self.whiteKPos = (r, c)
+						self.mPrint('DEBUG', f'Found white king @ ({r}, {c})')
+				else:
+					row.append(f'B{char.upper()}')
+					if char == 'k':
+						self.blackKPos = (r, c)
+						self.mPrint('DEBUG', f'Found black king @ ({r}, {c})')
+
+			board.append(row)
+			row = []
+
+	
+		FENdata = FEN.split()
+		if len(FENdata) >= 1: #the board was descrbed (this should always be True)
+			self.board = board
+		else:																#random letters for searching in the code
+			self.mPrint('ERROR', 'Unexpected condition result (False) (expected:True) jiaejriajifea')
+			return
+		if len(FENdata) >= 2: #the turn is described
+			self.whiteMoves = True if FENdata[1].lower() == 'w' else False
+		
+		if len(FENdata) >= 3: #the castling rights were described
+			if (FENdata[3] != '-'): #check if it was not blank
+				pass
+
+		if len(FENdata) >= 4: #enPassant was described
+			if (FENdata[3] != '-'): #check if it was not blank
+				self.enpassantPossible = (Move.filesToCols[FENdata[3][0]], Move.ranksToRows[FENdata[3][1]])
+		
+		if len(FENdata) >= 5: #the half Clock was described
+			if (FENdata[4].isnumeric()):
+				self.halfMoveClock = int(FENdata[4])
+			else:
+				self.mPrint('WARN', 'FEN halfclock was provived but it\'s not an integer.')
+		
+		if len(FENdata) >= 6: #the full Clock was described
+			if (FENdata[5].isnumeric()):
+				self.fullMoves = int(FENdata[5])
+			else:
+				self.mPrint('WARN', 'FEN fullclock was provived but it\'s not an integer.')
+
+
+
+		#return (board,whiteKPos,blackKPos,enPassant,whiteMoves,castling,halfMoves,fullMoves)
+
+	def getFEN(self) -> str: #TODO: add castling
+		fen = ''
+		consecutiveBlanks = 0
+		whiteKingPresent = False
+		blackKingPresent = False
+		for row in range(len(self.board)-1, -1, -1): #FEN is written from row 8 to 1
+			for col, colPiece in enumerate(self.board[row]):
+				if colPiece == '--':
+					consecutiveBlanks += 1
+
+				elif colPiece[0] == 'W':
+					if consecutiveBlanks: #0 acts like False
+						fen += str(consecutiveBlanks)
+						consecutiveBlanks = 0
+					if colPiece[1] == 'K': whiteKingPresent=True
+					fen += colPiece[1]
+
+				elif colPiece[0] == 'B':
+					if consecutiveBlanks: #0 acts like False
+						fen += str(consecutiveBlanks)
+						consecutiveBlanks = 0
+					if colPiece[1] == 'K': blackKingPresent=True
+					fen += colPiece[1].lower()
+				else:
+					self.mPrint('ERROR', f'<ERROR generating FEN @ tile({row},{col}); piece="{colPiece}">')
+					return None
+			#at the end of each row
+			if consecutiveBlanks: #0 acts like False
+				fen += str(consecutiveBlanks)
+				consecutiveBlanks = 0
+			fen += '/'
+		fen = fen[:-1] #remove the last '/'
+		if(not whiteKingPresent or not blackKingPresent):
+			#sorry for the long string, it's just an "UI" thing
+			self.mPrint('ERROR', f'<ERROR generating FEN: {"white King" if not whiteKingPresent else ""}{" and " if not whiteKingPresent and not blackKingPresent else ""}{"black King" if not blackKingPresent else ""} is not present on the board>')
+			return None
+		
+		fen += ' '
+		if self.whiteMoves: fen += 'w '
+		else: fen += 'b '
+
+		#castling rights (QK)(qk) eg: QKqk: all castling right available; QK only white can castle; k black can only castle kingside
+		fen += '- '
+
+		#enpassant
+		if self.enpassantPossible != ():
+			fen += f'{Move.colsToFiles[self.enpassantPossible[1]]}{Move.rowsToRanks[self.enpassantPossible[0]]}'
+		else: fen += '- '
+
+		fen += f'{self.halfMoveClock} {self.fullMoves}'
+
+		return fen 
 
 	def getStats(self):
 		return (f'wK:{self.whiteKpos}', f'bK:{self.blackKpos}', f'checkmate: {self.checkMate}',
@@ -74,6 +199,8 @@ class GameState():
 			self.whiteKpos = (move.endRow, move.endCol)
 		if move.pieceMoved == 'BK':
 			self.blackKpos = (move.endRow, move.endCol)
+		if move.pieceMoved[0] == 'B':
+			self.fullMoves += 1
 		#updating enpassant variable (pawn moves twice)
 		if move.pieceMoved[1] == 'P' and abs(move.startRow - move.endRow) == 2:
 			self.enpassantPossible = ((move.endRow + move.startRow) // 2, move.endCol) #the enPassant square is the average
@@ -103,6 +230,8 @@ class GameState():
 				self.whiteKpos = (lastMove.startRow, lastMove.startCol)
 			if lastMove.pieceMoved == 'BK':
 				self.blackKpos = (lastMove.startRow, lastMove.startCol)
+			if lastMove.pieceMoved[0] == 'B':
+				self.fullMoves -= 1
 			#undo enpassant
 			if lastMove.enPassant:
 				self.board[lastMove.endRow][lastMove.endCol] = '--' #leave landing square
@@ -122,7 +251,7 @@ class GameState():
 		
 		Move.setAlgebraicNotation(moves) #pass every move so it can set the notation
 		for m in moves:
-			self.mPrint("DEBUG", f"legalMove {m.moveID}: ({m.getChessNotation()}) ({m.algebraicNotation}{m.algebraicNotationSuffixes})")
+			self.mPrint("MOVE", f"legalMove {m.moveID}: ({m.getChessNotation()}) ({m.algebraicNotation}{m.algebraicNotationSuffixes})")
 		return moves
 
 	def getValidMovesComplicated(self) -> list: #more efficient but complicated algorithm
@@ -130,6 +259,15 @@ class GameState():
 		moves = []
 		self.inCheck, self.pins, self.checks = self.checkForPinsAndChecks()
 		self.mPrint('VARS', f'inCheck: {self.inCheck}')
+		self.mPrint('VARS', f'checks: {self.checks}')
+		self.mPrint('VARS', f'pins: {self.pins}')
+		self.mPrint('VARS', f'enPassant: {self.enpassantPossible}')
+		self.mPrint('VARS', f'whiteK: {self.whiteKPos}')
+		self.mPrint('VARS', f'blackK: {self.blackKPos}')
+		self.mPrint('VARS', f'halfMoves: {self.halfMoveClock}')
+		self.mPrint('VARS', f'fullMoves: {self.fullMoves}')
+		self.mPrint('VARS', f'checkmate: {self.checkMate}')
+		self.mPrint('VARS', f'stalemate: {self.staleMate}')
 		for p in self.pins: self.mPrint('VARS', f'pin[x]: {p}')
 		for c in self.checks: self.mPrint('VARS', f'check[x]: {c}')
 

@@ -1,11 +1,13 @@
 import asyncio
 import os
 import json
+from pydoc import describe
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
 from dotenv import load_dotenv
 import random
 from datetime import datetime
+from typing import Union
 # from discord_slash.model import ButtonStyle
 # from discord_slash import SlashCommand
 import chessBridge
@@ -18,6 +20,9 @@ import chessBridge
 load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 GUILD = os.getenv('DISCORD_GUILD')[1:-1]
+
+SETTINGS_TEMPLATE = {"id": {"responseSettings": {"response":35,"other_response":20,"responsetobots":25,"willRepondToBots":True,"useDefaultWords":True,"customwords":[]},"chessGame": {"test": False}}}
+#TOIMPLEMENT: useDefaultWords, chessGame
 
 intents = discord.Intents.all()
 intents.members = True
@@ -48,10 +53,9 @@ def updateSettings(id, setting = None, value = None, reset = False, category = "
         return
     
     elif reset: #if only id is given, we want to append a new server
-        template = {"id": {"responseSettings": {"response":35,"other_response":20,"responsetobots":25,"willRepondToBots":True},"chessGame": {"test": False}}}
         with open(settingsFile, 'r') as f:
             temp = json.load(f)
-        temp[id] = template["id"]
+        temp[id] = SETTINGS_TEMPLATE["id"]
         with open(settingsFile, 'w') as fp:
             json.dump(temp, fp , indent=2)
     
@@ -90,13 +94,15 @@ def log(msg):
     with open('bot.log', 'a') as f:
         f.write(f'{current_time} {msg}')
 
-def getWord():
+def getWord(all=False) -> Union[str,list]:
     """
     :return: A random line from the words.txt file.
     e.g. culo, i culi
     """
     with open('words.txt', 'r') as words:
         lines = words.read().splitlines()
+        if(all):
+            return lines
         return random.choice(lines)
 
 def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, str]:
@@ -162,7 +168,7 @@ async def on_ready():
         print(f'Guild Members:\n - {members}')
         if (str(guild.id) not in settings):
             print('^ Generating settings for guild')
-            updateSettings(str(guild.id, reset=True))
+            updateSettings(str(guild.id), reset=True)
 
 
     #channel = bot.get_channel(972610894930538507)
@@ -223,6 +229,38 @@ async def perc(ctx):  ## BOT COMMAND
     log(f'[INFO]: {ctx.author} set response to {arg}%')
     updateSettings(str(ctx.guild.id) , 'response', newPerc)
     updateSettings(str(ctx.guild.id) , 'other_response', newPerc//2)
+
+@bot.command(name='words', aliases=['parole'])
+async def words(ctx):
+    botWords = getWord(True)
+    customWords = settings[str(ctx.guild.id)]['responseSettings']['customwords']
+    description = '''Comandi disponibili:\n`!words del <x>` per eliminare una parola
+                        `!words change <x> <parola>` per cambiare una parola
+                        `!words add <parola> per aggiungere una parola nuova
+                        `!words useDefault [true|false] per scegliere se usare le parole di default
+                        Puoi modificare solo le parole con accanto un ID
+    '''
+    if not settings[str(ctx.guild.id)]['responseSettings']['useDefaultWords']:
+       description += '`Il server non usa le parole di default, quindi non verranno mostrate,\
+       per mostrarle usare il comando: !words useDefault `'
+        
+    embed = discord.Embed(
+        title = 'Ecco le parole che conosco: ',
+        description = description,
+        colour = 0xf39641
+    )
+
+    if settings[str(ctx.guild.id)]['responseSettings']['useDefaultWords']:
+        #is server uses default words
+        value = '\n'.join(botWords)
+        embed.add_field(name = 'Fefault words:', value=value)
+        value = '' 
+
+    for i, cw in enumerate(customWords):
+        value += f'[`{i}`]: {cw}'
+    embed.add_field(name = f'Server words:', value=value)
+    
+    await ctx.send(embed=embed)
 
 @bot.command(name = 'help')
 async def embedpages(ctx):
