@@ -3,12 +3,12 @@ class GameState():
 	"""
 	Stores information about the current game, detects legal moves, logs moves, etc
 	"""
-	def __init__(self, gameID, cg) -> None:
+	def __init__(self, cg) -> None:
 		self.cg = cg
 		#board: 8x8 2d list of str (2chr)
 		#N = Nero, B = Bianco, Torre Alfiere Cavallo Queen King Pedone
 		#					   Rook  Bishop  kNight  Queen King Pawn
-		self.board = [
+		self.board = [ #TODO invert board
 			["WR", "WN", "WB", "WQ", "WK", "WB", "WN", "WR"], #A Bianco 
 			["WP", "WP", "WP", "WP", "WP", "WP", "WP", "WP"], #B
 			["--", "--", "--", "--", "--", "--", "--", "--"], #C
@@ -42,10 +42,8 @@ class GameState():
 			'K': self.getKMoves
 		}
 		self.turnCount = 0
-		self.gameID = gameID
 
 	def boardFromFEN(self, FEN : str) -> None:
-		#In order the returns are: (\\
 		self.mPrint('DEBUG', f'requested board FEN: {FEN}')
 		
 		board = []
@@ -61,6 +59,7 @@ class GameState():
 				if char.isnumeric():
 					for i in range(int(char)):
 						row.append('--')
+						
 				elif char.isupper(): #white
 					row.append(f'W{char}')
 					if char == 'K':

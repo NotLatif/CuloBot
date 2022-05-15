@@ -1,21 +1,26 @@
 import asyncio
 import random
 import discord
-import Main as chessMain
+import sys
+import os
+  
+sys.path.insert(0, 'chessGame/') #needed since Main is in another folder
+import chessMain
 
 def num2emoji(num : int):
 	words = []
 	for digit in str(num):
 		if digit == '0': words.append('zero')
-		if digit == '1': words.append('one')
-		if digit == '2': words.append('two')
-		if digit == '3': words.append('three')
-		if digit == '4': words.append('four')
-		if digit == '5': words.append('five')
-		if digit == '6': words.append('six')
-		if digit == '7': words.append('seven')
-		if digit == '8': words.append('eight')
-		if digit == '9': words.append('nine')
+		elif digit == '1': words.append('one')
+		elif digit == '2': words.append('two')
+		elif digit == '3': words.append('three')
+		elif digit == '4': words.append('four')
+		elif digit == '5': words.append('five')
+		elif digit == '6': words.append('six')
+		elif digit == '7': words.append('seven')
+		elif digit == '8': words.append('eight')
+		elif digit == '9': words.append('nine')
+		else: words.append('?')
 	return f':{"::".join(words)}:'
 
 def getOverallWinnerName(players, score) -> str:
@@ -23,7 +28,7 @@ def getOverallWinnerName(players, score) -> str:
 		return "Pareggio"
 	return str(players[0]) if score[0]>score[1] else str(players[1])
 
-async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.Member], fetchThread : tuple[discord.Message, discord.Embed], selectedBoard : tuple[str,str]):
+async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.Member], fetchThread : tuple[discord.Message, discord.Embed], selectedBoard : tuple[str,str], boardName : str = 'default'):
 	"""links bot.py with chess game (Main.py)
 		
 		:param threadChannel: the thread where the bot will send messages about the game.
@@ -35,8 +40,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 	- Mini database of games won / games lost
 	- keep track also of scores between players
 		-eg:	("luigi", "Mario", 23, 25) -> meaning that of all the game played between luigi VS mario ever
-												luigi won 23 times and mario won 25 times
-	- Add support for chess notation input (implement in Engine.py or watever)
+												luigi won 23 times and mario won 25 times									
 	- keep track of move history between different rounds and don't delete them after each one (maybe also store them in the mini database
 	- (not important): thread.id does not change with each round, so the script will only save the last game output file 
 	- BUG sometimes bot fails to send the board image, possible fix: add 'resend' command to send another one
@@ -49,24 +53,22 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 	emojis = ('🌑', '⚪') #('🖤', '🤍') (black, white) 	< order matters
 #	players  [black, white] because: players[False] -> Black, players[True] -> White
 # 									useful for using with gs.whiteMoves
-	# cg = ChessGame(1)
-	# gs = Engine.GameState(1, cg)
-	selectedBoard
-	chessGame = chessMain.ChessGame(threadChannel.id, players)
-	
+	if not os.path.isdir(f'{chessMain.gameRenderer.gamesFolder}{threadChannel.guild.id}'):
+		os.mkdir(f'{chessMain.gameRenderer.gamesFolder}{threadChannel.guild.id}')
+
+
+	chessGame = chessMain.ChessGame(f'{threadChannel.guild.id}/{threadChannel.id}', players)
+	gs = chessMain.Engine.GameState(chessGame)
+
 	while True: #matchloop (iterates every round)
-		gs = chessMain.Engine.GameState(threadChannel.id, chessGame)
-		#to use the FEN:
-		
-		#gs.boardFromFEN('rrrrkrrr/pp1ppppp/2p4n/3P1p2/5p2/4P2P/PPPP1PP1/RNBQKBNR b - b5 34 2')
-		#gs.boardFromFEN(chessGame.boards['default'])
-		
 		if(selectedBoard[0] == 'FEN'):
 			gs.boardFromFEN(selectedBoard[1])
 		elif(selectedBoard[0] == 'BOARD'):
 			gs.boardFromFEN(chessGame.boards[selectedBoard[1]])
 
-	
+		renderer = chessMain.gameRenderer.GameRenderer(chessGame, boardName, gs.board)
+		renderer.drawBoard()
+		
 		roundFEN = gs.getFEN()
 		gs.mPrint('GAME', f'FEN {roundFEN}')
 
@@ -74,30 +76,28 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 		boardMessages = [] #needed to delete the last edited board and avoid chat clutter
 							#this will keep max two boards loaded at a time [board0, board1]
 							#will delete the last -> [board1, board2]
-
-		chessGame.loadSprites()
-		chessGame.drawGameState(gs.board, gs.gameID)	#Don't really like this mess, will clean later
+		
 		validMoves = gs.getValidMoves()
 
 		#send first board
-		with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
-			f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
+		with open(chessGame.getOutputFile(), "rb") as fh:
+			f = discord.File(fh, filename=chessGame.getOutputFile())
 			boardMessages.append(await threadChannel.send(file=f)) #add first board to list
 
 		while True: #gameloop (iterates every turn)
 			turn = gs.whiteMoves #if turn = 1, players[turn] is white, if turn = 0 players[turn is black]
 #									 turn = True						  turn = False
 			lastTurn = not gs.whiteMoves #needed to find winners
-
+			renderer.drawBoard()
 			#generate board and moves
 			if not didIllegalMove[0] or gs.turnCount == 0: #no need to regenerate if last move was illegal
-				chessGame.drawGameState(gs.board, gs.gameID) #will check below in the code for illegal moves
+				renderer.drawBoard() #will check below in the code for illegal moves
 				validMoves = gs.getValidMoves()
 
 			#send board img to discord
 			if gs.turnCount != 0: #Don't resend the first image
-				with open(chessGame.getOutputFile(gs.gameID), "rb") as fh:
-					f = discord.File(fh, filename=chessGame.getOutputFile(gs.gameID))
+				with open(chessGame.getOutputFile(), "rb") as fh:
+					f = discord.File(fh, filename=chessGame.getOutputFile())
 					boardMessages.append(await threadChannel.send(file=f))
 					await boardMessages[0].delete() #delete last board
 					del boardMessages[0] #remove last board from list -> the current one will be at boardMessages[0]
@@ -134,7 +134,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			#2c. GAMEOVER SCRIPT if checkmate or stalemate modify the embed and end the game
 			async def roundOverActions(reason : str, players : list[discord.Member], rematchMsg : discord.Message):
 				winner = players[lastTurn] #winner is whoever had the turn BEFORE the current one
-				chessGame.mPrint('GAME', f'Game won by {winner}, <gameID:{gs.gameID}>')
+				chessGame.mPrint('GAME', f'Game won by {winner}, <gameID:{threadChannel.id}>')
 				
 				#edit and send the main channel embed
 				embed = fetchThread[1]
@@ -190,6 +190,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 						
 						embed = discord.Embed(
 							title = 'Rivincita!',
+							description= newThreadName,
 							color = 0x77b255
 						)
 						embed.set_footer(text = "Generating rematch... please wait!")
@@ -283,7 +284,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					embed.set_footer(text=f'ID: {threadChannel.id}')
 					await fetchThread[0].edit(embed=embed)
 					await threadChannel.edit(reason='Partita annullata', locked=True, archived=True)
-					chessGame.mPrint('GAME', f'Game stopped by user, <gameID:{gs.gameID}, user:{userMessage.author}>')
+					chessGame.mPrint('GAME', f'Game stopped by user, <gameID:{threadChannel.id}, user:{userMessage.author}>')
 					chessGame.mPrint('GAME', f'Game stats: <{gs.getStats()}>')
 					return -1
 				
@@ -356,6 +357,9 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				await userMessage.delete()
 				chessGame.mPrint("GAMEErr", "Invalid move.")
 				chessGame.mPrint("GAME", f"your move: {userMove}")
+
+def getDesigns() -> list:
+	return chessMain.getDesigns()
 
 def getBoards() -> list:
 	return chessMain.getSavedBoards()

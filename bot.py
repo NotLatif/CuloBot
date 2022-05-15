@@ -1,10 +1,8 @@
-from ast import arg
 import asyncio
 import os
 import json
 import random
 import copy
-from re import sub
 import sys
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
@@ -13,8 +11,8 @@ from datetime import datetime
 from typing import Union
 
 import chessBridge
-# from discord_slash.model import ButtonStyle
-# from discord_slash import SlashCommand
+
+#TODO render a new custom from colors
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
@@ -23,7 +21,7 @@ load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[]},"chessGame":{"default_board": "default","boards":{}}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}}}}
 #TOIMPLEMENT: use_global_words, chessGame
 
 intents = discord.Intents.all()
@@ -436,15 +434,17 @@ async def embedpages(ctx : commands.Context):
     page1.add_field(name='Struttura di word:', value='Per un esperienza migliore è consigliato usare gli articoli e specificare prima la forma singolare e poi quella plurale divise da una virgola e.g. `il culo, i culi`\n`il culo` `culo` `culo, culi` sono comunque forme accettabili', inline=False)
 
     #Page 2
-    page2.add_field(name='!chess [@user | @role] [fen="<FEN>" | board=<boardname>]', 
+    page2.add_field(name='!chess [@user | @role] [fen="<FEN>" | board=<boardname>] [design=<deisgn>]', 
     value='Gioca ad una partita di scacchi!\n\
      [@user]: Sfida una persona a scacchi\n\
      [@role]: Sfida un ruolo a scacchi\n\
      [fen="<FEN>"]: usa una scacchiera preimpostata\n\
-     [board=<boardname>]: usa una delle scacchiere salvate', inline=False)#ok
+     [board=<boardname>]: usa una delle scacchiere salvate\n\
+     [design=<design>: usa uno dei design disponibili', inline=False)#ok
     page2.add_field(name='e.g.:', value='```!chess board=board2\n!chess\n!chess @Admin\n!chess fen="k7/8/8/8/8/8/8/7K"```')
 
-    page2.add_field(name='!chess boards', value='vedi le scacchiere disponibili', inline=False)#ok
+    page2.add_field(name='!chess boards', value='vedi i FEN disponibili', inline=False)#ok
+    page2.add_field(name='!chess designs [see|add|del|edit]', value='vedi le scacchiere disponibili `!chess design` per più informazioni', inline=False)#ok
     page2.add_field(name='!chess render <name | FEN>', value='genera l\'immagine della scacchiera', inline=False)#ok
     page2.add_field(name='!chess add <name> <FEN>', value='aggiungi una scacchiera', inline=False)#ok
     page2.add_field(name='!chess remove <name>', value='rimuovi una scacchiera', inline=False)#ok
@@ -528,6 +528,7 @@ async def chessGame(ctx : commands.Context):
     args = splitString(args)                    #wheras splitString will return ["game", "fen=", "bla", "bla", "bla"]
     gameFEN = ''
     gameBoard = settings[str(ctx.guild.id)]["chessGame"]["default_board"]
+    design = 'default'
     
     
 # 2. Parse args
@@ -573,6 +574,71 @@ async def chessGame(ctx : commands.Context):
             #iv. send the embed
             await ctx.send(embed=embed)
             return 0
+
+        elif args[0] == 'designs' or args[0] == 'design': #show board designs
+            if len(args) == 1:
+                #i. prepare the embed
+                embed = discord.Embed(
+                    title = 'Design disponibili: ',
+                    colour = 0xf39641
+                )
+
+                #ii. append the global data boards to the embed
+                botDesigns = chessBridge.getDesigns()
+                value = ''
+                for b in range(len(botDesigns)):
+                    value += f"{botDesigns[b]}\n"
+
+                embed.add_field(name = 'Design disponibili:', value=value, inline=False)
+
+                #iii. if guild data has boards, append them to the embed
+                if settings[str(ctx.guild.id)]['chessGame']['designs'] != {}:
+                    guildDesigns = ''
+                    for b in settings[str(ctx.guild.id)]['chessGame']['designs']:
+                        guildDesigns += f"**{b}**: {settings[str(ctx.guild.id)]['chessGame']['designs'][b]}\n"
+                    embed.add_field(name = f'Design di {ctx.guild.name}:', value=guildDesigns, inline=False)
+                
+                #TODO implement
+                embed.add_field(name="Per creare una scacchiera: ", value="`!chess design add <Colore primario, ColoreSecondario>`", inline=False)
+                embed.add_field(name="Per eliminare una scacchiera: ", value="`!chess design del <name>`", inline=False)
+                embed.add_field(name="Per vedere una scacchiera: ", value="`!chess design see <name>`", inline=False)
+
+                #iv. send the embed
+                await ctx.send(embed=embed)
+                return 0
+            
+            #else
+            if args[1] == 'see': #user wants the image of a design
+                if(len(args) == 3):
+                    #design exists in guildData
+                    if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
+                        await ctx.send(settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]]) #TODO will implement when the gamerenderer will be able to draw boards
+                        return 0
+                    
+                    #design does not exist in guildData, search if exists in sprites folder
+                    design = f'{chessBridge.chessMain.gameRenderer.spritesFolder}{args[2]}/chessboard.png'
+                    if chessBridge.chessMain.gameRenderer.doesDesignExist(design):
+                        with open(design, "rb") as fh:
+                            f = discord.File(fh, filename=design)
+                            await ctx.send(file=f)
+                    else:
+                        await ctx.send("Design non trovato, usa `!chess design` per vedere i design disponibili")
+                    return 0
+                else:
+                    await ctx.send('Usage: `!chess design see <name>`')
+            
+            if args[1] == 'del': #delete a guild design
+                if(len(args) == 3):
+                    if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
+                        design = settings[str(ctx.guild.id)]['chessGame']['designs'].pop(args[2])
+                        ctx.send(f'Ho eliminato {args[2]}: {design}')
+                else:
+                    await ctx.send('Usage: `!chess design del <name>`')
+            
+            if args[1] == 'edit':
+                await ctx.send('edit not supported yet, sorry')
+            if args[1] == 'add':
+                await ctx.send('add not supported yet, sorry')
 
         elif args[0] == 'renderboard' or args[0] == 'render': # renders a FEN and send it in chat
             #i. avoid indexError because of the dumb user
@@ -676,6 +742,10 @@ async def chessGame(ctx : commands.Context):
             if i.lower()[:6] == 'board=':
                 gameBoard = i[6:]
                 print(f'found board -> {gameFEN}')
+            
+            if i.lower()[:7] == 'design=':
+                design = i[7:]
+                print(f'found design -> {design}')
 
     #2C. double-check the data retreived
     board = ()
@@ -702,26 +772,31 @@ async def chessGame(ctx : commands.Context):
             embed = discord.Embed(title = f'Errore 404, non trovo {gameBoard} tra le scacchiere salvare 😢\n riprova',color = 0xd32c41)
             await ctx.send(embed=embed)
             return -1
+    
+    if design != 'default': #if user asked for a design, check if it exists
+        if not chessBridge.chessMain.gameRenderer.doesDesignExist(design):
+            design = 'default'
+
 
 # 3. All seems good, now let's send the embed to find some players
     #3A. Challenge one user
     if challenge['type'] == 'User': 
         challengedUser = ctx.guild.get_member(int(challenge['challenged'])) #await bot.fetch_user(challenged)
         embed = discord.Embed(title = f'@{challengedUser.name}, sei stato sfidato da {ctx.message.author}!\nUsate una reazione per unirti ad un team (max 1 per squadra)',
-            description=f'Scacchiera: {board[1]}',
+            description=f'Scacchiera: {board[1]}, design: {design}',
             color = 0x0a7ace)
         
     #3B. Challenge one guild
     elif challenge['type'] == 'Role':
         challengedRole = ctx.guild.get_role(int(challenge['challenged']))
         embed = discord.Embed(title = f'@{challengedRole.name}, siete stati sfidati da {ctx.message.author}!\nUno di voi può unirsi alla partita!',
-            description=f'Scacchiera: {board[1]}',
+            description=f'Scacchiera: {board[1]}, design: {design}',
             color = 0x0a7ace)
 
     #3C. Challenge everyone
     else:
         embed = discord.Embed(title = f'Cerco giocatori per una partita di scacchi! ♟,\nUsa una reazione per unirti ad un team (max 1 per squadra)',
-            description=f'Scacchiera: {board[1]}',
+            description=f'Scacchiera: {board[1]}, design: {design}',
             color = 0x0a7ace).set_footer(text=f'Partita richiesta da {ctx.message.author}')
     
     #3D. SEND THE EMBED FINALLY
@@ -741,6 +816,7 @@ async def chessGame(ctx : commands.Context):
     #add reactions to the embed that people can use as buttons to join the teams
     await playerFetchMsg.add_reaction(r1)
     await playerFetchMsg.add_reaction(r2)
+    await playerFetchMsg.add_reaction("❌") #if the author changes their mind
 
 
     def fetchChecker(reaction, user) -> bool: #this is one fat checker damn
@@ -755,6 +831,9 @@ async def chessGame(ctx : commands.Context):
         #1- prevent bot from joining teams
         if (user == bot.user): 
             return False
+
+        if(str(reaction.emoji) == "❌" and user == ctx.message.author):
+            return True #only the author can cancel the search
 
         #2- check if color is still available (prevent two players from joining the same team)
         if(str(reaction.emoji) not in availableTeams):
@@ -800,14 +879,28 @@ async def chessGame(ctx : commands.Context):
         # fetchChecker end #
 
     #4B. await user joins (with reactions)
+    async def stopsearch():
+        embed.title = "Ricerca annullata"
+        embed.description = ""
+        embed.color = 0xdc143c
+        await playerFetchMsg.clear_reactions()
+        await playerFetchMsg.edit(embed=embed)
+
     try:
         #i. await first player
         r1, players[0] = await bot.wait_for('reaction_add', timeout=60.0, check=fetchChecker)
+        if str(r1.emoji) == "❌": 
+            await stopsearch()
+            return -2
         embed.description += f'\n{players[0]} si è unito a {r1}!'
         await playerFetchMsg.edit(embed=embed)
+        
 
         #ii. await second player
         r2, players[1] = await bot.wait_for('reaction_add', timeout=60.0, check=fetchChecker)
+        if str(r2.emoji) == "❌": 
+            await stopsearch()
+            return -2
         embed.description += f'\n{players[1]} si è unito a {r2}!\nGenerating game please wait...'
         embed.set_footer(text = 'tutti i caricamenti sono ovviamente falsissimi.')
         
@@ -837,7 +930,7 @@ async def chessGame(ctx : commands.Context):
         #iv. Send an embed with the details of the game
         embed = discord.Embed(
             title = f'Giocatori trovati\n{r1} {player1} :vs: {player2} {r2}',
-            description=f"Impostazioni:\n- Scacchiera: {board[1]}",
+            description=f"Impostazioni:\n- Scacchiera: {board[1]}, Design: {design}",
             colour = 0x27E039
         )
         
@@ -850,9 +943,9 @@ async def chessGame(ctx : commands.Context):
         mainThreadEmbed = (thread, embed)
 
 #5. FINALLY, start the game
-        await chessBridge.loadGame(gameThread, bot, [player2, player1], mainThreadEmbed, board)
+        await chessBridge.loadGame(gameThread, bot, [player2, player1], mainThreadEmbed, board, design)
         #                                        #send them backwards (info on chessBrige.py) [black, white]
-        
+        await gameThread.edit(archived=True, locked=True)
 
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message : discord.Message):
