@@ -3,6 +3,7 @@ import asyncio
 import os
 import json
 import sys
+from tkinter import E
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -299,64 +300,52 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
 
 @bot.command(name = 'help')
 async def embedpages(ctx : commands.Context):
-    page1 = discord.Embed (
-        title = 'CuloBot',
-        description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza artificiale',
-        colour = 0xf39641
-    ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
-    page2 = discord.Embed(
-        title = 'CuloBot',
-        description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza artificiale',
-        colour = 0xf39641
-    ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
-    page3 = discord.Embed(
+    e = discord.Embed (
         title = 'CuloBot',
         description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza artificiale',
         colour = 0xf39641
     ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
     
+    e.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
+    e.set_author(name='Help menu', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
 
-    page1.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
-    page1.set_author(name='Help 1', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page2.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
-    page2.set_author(name='Help 2', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page3.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
-    page3.set_author(name='Help 3', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page1 = e.copy()
+    page2 = e.copy()
+    page3 = e.copy()
     
     page1.add_field(name='!resp', value='Chiedi al bot la percentuale di culificazione', inline=False)#ok
     page1.add_field(name='!resp [x]%', value='Imposta la percentuale di culificazione a [x]%', inline=False)#ok
     page1.add_field(name='!resp bot', value= 'controlla le percentuale di risposta verso gli altri bot', inline=False)#TODO implement
     page1.add_field(name='!resp bot [x]%', value= 'Imposta la percentuale di culificazione contro altri bot a [x]%', inline=False)#TODO implement
     page1.add_field(name='!resp bot [True|False]', value= 'abilita/disabilita le culificazioni di messaggi di altri bot', inline=False)#TODO implement
-    page2.add_field(name='!ping', value='Pong!', inline=False)#ok
+    page1.add_field(name='!ping', value='Pong!', inline=False)#ok
     
-    page2.add_field(name='!chess', value='Gioca a scacchi contro un amico', inline=False)#ok
-    page2.add_field(name='!chess [@user]', value='Sfida una persona a scacchi!', inline=False)#ok
-    page2.add_field(name='!chess [@role]', value='Sfida un ruolo a scacchi!', inline=False)#ok
-    page2.add_field(name='!chess [fen="<FEN>"]', value='inizia con una scacchiera preimpostata', inline=False)#ok
-    page2.add_field(name='!chess [board=<boardname>]', value='inizia con una scacchiera preimpostata, usa `!chess boards` per vedere le scacchiedere disponibili', inline=False)#ok
-    page2.add_field(name='e.g.:', value='```!chess @Admin fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 0"\n!chess board=board2```')
+    page2.add_field(name='!chess [@user | @role] [fen="<FEN>" | board=<boardname>]', 
+    value='Gioca ad una partita di scacchi!\n\
+     [@user]: Sfida una persona a scacchi\n\
+     [@role]: Sfida un ruolo a scacchi\n\
+     [fen="<FEN>"]: usa una scacchiera preimpostata\n\
+     [board=<boardname>]: usa una delle scacchiere salvate', inline=False)#ok
+    page2.add_field(name='e.g.:', value='```!chess board=board2\n!chess\n!chess @Admin\n!chess fen="k7/8/8/8/8/8/8/7K"```')
 
-    page3.add_field(name='!chess boards', value='vedi le scacchiere disponibili', inline=False)#ok
-    page3.add_field(name='!chess render <name>', value='genera l\'immagine della scacchiera', inline=False)#ok
-    page3.add_field(name='!chess render <FEN>', value='genera l\'immagine della scacchiera a partire dal FEN', inline=False)#ok
-    page3.add_field(name='!chess add <name> <FEN>', value='aggiungi una scacchiera', inline=False)#ok
-    page3.add_field(name='!chess remove <name>', value='rimuovi una scacchiera', inline=False)#ok
-    page3.add_field(name='!chess rename <name> <newName>', value='rinomina una scacchiera', inline=False)#ok
-    page3.add_field(name='!chess edit <name> <FEN>', value='modifica una scacchiera', inline=False)#ok
+    page2.add_field(name='!chess boards', value='vedi le scacchiere disponibili', inline=False)#ok
+    page2.add_field(name='!chess render <name | FEN>', value='genera l\'immagine della scacchiera', inline=False)#ok
+    page2.add_field(name='!chess add <name> <FEN>', value='aggiungi una scacchiera', inline=False)#ok
+    page2.add_field(name='!chess remove <name>', value='rimuovi una scacchiera', inline=False)#ok
+    page2.add_field(name='!chess rename <name> <newName>', value='rinomina una scacchiera', inline=False)#ok
+    page2.add_field(name='!chess edit <name> <FEN>', value='modifica una scacchiera', inline=False)#ok
 
     page1.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
     page1.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
     
-
     pages = [page1, page2, page3]
 
     msg = await ctx.send(embed = page1)
 
     await msg.add_reaction('◀')
     await msg.add_reaction('▶')
-    await msg.add_reaction('⏮')
-    await msg.add_reaction('⏭')
+    # await msg.add_reaction('⏮') # Those add too much latency and I never use them so...
+    # await msg.add_reaction('⏭')
     
     i = 0
     emoji = ''
