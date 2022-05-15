@@ -8,7 +8,7 @@ from colorama import Fore, Style, init
 import Engine as Engine
 import os
 import json
-
+init()
 
 #helper functions
 def doesBoardExist(b) -> bool:

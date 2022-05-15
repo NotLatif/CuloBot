@@ -1,22 +1,18 @@
-from ast import arg
 import asyncio
 import os
 import json
+import random
 import sys
-from tkinter import E
+from textwrap import indent
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
 from dotenv import load_dotenv
-import random
 from datetime import datetime
 from typing import Union
 
-from numpy import imag
+import chessBridge
 # from discord_slash.model import ButtonStyle
 # from discord_slash import SlashCommand
-
-import chessBridge
-
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
@@ -27,7 +23,7 @@ load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"response":35,"other_response":20,"responsetobots":25,"willRepondToBots":True,"useGlobalWords":True,"customwords":[]},"chessGame":{"defaultBoard": "default","boards":{}}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"responsePerc":35,"other_response":20,"responseToBotsPerc":25,"willRepondToBots":True,"useGlobalWords":True,"customwords":[]},"chessGame":{"defaultBoard": "default","boards":{}}}}
 #TOIMPLEMENT: useGlobalWords, chessGame
 
 intents = discord.Intents.all()
@@ -207,13 +203,17 @@ async def on_member_join(member : discord.Member):
     await member.guild.system_channel.send(f'A {member.name} piace il culo.')   
     print("join detected")
 
+@bot.command(name='rawdump')
+async def rawDump(ctx : commands.Context):
+    await ctx.send(f'```JSON dump for {ctx.guild.name}:\n{json.dumps(settings[str(ctx.guild.id)], indent=3)}```')
+
 @bot.command(name='resp') 
-async def perc(ctx :commands.Context):  ## BOT COMMAND
+async def perc(ctx : commands.Context):  ## RESP command
     arg = ctx.message.content.replace('!resp', '')
-    setting = settings[str(ctx.guild.id)]["responseSettings"]
+    respSettings = settings[str(ctx.guild.id)]["responseSettings"]
 
     if(arg == ''):
-        await ctx.send(f'Rispondo il {setting["response"]}% delle volte')
+        await ctx.send(f'Rispondo il {respSettings["responsePerc"]}% delle volte')
         return
     
     arg = arg.lower().split()
@@ -224,12 +224,12 @@ async def perc(ctx :commands.Context):  ## BOT COMMAND
     if(arg[0].strip('s') == 'bot'):
         print(arg)
         if len(arg) == 1:
-            await ctx.send(f'Risposta ai bot: {setting["willRepondToBots"]}\nRispondo ai bot il {setting["responsetobots"] if setting["willRepondToBots"] else 0}% delle volte')
+            await ctx.send(f'Risposta ai bot: {respSettings["willRepondToBots"]}\nRispondo ai bot il {respSettings["responseToBotsPerc"] if respSettings["willRepondToBots"] else 0}% delle volte')
             return
 
         if(arg[1].isnumeric()):
             await ctx.send(f'Okay, risponderò ai bot il {arg[1]}% delle volte')
-            updateSettings(str(ctx.guild.id), 'responsetobots', int(arg[1]))
+            updateSettings(str(ctx.guild.id), 'responseToBotsPerc', int(arg[1]))
             return
         
         if arg[1] in affirmative:
@@ -247,11 +247,11 @@ async def perc(ctx :commands.Context):  ## BOT COMMAND
 
     newPerc = int(arg[0].strip("%"))
 
-    if (setting['response'] == newPerc):
+    if (respSettings['response'] == newPerc):
         await ctx.send(f"non è cambiato niente.")
         return
 
-    setting["response"] = newPerc
+    respSettings["responsePerc"] = newPerc
     await ctx.send(f"ok, risponderò il {newPerc}% delle volte")
 
     log(f'[INFO]: {ctx.author} set response to {arg}%')
@@ -307,18 +307,17 @@ async def embedpages(ctx : commands.Context):
     ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
     
     e.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
-    e.set_author(name='Help menu', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
 
-    page1 = e.copy()
-    page2 = e.copy()
-    page3 = e.copy()
+    page1 = e.copy().set_author(name='Help 1/3, culo!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page2 = e.copy().set_author(name='Help 2/3, CHECKMATE', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page3 = e.copy().set_author(name='Help 3/3, misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     
     page1.add_field(name='!resp', value='Chiedi al bot la percentuale di culificazione', inline=False)#ok
     page1.add_field(name='!resp [x]%', value='Imposta la percentuale di culificazione a [x]%', inline=False)#ok
-    page1.add_field(name='!resp bot', value= 'controlla le percentuale di risposta verso gli altri bot', inline=False)#TODO implement
-    page1.add_field(name='!resp bot [x]%', value= 'Imposta la percentuale di culificazione contro altri bot a [x]%', inline=False)#TODO implement
-    page1.add_field(name='!resp bot [True|False]', value= 'abilita/disabilita le culificazioni di messaggi di altri bot', inline=False)#TODO implement
-    page1.add_field(name='!ping', value='Pong!', inline=False)#ok
+    page1.add_field(name='!resp bot', value= 'controlla le percentuale di risposta verso gli altri bot', inline=False)#ok
+    page1.add_field(name='!resp bot [x]%', value= 'Imposta la percentuale di culificazione contro altri bot a [x]%', inline=False)#ok
+    page1.add_field(name='!resp bot [True|False]', value= 'abilita/disabilita le culificazioni di messaggi di altri bot', inline=False)#ok
+    page3.add_field(name='!words', value='Usalo per vedere le parole che il bot conosce', inline=False)
     
     page2.add_field(name='!chess [@user | @role] [fen="<FEN>" | board=<boardname>]', 
     value='Gioca ad una partita di scacchi!\n\
@@ -334,6 +333,10 @@ async def embedpages(ctx : commands.Context):
     page2.add_field(name='!chess remove <name>', value='rimuovi una scacchiera', inline=False)#ok
     page2.add_field(name='!chess rename <name> <newName>', value='rinomina una scacchiera', inline=False)#ok
     page2.add_field(name='!chess edit <name> <FEN>', value='modifica una scacchiera', inline=False)#ok
+
+    page3.add_field(name='!ping', value='Pong!', inline=False)#ok
+    page3.add_field(name='!rawdump', value='manda un messaggio con tutti i dati salvati di questo server', inline=False)#ok
+    
 
     page1.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
     page1.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
@@ -736,47 +739,46 @@ async def chessGame(ctx : commands.Context):
 
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message : discord.Message):
-    setting = settings[str(message.guild.id)]["responseSettings"]
-
     await bot.process_commands(message)
-    user = message.author
-    if message.author == bot.user:
-        return
-    
-    # manage_components.create_button(style=ButtonStyle.URL, label="Your channel", url=f'https://discord.com/channels/{user.guild.id}/{user.id}')
-    # action_row = manage_components.create_actionrow(button)
-        
-    # await message.reply('Hello')
-    # return
 
+    respSettings = settings[str(message.guild.id)]["responseSettings"]
+
+    #don't respond to self, commands, messages with less than 2 words
+    if message.author == bot.user or message.content[0] in ['!', "/", "?", '|', '$', "&", ">", "<"] or len(message.content.split()) < 2: return
+    
     if 'word' in message.content: #for future implementation, respond to specific string
         pass
         
-    if message.author.id == 438269159126859776: #buttbot
-        if random.randrange(1, 100) < setting["responsetobots"]: #implement % of answering
+#---------------------------------------------- This is specific to a server
+    if message.author.id == 438269159126859776 and message.guild.id == 694106741436186665:
+        if random.randrange(1, 100) < respSettings["responseToBotsPerc"]:
             await asyncio.sleep(random.randrange(1, 3))
             m = ''
             with open('botFiles/antiButt.txt', 'r') as lines:
                 m = random.choice(lines.read().splitlines())
             await message.reply(m, mention_author=False)
-            if random.randrange(1, 100) < setting["responsetobots"]/2:
+            if random.randrange(1, 100) < respSettings["responseToBotsPerc"]/2:
                 r = random.choice(['🤣', '😂', '🤢', '🤡'])
                 await message.add_reaction(r)
         return
+##---------------------------------------------- you can safely delete until here
+    
+    #if guild does not want bot responses and sender is a bot, ignore the message
+    if message.author.bot and not respSettings["willRepondToBots"]: return 0
 
     #culificazione
-    articoli = ['il', 'lo', 'la', 'i', 'gli', 'le']
-    if message.author == bot.user or len(message.content.split()) < 2 or message.content[0] == '!':
-        return  #don't respond to: self, strings with < 2 words, commands
+    articoli = ['il', 'lo', 'la', 'i', 'gli', 'le'] #Italian specific
  
-    if random.randrange(1, 100) > setting["response"]: #implement % of answering
+    if random.randrange(1, 100) > respSettings["responsePerc"]: #implement % of answering
         return
 
     msg = message.content.split() #trasforma messaggio in lista
     
-    i = 0
-    while (len(msg) // 2 > i): #non cambio più di una parola ogni 2    
+    for i in range(len(msg) // 2): #culifico al massimo metà delle parole
         scelta = random.randrange(1, len(msg)) #scegli una parola
+
+        # se la parola scelta è un articolo (e non è l'ultima parola), cambio la prossima parola
+        # e.g "ciao sono il meccanico" (se prendo la parola DOPO "il") -> "ciao sono il culo"   
         if msg[scelta] in articoli and scelta < len(msg)-1:
             scelta += 1
         parola = getWord() #scegli con cosa cambiarla
@@ -789,7 +791,7 @@ async def on_message(message : discord.Message):
             parola = parola[0].upper() + parola[1:]
         msg[scelta] = parola #sostituisci parola
 
-        if(random.randrange(1, 100) > setting['other_response']):
+        if(random.randrange(1, 100) > respSettings['other_response']):
            i+=1
         i+=1
 
@@ -797,7 +799,7 @@ async def on_message(message : discord.Message):
 
     await message.reply(msg, mention_author=False)
     print('responded')
-    log(f'[INFO]: responded to message <resp_rate: {setting["response"]}%>')
+    log(f'[INFO]: responded to message <resp_rate: {respSettings["responsePerc"]}%>')
 
 
 loadSettings()
@@ -806,5 +808,4 @@ checkSettingsIntegrity()
 
 bot.run(TOKEN)
 
-#TODO comando per vedere la lista delle parole
 #TODO comando per togliere/aggiungere parole dalla lista
