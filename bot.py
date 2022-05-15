@@ -1,9 +1,11 @@
+from ast import arg
 import asyncio
 import os
 import json
 import random
+import copy
+from re import sub
 import sys
-from textwrap import indent
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -17,14 +19,12 @@ import chessBridge
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
 
-#TODO add "customwords": [,] to settings for server distinct words
-
 load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"responsePerc":35,"other_response":20,"responseToBotsPerc":25,"willRepondToBots":True,"useGlobalWords":True,"customwords":[]},"chessGame":{"defaultBoard": "default","boards":{}}}}
-#TOIMPLEMENT: useGlobalWords, chessGame
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[]},"chessGame":{"default_board": "default","boards":{}}}}
+#TOIMPLEMENT: use_global_words, chessGame
 
 intents = discord.Intents.all()
 intents.members = True
@@ -76,28 +76,10 @@ def splitString(str, separator = ' ', delimiter = '\"') -> list:
     return lstStr
 
 def dumpSettings():
-    """Useful when you update the settings variable and want to save that data"""
+    """Saves the settings to file"""
     with open(settingsFile, 'w') as f:
-            json.dump(settings, f, indent=2)
+        json.dump(settings, f, indent=2)
 
-def updateSettings(id : int, setting :str = None, value :str = None, reset : bool = False, category : str = "responseSettings"):
-    id = str(id)
-    if setting != None:
-        for s in settings[id][category]:
-            if s == setting:
-                settings[id][category][s] = value
-        print('settings updated for ' + str(id))
-        with open(settingsFile, 'w') as f:
-            json.dump(settings, f, indent=2)
-        return
-    
-    elif reset: #if only id is given, we want to append a new server
-        with open(settingsFile, 'r') as f:
-            temp = json.load(f)
-        temp[id] = SETTINGS_TEMPLATE["id"]
-        with open(settingsFile, 'w') as fp:
-            json.dump(temp, fp , indent=2)
-    
 def loadSettings():
     template = {}
     global settings
@@ -109,8 +91,65 @@ def loadSettings():
             json.dump(template, fp , indent=2)
         return 0
 
-def checkSettingsIntegrity():
-    pass #TODO implement function
+def updateSettings(id : int, setting :str = None, value :str = None, reset : bool = False, category : str = "responseSettings"):
+    id = str(id)
+    if setting != None:
+        settingFound = False
+        for s in settings[id][category]:
+            if s == setting:
+                settings[id][category][s] = value
+                settingFound = True
+        if settingFound == False : return -1
+
+        print('settings updated for ' + str(id))
+        with open(settingsFile, 'w') as f:
+            json.dump(settings, f, indent=2)
+        return
+    
+    elif reset: #if only id is given, we want to append a new server
+        with open(settingsFile, 'r') as f:
+            temp = json.load(f)
+        temp[id] = SETTINGS_TEMPLATE["id"]
+        with open(settingsFile, 'w') as fp:
+            json.dump(temp, fp , indent=2)
+            settings[id] = temp[id]
+  
+
+
+def checkSettingsIntegrity(id : str):
+    id = str(id)
+    print(f'Checking guildData integrity of ({id})')
+
+    settingsToCheck = copy.deepcopy(settings[id])
+    
+    #check if there is more data than there should
+    for key in settingsToCheck:
+        if(key not in SETTINGS_TEMPLATE["id"]): #check if there is a key that should not be there (avoid useless data)
+            del settings[id][key]
+            print(f'Deleting: {key}')
+
+        if(type(settingsToCheck[key]) == dict):
+            for subkey in settingsToCheck[key]:
+                if(subkey not in SETTINGS_TEMPLATE["id"][key]): #check if there is a subkey that should not be there (avoid useless data)
+                    del settings[id][key][subkey]
+                    print(f'Deleting: {subkey}')
+
+    #check if data is missing
+    for key in SETTINGS_TEMPLATE["id"]:
+        if(key not in settings[id]): #check if there is a key that should not be there (avoid useless data)
+            settings[id][key] = SETTINGS_TEMPLATE["id"][key]
+            print(f'Missing key: {key}')
+
+        #it it's a dict also check it's keys
+        if(type(SETTINGS_TEMPLATE["id"][key]) == dict):
+            for subkey in SETTINGS_TEMPLATE["id"][key]:
+                if(subkey not in settings[id][key]): #check if there is a key that should not be there (avoid useless data)
+                    settings[id][key][subkey] = SETTINGS_TEMPLATE["id"][key][subkey]
+                    print(f'Missing subkey: {subkey}')
+
+    dumpSettings()
+
+    print('####### Done #######')
 
 def log(msg): #It's more annoying than it is usefull, maybe 
     return
@@ -182,14 +221,14 @@ async def on_error(event, *args, **kwargs):
     print(sys.exc_info())
     if event == 'on_message':
         log(f'[ERROR]: Unhandled message: {args[0]}\n')
-    log('ERROR', sys.exc_info())
+    log(sys.exc_info())
 
 @bot.event   ## BOT ONLINE
 async def on_ready():
     for guild in bot.guilds:
         print(
-            f'{bot.user} is connected to the following guild:\n'
-            f'{guild.name}(id: {guild.id})\n'
+            f'\nConnected to the following guild:\n'
+            f'{guild.name} (id: {guild.id})'
         )
 
         members = '\n - '.join([member.name for member in guild.members])
@@ -198,14 +237,55 @@ async def on_ready():
             print('^ Generating settings for guild')
             updateSettings(str(guild.id), reset=True)
 
-@bot.event #TODO add custom message per server
+        checkSettingsIntegrity(str(guild.id))
+
+@bot.event
 async def on_member_join(member : discord.Member):
-    await member.guild.system_channel.send(f'A {member.name} piace il culo.')   
+    joinString = settings[str(member.guild.id)]['responseSettings']['join_message']
+    if(joinString == ''): return
+    joinString.replace('%name%', member.name)
+
+    await member.guild.system_channel.send(joinString)   
     print("join detected")
 
 @bot.command(name='rawdump')
 async def rawDump(ctx : commands.Context):
     await ctx.send(f'```JSON dump for {ctx.guild.name}:\n{json.dumps(settings[str(ctx.guild.id)], indent=3)}```')
+
+@bot.command(name='rawchange')
+async def rawChange(ctx : commands.Context):
+    args = ctx.message.content.split()[1:]
+    id = str(ctx.guild.id)
+    if len(args) == 2:
+        if (args[1].isnumeric()): args[1] = int(args[1])
+        r = updateSettings(id, args[0], args[1])
+        if r == -1:
+            await ctx.send(f'```Setting "{args[0]}" not found\nuse !rawdump to see the data```')
+        else:
+           await ctx.send(f'```"{args[0]}" = {args[1]}```')
+    else:
+        await ctx.send('huh?')
+
+@bot.command(name='joinmsg')
+async def joinmsg(ctx : commands.Context):
+    args = ctx.message.content.split()
+    if len(args) == 1:
+        #if join message is not empty
+        if(settings[str(ctx.guild.id)]['responseSettings']['join_message'] != ''):
+            await ctx.send(settings[str(ctx.guild.id)]['responseSettings']['join_message'])
+        else:
+            await ctx.send('Il server non ha un messaggio di benvenuto, `!joinmsg help` per informazioni')
+    else:
+        if args[1] == 'help':
+            await ctx.send('`!joinmsg [msg]`: cambia il messaggio di benvenuto\nPuoi usare %name% nel messaggio per riferirti ad un utente eg: `!joinmsg A %name% piace il culo 🍑`\nUsa `!joinmsg false` per disattivarlo')
+            return
+        elif args[1].lower() == 'false':
+            settings[str(ctx.guild.id)]['responseSettings']['join_message'] = ''
+            await ctx.send('Hai disattivato la risposta')
+            return
+        settings[str(ctx.guild.id)]['responseSettings']['join_message'] = ' '.join(args[1:])
+        dumpSettings()
+        await ctx.send(f"Il nuovo messaggio di benvenuto è:\n{settings[str(ctx.guild.id)]['responseSettings']['join_message']}")
 
 @bot.command(name='resp') 
 async def perc(ctx : commands.Context):  ## RESP command
@@ -213,7 +293,7 @@ async def perc(ctx : commands.Context):  ## RESP command
     respSettings = settings[str(ctx.guild.id)]["responseSettings"]
 
     if(arg == ''):
-        await ctx.send(f'Rispondo il {respSettings["responsePerc"]}% delle volte')
+        await ctx.send(f'Rispondo il {respSettings["response_perc"]}% delle volte')
         return
     
     arg = arg.lower().split()
@@ -224,12 +304,12 @@ async def perc(ctx : commands.Context):  ## RESP command
     if(arg[0].strip('s') == 'bot'):
         print(arg)
         if len(arg) == 1:
-            await ctx.send(f'Risposta ai bot: {respSettings["willRepondToBots"]}\nRispondo ai bot il {respSettings["responseToBotsPerc"] if respSettings["willRepondToBots"] else 0}% delle volte')
+            await ctx.send(f'Risposta ai bot: {respSettings["will_respond_to_bots"]}\nRispondo ai bot il {respSettings["response_to_bots_perc"] if respSettings["will_respond_to_bots"] else 0}% delle volte')
             return
 
         if(arg[1].isnumeric()):
             await ctx.send(f'Okay, risponderò ai bot il {arg[1]}% delle volte')
-            updateSettings(str(ctx.guild.id), 'responseToBotsPerc', int(arg[1]))
+            updateSettings(str(ctx.guild.id), 'response_to_bots_perc', int(arg[1]))
             return
         
         if arg[1] in affirmative:
@@ -242,7 +322,7 @@ async def perc(ctx : commands.Context):  ## RESP command
             response = 'Ehm, non ho capito? cosa vuoi fare con i bot?'
         await ctx.send(response)
         if validResponse:
-            updateSettings(ctx.guild.id, 'willRepondToBots', arg[1])
+            updateSettings(ctx.guild.id, 'will_respond_to_bots', arg[1])
             return
 
     newPerc = int(arg[0].strip("%"))
@@ -251,7 +331,7 @@ async def perc(ctx : commands.Context):  ## RESP command
         await ctx.send(f"non è cambiato niente.")
         return
 
-    respSettings["responsePerc"] = newPerc
+    respSettings["response_perc"] = newPerc
     await ctx.send(f"ok, risponderò il {newPerc}% delle volte")
 
     log(f'[INFO]: {ctx.author} set response to {arg}%')
@@ -260,16 +340,49 @@ async def perc(ctx : commands.Context):  ## RESP command
 
 @bot.command(name='words', aliases=['parole'])
 async def words(ctx : commands.Context): #send an embed with the words that the bot knows
+    args = ctx.message.content.split()
+    if len(args) > 1: #add new words
+        newWord = ' '.join(args[1:])
+        if args[1].lower() == 'del':
+            delWord = int(args[2])
+            if len(settings[str(ctx.guild.id)]['responseSettings']['custom_words']) > delWord:
+                del settings[str(ctx.guild.id)]['responseSettings']['custom_words'][delWord]
+                await ctx.send('Fatto')
+            else:
+                await ctx.send('Id parola non trovato, `!words` per la lista di parole')
+            return
+        
+        if args[1].lower() == 'edit':
+            editWord = int(args[2])
+            if len(settings[str(ctx.guild.id)]['responseSettings']['custom_words']) > editWord:
+                settings[str(ctx.guild.id)]['responseSettings']['custom_words'][editWord] = ' '.join(args[3:])
+                await ctx.send('Fatto')
+            else:
+                await ctx.send('Id parola non trovato, `!words` per la lista di parole')
+            return
+
+        if args[1].lower() == 'add':
+            newWord = ' '.join(args[2:])
+        
+        settings[str(ctx.guild.id)]['responseSettings']['custom_words'].append(newWord)
+        await ctx.send('Nuova parola imparata!')
+        dumpSettings()
+
+        return
+
     #1. Send a description
-    customWords = settings[str(ctx.guild.id)]['responseSettings']['customwords']
-    description = '''Comandi disponibili:\n`!words del <x>` per eliminare una parola
-                        `!words change <x> <parola>` per cambiare una parola
-                        `!words add <parola>` per aggiungere una parola nuova
+    custom_words = settings[str(ctx.guild.id)]['responseSettings']['custom_words']
+    description = f'''Comandi disponibili:\n`!words del <x>` per eliminare una parola
+                        `!words edit <x> <parola>` per cambiare una parola
+                        `!words <parola>` per aggiungere una parola nuova
+                        `!words del <id>` per rimuovere una parola nuova
                         `!words useDefault [true|false]` per scegliere se usare le parole di default
-                        Puoi modificare solo le parole con accanto un ID
+                        eg: `!words il culo, i culi` < per un esperienza migliore specifica l'articolo e la forma singolare(plurale)
+                        eg: `!words culo` < specificare le forme non è obbligatorio
+                        Puoi modificare solo le parole di {ctx.guild.name}
     '''
 
-    if not settings[str(ctx.guild.id)]['responseSettings']['useGlobalWords']:
+    if not settings[str(ctx.guild.id)]['responseSettings']['use_global_words']:
        description += f'{ctx.guild.name} non usa le parole di default, quindi non verranno mostrate, per mostrarle usare il comando: `!words useDefault `'
         
     embed = discord.Embed(
@@ -283,15 +396,15 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
     botWords = getWord(True)
 
     #2b. if the guild uses the global words, append them to value
-    if settings[str(ctx.guild.id)]['responseSettings']['useGlobalWords']:
+    if settings[str(ctx.guild.id)]['responseSettings']['use_global_words']:
         #is server uses default words
         value = '\n'.join(botWords)
         embed.add_field(name = 'Parole del bot:', value=value)
         value = '' 
 
     #2c. append the guild(local) words to value
-    for i, cw in enumerate(customWords):
-        value += f'[`{i}`]: {cw}'
+    for i, cw in enumerate(custom_words):
+        value += f'[`{i}`]: {cw}\n'
     if value == '': value='Nessuna parola impostata, usa `!words help` per più informazioni'
     embed.add_field(name = f'Parole di {ctx.guild.name}:', value=value)
     
@@ -312,13 +425,17 @@ async def embedpages(ctx : commands.Context):
     page2 = e.copy().set_author(name='Help 2/3, CHECKMATE', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     page3 = e.copy().set_author(name='Help 3/3, misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     
+    #Page 1
     page1.add_field(name='!resp', value='Chiedi al bot la percentuale di culificazione', inline=False)#ok
     page1.add_field(name='!resp [x]%', value='Imposta la percentuale di culificazione a [x]%', inline=False)#ok
     page1.add_field(name='!resp bot', value= 'controlla le percentuale di risposta verso gli altri bot', inline=False)#ok
     page1.add_field(name='!resp bot [x]%', value= 'Imposta la percentuale di culificazione contro altri bot a [x]%', inline=False)#ok
     page1.add_field(name='!resp bot [True|False]', value= 'abilita/disabilita le culificazioni di messaggi di altri bot', inline=False)#ok
-    page3.add_field(name='!words', value='Usalo per vedere le parole che il bot conosce', inline=False)
-    
+    page1.add_field(name='!words', value='Usalo per vedere le parole che il bot conosce', inline=False)
+    page1.add_field(name='!words [add <words>|del <id>|edit<id> <word>]', value='Usalo modificare le parole del server', inline=False)
+    page1.add_field(name='Struttura di word:', value='Per un esperienza migliore è consigliato usare gli articoli e specificare prima la forma singolare e poi quella plurale divise da una virgola e.g. `il culo, i culi`\n`il culo` `culo` `culo, culi` sono comunque forme accettabili', inline=False)
+
+    #Page 2
     page2.add_field(name='!chess [@user | @role] [fen="<FEN>" | board=<boardname>]', 
     value='Gioca ad una partita di scacchi!\n\
      [@user]: Sfida una persona a scacchi\n\
@@ -334,10 +451,12 @@ async def embedpages(ctx : commands.Context):
     page2.add_field(name='!chess rename <name> <newName>', value='rinomina una scacchiera', inline=False)#ok
     page2.add_field(name='!chess edit <name> <FEN>', value='modifica una scacchiera', inline=False)#ok
 
+    #Page 3
     page3.add_field(name='!ping', value='Pong!', inline=False)#ok
     page3.add_field(name='!rawdump', value='manda un messaggio con tutti i dati salvati di questo server', inline=False)#ok
-    
+    page3.add_field(name='joinmsg [msg]', value="Mostra il messaggio di benvenuto del bot, usa `!joinmsg help` per più informazioni\n", inline=False)
 
+    #fotter for page 1
     page1.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
     page1.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
     
@@ -347,8 +466,6 @@ async def embedpages(ctx : commands.Context):
 
     await msg.add_reaction('◀')
     await msg.add_reaction('▶')
-    # await msg.add_reaction('⏮') # Those add too much latency and I never use them so...
-    # await msg.add_reaction('⏭')
     
     i = 0
     emoji = ''
@@ -410,7 +527,7 @@ async def chessGame(ctx : commands.Context):
     #useful for FENs: eg   (!chess) game fen="bla bla bla" < str.strip will return ["game", "fen=bla", "bla", "bla"]
     args = splitString(args)                    #wheras splitString will return ["game", "fen=", "bla", "bla", "bla"]
     gameFEN = ''
-    gameBoard = settings[str(ctx.guild.id)]["chessGame"]["defaultBoard"]
+    gameBoard = settings[str(ctx.guild.id)]["chessGame"]["default_board"]
     
     
 # 2. Parse args
@@ -751,25 +868,25 @@ async def on_message(message : discord.Message):
         
 #---------------------------------------------- This is specific to a server
     if message.author.id == 438269159126859776 and message.guild.id == 694106741436186665:
-        if random.randrange(1, 100) < respSettings["responseToBotsPerc"]:
+        if random.randrange(1, 100) < respSettings["response_to_bots_perc"]:
             await asyncio.sleep(random.randrange(1, 3))
             m = ''
             with open('botFiles/antiButt.txt', 'r') as lines:
                 m = random.choice(lines.read().splitlines())
             await message.reply(m, mention_author=False)
-            if random.randrange(1, 100) < respSettings["responseToBotsPerc"]/2:
+            if random.randrange(1, 100) < respSettings["response_to_bots_perc"]/2:
                 r = random.choice(['🤣', '😂', '🤢', '🤡'])
                 await message.add_reaction(r)
         return
 ##---------------------------------------------- you can safely delete until here
     
     #if guild does not want bot responses and sender is a bot, ignore the message
-    if message.author.bot and not respSettings["willRepondToBots"]: return 0
+    if message.author.bot and not respSettings["will_respond_to_bots"]: return 0
 
     #culificazione
     articoli = ['il', 'lo', 'la', 'i', 'gli', 'le'] #Italian specific
  
-    if random.randrange(1, 100) > respSettings["responsePerc"]: #implement % of answering
+    if random.randrange(1, 100) > respSettings["response_perc"]: #implement % of answering
         return
 
     msg = message.content.split() #trasforma messaggio in lista
@@ -799,13 +916,11 @@ async def on_message(message : discord.Message):
 
     await message.reply(msg, mention_author=False)
     print('responded')
-    log(f'[INFO]: responded to message <resp_rate: {respSettings["responsePerc"]}%>')
+    log(f'[INFO]: responded to message <resp_rate: {respSettings["response_perc"]}%>')
 
 
 loadSettings()
-checkSettingsIntegrity()
+
 # updateSettings("694106741436186665", 'response', 534) #testing purposes
 
 bot.run(TOKEN)
-
-#TODO comando per togliere/aggiungere parole dalla lista
