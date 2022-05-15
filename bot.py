@@ -26,8 +26,8 @@ load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"response":35,"other_response":20,"responsetobots":25,"willRepondToBots":True,"useDefaultWords":True,"customwords":[]},"chessGame":{"defaultBoard": "default","boards":{}}}}
-#TOIMPLEMENT: useDefaultWords, chessGame
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"response":35,"other_response":20,"responsetobots":25,"willRepondToBots":True,"useGlobalWords":True,"customwords":[]},"chessGame":{"defaultBoard": "default","boards":{}}}}
+#TOIMPLEMENT: useGlobalWords, chessGame
 
 intents = discord.Intents.all()
 intents.members = True
@@ -42,7 +42,7 @@ bot = commands.Bot(
 
 bot.remove_command("help")
 
-settingsFile = "settingsData.json"
+settingsFile = "botFiles/guildsData.json"
 settings = {}
 with open(settingsFile, 'a'): pass #make setting file if it does not exist
 
@@ -115,7 +115,8 @@ def loadSettings():
 def checkSettingsIntegrity():
     pass #TODO implement function
 
-def log(msg):
+def log(msg): #It's more annoying than it is usefull, maybe 
+    return
     """
     It takes a string as an argument, gets the current time, formats it, and writes the message to a file
 
@@ -139,7 +140,7 @@ def getWord(all=False) -> Union[str,list]:
     :return: A random line from the words.txt file.
     e.g. culo, i culi
     """
-    with open('words.txt', 'r') as words:
+    with open('botFiles/words.txt', 'r') as words:
         lines = words.read().splitlines()
         if(all):
             return lines
@@ -267,7 +268,7 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
                         Puoi modificare solo le parole con accanto un ID
     '''
 
-    if not settings[str(ctx.guild.id)]['responseSettings']['useDefaultWords']:
+    if not settings[str(ctx.guild.id)]['responseSettings']['useGlobalWords']:
        description += f'{ctx.guild.name} non usa le parole di default, quindi non verranno mostrate, per mostrarle usare il comando: `!words useDefault `'
         
     embed = discord.Embed(
@@ -279,8 +280,9 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
     value = ''
     #2a. get the global words
     botWords = getWord(True)
+
     #2b. if the guild uses the global words, append them to value
-    if settings[str(ctx.guild.id)]['responseSettings']['useDefaultWords']:
+    if settings[str(ctx.guild.id)]['responseSettings']['useGlobalWords']:
         #is server uses default words
         value = '\n'.join(botWords)
         embed.add_field(name = 'Parole del bot:', value=value)
@@ -289,6 +291,7 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
     #2c. append the guild(local) words to value
     for i, cw in enumerate(customWords):
         value += f'[`{i}`]: {cw}'
+    if value == '': value='Nessuna parola impostata, usa `!words help` per più informazioni'
     embed.add_field(name = f'Parole di {ctx.guild.name}:', value=value)
     
     #3. send the words
@@ -764,7 +767,7 @@ async def on_message(message : discord.Message):
         if random.randrange(1, 100) < setting["responsetobots"]: #implement % of answering
             await asyncio.sleep(random.randrange(1, 3))
             m = ''
-            with open('antiButt.txt', 'r') as lines:
+            with open('botFiles/antiButt.txt', 'r') as lines:
                 m = random.choice(lines.read().splitlines())
             await message.reply(m, mention_author=False)
             if random.randrange(1, 100) < setting["responsetobots"]/2:

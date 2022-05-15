@@ -1,6 +1,6 @@
-spotify.py
+tests/
 chessGame/games/
-settingsData.json
+guildsData.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
