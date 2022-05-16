@@ -28,7 +28,7 @@ def getOverallWinnerName(players, score) -> str:
 		return "Pareggio"
 	return str(players[0]) if score[0]>score[1] else str(players[1])
 
-async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.Member], fetchThread : tuple[discord.Message, discord.Embed], selectedBoard : tuple[str,str], boardName : str = 'default'):
+async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.Member], fetchThread : tuple[discord.Message, discord.Embed], selectedBoard : tuple[str,str], designName : str = 'default'):
 	"""links bot.py with chess game (Main.py)
 		
 		:param threadChannel: the thread where the bot will send messages about the game.
@@ -66,7 +66,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 		elif(selectedBoard[0] == 'BOARD'):
 			gs.boardFromFEN(chessGame.boards[selectedBoard[1]])
 
-		renderer = chessMain.gameRenderer.GameRenderer(chessGame, boardName, gs.board)
+		renderer = chessMain.gameRenderer.GameRenderer(chessGame, designName, gs.board)
 		renderer.drawBoard()
 		
 		roundFEN = gs.getFEN()
@@ -358,8 +358,6 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				chessGame.mPrint("GAMEErr", "Invalid move.")
 				chessGame.mPrint("GAME", f"your move: {userMove}")
 
-def getDesigns() -> list:
-	return chessMain.getDesigns()
 
 def getBoards() -> list:
 	return chessMain.getSavedBoards()

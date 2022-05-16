@@ -3,6 +3,7 @@ import os
 import json
 import random
 import copy
+import shutil
 import sys
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
@@ -583,15 +584,15 @@ async def chessGame(ctx : commands.Context):
                     colour = 0xf39641
                 )
 
-                #ii. append the global data boards to the embed
-                botDesigns = chessBridge.getDesigns()
+                #ii. append the global data designs to the embed
+                botDesigns = chessBridge.chessMain.getDesignNames()
                 value = ''
                 for b in range(len(botDesigns)):
                     value += f"{botDesigns[b]}\n"
 
                 embed.add_field(name = 'Design disponibili:', value=value, inline=False)
 
-                #iii. if guild data has boards, append them to the embed
+                #iii. if guild data has designs, append them to the embed
                 if settings[str(ctx.guild.id)]['chessGame']['designs'] != {}:
                     guildDesigns = ''
                     for b in settings[str(ctx.guild.id)]['chessGame']['designs']:
@@ -612,12 +613,18 @@ async def chessGame(ctx : commands.Context):
                 if(len(args) == 3):
                     #design exists in guildData
                     if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
-                        await ctx.send(settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]]) #TODO will implement when the gamerenderer will be able to draw boards
+                        colors = settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]]
+                        design = chessBridge.chessMain.gameRenderer.renderBoard(colors, ctx.message.id)
+                        path = chessBridge.chessMain.gameRenderer.spritesFolder + design
+                        with open(path+'chessboard.png', "rb") as fh:
+                            f = discord.File(fh, filename=(path + 'chessboard.png'))
+                            await ctx.send(file=f)
+                        shutil.rmtree(path, ignore_errors=False, onerror=None)
                         return 0
                     
                     #design does not exist in guildData, search if exists in sprites folder
-                    design = f'{chessBridge.chessMain.gameRenderer.spritesFolder}{args[2]}/chessboard.png'
-                    if chessBridge.chessMain.gameRenderer.doesDesignExist(design):
+                    if chessBridge.chessMain.gameRenderer.doesDesignExist(args[2]):
+                        design = f'{chessBridge.chessMain.gameRenderer.spritesFolder}{args[2]}/chessboard.png'
                         with open(design, "rb") as fh:
                             f = discord.File(fh, filename=design)
                             await ctx.send(file=f)
@@ -774,8 +781,17 @@ async def chessGame(ctx : commands.Context):
             return -1
     
     if design != 'default': #if user asked for a design, check if it exists
-        if not chessBridge.chessMain.gameRenderer.doesDesignExist(design):
+        #give priority to guild designs
+        if design in settings[str(ctx.guild.id)]['chessGame']['designs']:
+            designName = design
+            design = settings[str(ctx.guild.id)]['chessGame']['designs'][design]
+            design = chessBridge.chessMain.gameRenderer.renderBoard(design, ctx.message.id)
+        elif not chessBridge.chessMain.gameRenderer.doesDesignExist(design):
+            designName = 'default'
             design = 'default'
+        else:
+            designName = design
+        
 
 
 # 3. All seems good, now let's send the embed to find some players
@@ -783,20 +799,20 @@ async def chessGame(ctx : commands.Context):
     if challenge['type'] == 'User': 
         challengedUser = ctx.guild.get_member(int(challenge['challenged'])) #await bot.fetch_user(challenged)
         embed = discord.Embed(title = f'@{challengedUser.name}, sei stato sfidato da {ctx.message.author}!\nUsate una reazione per unirti ad un team (max 1 per squadra)',
-            description=f'Scacchiera: {board[1]}, design: {design}',
+            description=f'Scacchiera: {board[1]}, design: {designName}',
             color = 0x0a7ace)
         
     #3B. Challenge one guild
     elif challenge['type'] == 'Role':
         challengedRole = ctx.guild.get_role(int(challenge['challenged']))
         embed = discord.Embed(title = f'@{challengedRole.name}, siete stati sfidati da {ctx.message.author}!\nUno di voi può unirsi alla partita!',
-            description=f'Scacchiera: {board[1]}, design: {design}',
+            description=f'Scacchiera: {board[1]}, design: {designName}',
             color = 0x0a7ace)
 
     #3C. Challenge everyone
     else:
         embed = discord.Embed(title = f'Cerco giocatori per una partita di scacchi! ♟,\nUsa una reazione per unirti ad un team (max 1 per squadra)',
-            description=f'Scacchiera: {board[1]}, design: {design}',
+            description=f'Scacchiera: {board[1]}, design: {designName}',
             color = 0x0a7ace).set_footer(text=f'Partita richiesta da {ctx.message.author}')
     
     #3D. SEND THE EMBED FINALLY
@@ -883,6 +899,10 @@ async def chessGame(ctx : commands.Context):
         embed.title = "Ricerca annullata"
         embed.description = ""
         embed.color = 0xdc143c
+
+        designFolder = f'{chessBridge.chessMain.gameRenderer.spritesFolder}{design}'
+        if design.find('\\') != -1 or design.find('/') != -1:
+            shutil.rmtree(designFolder)
         await playerFetchMsg.clear_reactions()
         await playerFetchMsg.edit(embed=embed)
 
@@ -930,7 +950,7 @@ async def chessGame(ctx : commands.Context):
         #iv. Send an embed with the details of the game
         embed = discord.Embed(
             title = f'Giocatori trovati\n{r1} {player1} :vs: {player2} {r2}',
-            description=f"Impostazioni:\n- Scacchiera: {board[1]}, Design: {design}",
+            description=f"Impostazioni:\n- Scacchiera: {board[1]}, Design: {designName}",
             colour = 0x27E039
         )
         
@@ -946,6 +966,9 @@ async def chessGame(ctx : commands.Context):
         await chessBridge.loadGame(gameThread, bot, [player2, player1], mainThreadEmbed, board, design)
         #                                        #send them backwards (info on chessBrige.py) [black, white]
         await gameThread.edit(archived=True, locked=True)
+        designFolder = f'{chessBridge.chessMain.gameRenderer.spritesFolder}{design}'
+        if design.find('\\') != -1 or design.find('/') != -1:
+            shutil.rmtree(designFolder)
 
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message : discord.Message):

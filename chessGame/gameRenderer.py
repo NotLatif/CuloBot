@@ -1,5 +1,6 @@
 import os
 import json
+import os
 from PIL import Image
 
 spritesFolder = 'chessGame/sprites/'
@@ -7,9 +8,44 @@ gamesFolder = f'chessGame/games/'
 
 def doesDesignExist(design) -> bool: return os.path.isdir(f'{spritesFolder}{design}')
 
+def renderBoard(colors, id) -> str:
+	"""Reders a chessboards with the given colors and returns it's path"""
+	#TODO add bezels with letters/numbers
+	print(f'COLORS: {colors}')
+	new = Image.new(mode="RGBA", size=(1000,1000))
+	c1 = Image.new(mode="RGB", size=(125,125), color=colors[0])
+	c2 = Image.new(mode="RGB", size=(125,125), color=colors[1])
+
+	turn = True
+	for i in range(8):
+		for j in range(8):
+			if ((i + j + 1) % 2 == 0):
+				new.paste(c1, (i*125, j*125))
+			else:
+				new.paste(c2, (i*125, j*125))
+			turn = not turn
+
+	path = f'{spritesFolder}temp/{id}/chessboard'
+	
+	if not (os.path.exists(spritesFolder + 'temp/')):
+		os.mkdir(spritesFolder + 'temp/')
+	os.mkdir(spritesFolder + f'temp/{id}')
+
+	new.save(f'{path}.png')
+
+	bezels = {"bezel_left": 0,"bezel_right": 0,"bezel_top": 0}
+	with open(f'{path}.json', 'w') as f:
+		json.dump(bezels, f, indent=2)
+	
+	return f'temp/{id}/'
+	
+
+
+
 class GameRenderer():
-	def __init__(self, cg, boardName, board) -> None:
-		self.boardFolder = f'{spritesFolder}{boardName}/'
+	def __init__(self, cg, designName, board) -> None:
+		self.boardFolder = f'{spritesFolder}{designName}'
+
 		self.boardGS = board # list[][] containing board data
 		self.bezels = self.getBoardBezels()
 		self.cg = cg

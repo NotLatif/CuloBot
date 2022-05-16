@@ -12,7 +12,8 @@ init()
 def doesBoardExist(b) -> bool:
 	return True if b in getSavedBoards() else False
 
-def getDesigns() -> list:
+def getDesignNames() -> list:
+	print('d ' + gameRenderer.spritesFolder)
 	return next(os.walk(gameRenderer.spritesFolder))[1]
 
 def getSavedBoards() -> dict[str:str]:
@@ -25,7 +26,7 @@ def getSavedBoards() -> dict[str:str]:
 			json.dump(boards, fp , indent=2)
 	return boards
 
-def renderBoard(fen:str, id, boardName = 'default') -> tuple[str]:
+def renderBoard(fen:str, id, designName = 'default') -> tuple[str]:
 	if fen.count('/') == 7 and ('k' in fen and 'K' in fen):
 		pass #it's a fen
 	elif doesBoardExist(fen):
@@ -37,7 +38,7 @@ def renderBoard(fen:str, id, boardName = 'default') -> tuple[str]:
 	#a little expensive maybe but whatever nobody will use this code anyways
 	cg = ChessGame(str(f'temprender_{id}'))
 	gs = Engine.GameState(cg)
-	renderer = gameRenderer.GameRenderer(cg, boardName, gs.board)
+	renderer = gameRenderer.GameRenderer(cg, designName, gs.board)
 	gs.boardFromFEN(fen)
 	imagePathTuple = renderer.drawBoard()
 	return imagePathTuple
