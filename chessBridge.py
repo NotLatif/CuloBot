@@ -65,43 +65,40 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			gs.boardFromFEN(selectedBoard[1])
 		elif(selectedBoard[0] == 'BOARD'):
 			gs.boardFromFEN(chessGame.boards[selectedBoard[1]])
+		else:
+			await threadChannel.send('Error has occurred chessBridge.FENNotFound')
+			return -1
 
-		renderer = chessMain.gameRenderer.GameRenderer(chessGame, designName, gs.board)
-		renderer.drawBoard()
+		renderer = chessMain.gameRenderer.GameRenderer(chessGame, designName, gs)
 		
 		roundFEN = gs.getFEN()
 		gs.mPrint('GAME', f'FEN {roundFEN}')
 
 		didIllegalMove = [False, ''] #[bool, str]
-		boardMessages = [] #needed to delete the last edited board and avoid chat clutter
+		boardMessages = ['placeholder'] #needed to delete the last edited board and avoid chat clutter
 							#this will keep max two boards loaded at a time [board0, board1]
 							#will delete the last -> [board1, board2]
 		
-		validMoves = gs.getValidMoves()
-
-		#send first board
-		with open(chessGame.getOutputFile(), "rb") as fh:
-			f = discord.File(fh, filename=chessGame.getOutputFile())
-			boardMessages.append(await threadChannel.send(file=f)) #add first board to list
 
 		while True: #gameloop (iterates every turn)
 			turn = gs.whiteMoves #if turn = 1, players[turn] is white, if turn = 0 players[turn is black]
 #									 turn = True						  turn = False
 			lastTurn = not gs.whiteMoves #needed to find winners
-			renderer.drawBoard()
+
 			#generate board and moves
-			if not didIllegalMove[0] or gs.turnCount == 0: #no need to regenerate if last move was illegal
-				renderer.drawBoard() #will check below in the code for illegal moves
-				validMoves = gs.getValidMoves()
+			if not didIllegalMove[0]: #no need to regenerate if last move was illegal
+				validMoves = gs.getValidMoves()#will check below in the code for illegal moves
+				renderer.drawBoard()#IMPORTANT draw the board after getting the moves (to draw checks and moves on the board)
 
 			#send board img to discord
-			if gs.turnCount != 0: #Don't resend the first image
-				with open(chessGame.getOutputFile(), "rb") as fh:
-					f = discord.File(fh, filename=chessGame.getOutputFile())
-					boardMessages.append(await threadChannel.send(file=f))
+			with open(chessGame.getOutputFile(), "rb") as fh:
+				f = discord.File(fh, filename=chessGame.getOutputFile())
+				boardMessages.append(await threadChannel.send(file=f))
+				if boardMessages[0] != 'placeholder':
 					await boardMessages[0].delete() #delete last board
-					del boardMessages[0] #remove last board from list -> the current one will be at boardMessages[0]
+				del boardMessages[0] #remove last board from list -> the current one will be at boardMessages[0]
 			
+
 		#MACRO TASK: ask for a move or command
 			#1. make an embed with the request
 			embed = discord.Embed(
@@ -176,7 +173,8 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 
 				try:
 					r1, temp = await bot.wait_for('reaction_add', timeout=120.0, check=rematchVoteCheck)
-					r2, temp = await bot.wait_for('reaction_add', timeout=120.0, check=rematchVoteCheck)
+					if r1 == reactions[1]:
+						r2, temp = await bot.wait_for('reaction_add', timeout=120.0, check=rematchVoteCheck)
 				except asyncio.TimeoutError:
 					await notEnoughVotes()
 					return 0
@@ -290,6 +288,9 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				
 				elif(userMessage.content == "undo"): #ctrl-z
 					gs.undoMove()
+					break
+			
+				elif(userMessage.content == "board"):
 					break
 				
 				#c. check if message author has the turn

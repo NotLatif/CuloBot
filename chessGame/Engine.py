@@ -5,19 +5,7 @@ class GameState():
 	"""
 	def __init__(self, cg) -> None:
 		self.cg = cg
-		#board: 8x8 2d list of str (2chr)
-		#N = Nero, B = Bianco, Torre Alfiere Cavallo Queen King Pedone
-		#					   Rook  Bishop  kNight  Queen King Pawn
-		self.board = [ #TODO invert board
-			["WR", "WN", "WB", "WQ", "WK", "WB", "WN", "WR"], #A Bianco 
-			["WP", "WP", "WP", "WP", "WP", "WP", "WP", "WP"], #B
-			["--", "--", "--", "--", "--", "--", "--", "--"], #C
-			["--", "--", "--", "--", "--", "--", "--", "--"], #D
-			["--", "--", "--", "--", "--", "--", "--", "--"], #E
-			["--", "--", "--", "--", "--", "--", "--", "--"], #F
-			["BP", "BP", "BP", "BP", "BP", "BP", "BP", "BP"], #G
-			["BR", "BN", "BB", "BQ", "BK", "BB", "BN", "BR"], #H Nero 
-		]
+		self.board = [] #list[8][8] it will be generated from FEN
 		self.whiteKpos = (0, 4)
 		self.blackKpos = (7, 4)
 		self.whiteMoves = True
@@ -202,7 +190,6 @@ class GameState():
 			self.board[move.endRow][move.endCol] = move.pieceMoved[0] + 'Q' #Promote to a queen for now, will figure out later a way
 		
 		
-
 	def undoMove(self) -> None:
 		"""
 		Undo last move
@@ -228,13 +215,11 @@ class GameState():
 			if lastMove.pieceMoved[1] == 'P' and abs(lastMove.startRow - lastMove.endRow) == 2:
 				self.enpassantPossible = ()
 
-			
-
 
 	def getValidMoves(self) -> list:
 		self.mPrint('VARS', f"Turn: {'White' if self.whiteMoves else 'Black'}")
 		#return self.getValidMovesNaive() #not very good but should work
-		moves =  self.getValidMovesComplicated() #better but has bugs currently 
+		moves =  self.getValidMovesComplicated()#better method
 		
 		Move.setAlgebraicNotation(moves) #pass every move so it can set the notation
 		for m in moves:
@@ -294,7 +279,7 @@ class GameState():
 			moves = self.getAllPossibleMoves()
 
 		if len(moves) == 0:
-			if self.isInCheck():
+			if self.inCheck:
 				self.checkMate = True
 			else:
 				self.staleMate = True
@@ -371,53 +356,16 @@ class GameState():
 
 		return inCheck, pins, checks
 
-	def getValidMovesNaive(self) -> list:
-		self.mPrint('INFO', 'using the naive algorithm to generate moves')
-		tempEnpassantPossible = self.enpassantPossible
-
-		#All moves considering checks (if you move a piece do you expose the K?)
-		#1. generate all the moves
-		moves = self.getAllPossibleMoves() #temp.
-		#2. foreach move make it
-		for i in range(len(moves)-1, -1, -1): #go backwards because we will delete things from a list
-			self.makeMove(moves[i]) #WARN: this function switches turn
-			#3. generate all opponent's moves
-			#4. foreach opponent move, see if they attack the king
-			self.whiteMoves = not self.whiteMoves
-			if self.isInCheck():
-				#5. if they do, it's not a valid move
-				moves.remove(moves[i])
-			self.whiteMoves = not self.whiteMoves
-			self.undoMove() #WARN this function switches turn
-
-		if len(moves) == 0:
-			if self.isInCheck():
-				self.checkMate = True
+	def getCheckSquare(self) -> bool:
+		"""Returns the king square if it is in check"""
+		if self.inCheck:
+			if self.whiteMoves:
+				return self.blackKPos
+				
 			else:
-				self.staleMate = True
+				return self.whiteKPos
 		else:
-			self.checkMate = False #in case of undo
-			self.staleMate = False
-		self.enpassantPossible = tempEnpassantPossible
-		return moves
-
-	def isInCheck(self) -> bool:
-		"""Determines if player is in check"""
-		if self.whiteMoves:
-			return self.squareUnderAttack(self.whiteKpos[0], self.whiteKpos[1])
-		else:
-			return self.squareUnderAttack(self.blackKpos[0], self.blackKpos[1])
-
-	def squareUnderAttack(self, r, c) -> bool:
-		"""Determines if enemy can attack (r, c)"""
-		self.mPrint('DEBUG', f'generating opponent moves')
-		self.whiteMoves = not self.whiteMoves #I want opponent moves
-		opponentMoves = self.getAllPossibleMoves()
-		self.whiteMoves = not self.whiteMoves #reset turn
-		for move in opponentMoves:
-			if move.endRow == r and move.endCol == c: #square under attack
-				return True #square under attack
-		return False #square not under attack
+			return None
 		
 	def getAllPossibleMoves(self) -> list:
 		self.mPrint('FUNC', 'getAllPossibleMoves()')
@@ -650,6 +598,8 @@ class Move():
 		return None
 
 	def setAlgebraicNotation(legalMoves : list) -> None:
+		#Not passing self and doing it piece by piece because for the algebrai notation
+		#we need to consider the position of every piece at the same time to calculate ambiguities
 		#returns algebraic notation starting from coordinates
 		#TODO add support for check, double-check and other
 
@@ -705,10 +655,6 @@ class Move():
 
 		# copy the algorithm already made
 		#detect piece for prefix
-
-
-	
-
 
 
 	def getChessNotation(self) -> str:

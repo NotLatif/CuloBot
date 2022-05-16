@@ -38,7 +38,7 @@ def renderBoard(fen:str, id, designName = 'default') -> tuple[str]:
 	#a little expensive maybe but whatever nobody will use this code anyways
 	cg = ChessGame(str(f'temprender_{id}'))
 	gs = Engine.GameState(cg)
-	renderer = gameRenderer.GameRenderer(cg, designName, gs.board)
+	renderer = gameRenderer.GameRenderer(cg, designName, gs)
 	gs.boardFromFEN(fen)
 	imagePathTuple = renderer.drawBoard()
 	return imagePathTuple
@@ -126,7 +126,7 @@ def main():
 
 	gs.boardFromFEN(cg.boards['default'])
 
-	renderer = gameRenderer.GameRenderer(cg, 'old', gs.board)
+	renderer = gameRenderer.GameRenderer(cg, 'old', gs)
 	
 	for x in gs.board:
 		print(x)

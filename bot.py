@@ -13,8 +13,6 @@ from typing import Union
 
 import chessBridge
 
-#TODO render a new custom from colors
-
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
 
@@ -113,8 +111,6 @@ def updateSettings(id : int, setting :str = None, value :str = None, reset : boo
             json.dump(temp, fp , indent=2)
             settings[id] = temp[id]
   
-
-
 def checkSettingsIntegrity(id : str):
     id = str(id)
     print(f'Checking guildData integrity of ({id})')
@@ -326,7 +322,7 @@ async def perc(ctx : commands.Context):  ## RESP command
 
     newPerc = int(arg[0].strip("%"))
 
-    if (respSettings['response'] == newPerc):
+    if (respSettings['response_perc'] == newPerc):
         await ctx.send(f"non è cambiato niente.")
         return
 
@@ -445,7 +441,7 @@ async def embedpages(ctx : commands.Context):
     page2.add_field(name='e.g.:', value='```!chess board=board2\n!chess\n!chess @Admin\n!chess fen="k7/8/8/8/8/8/8/7K"```')
 
     page2.add_field(name='!chess boards', value='vedi i FEN disponibili', inline=False)#ok
-    page2.add_field(name='!chess designs [see|add|del|edit]', value='vedi le scacchiere disponibili `!chess design` per più informazioni', inline=False)#ok
+    page2.add_field(name='!chess design [see|add|del|edit]', value='vedi le scacchiere disponibili `!chess design` per più informazioni', inline=False)#ok
     page2.add_field(name='!chess render <name | FEN>', value='genera l\'immagine della scacchiera', inline=False)#ok
     page2.add_field(name='!chess add <name> <FEN>', value='aggiungi una scacchiera', inline=False)#ok
     page2.add_field(name='!chess remove <name>', value='rimuovi una scacchiera', inline=False)#ok
@@ -531,7 +527,6 @@ async def chessGame(ctx : commands.Context):
     gameBoard = settings[str(ctx.guild.id)]["chessGame"]["default_board"]
     design = 'default'
     
-    
 # 2. Parse args
     #2A. detect challenges
     if(len(args) >= 1 and args[0][:2] == '<@'): 
@@ -599,10 +594,11 @@ async def chessGame(ctx : commands.Context):
                         guildDesigns += f"**{b}**: {settings[str(ctx.guild.id)]['chessGame']['designs'][b]}\n"
                     embed.add_field(name = f'Design di {ctx.guild.name}:', value=guildDesigns, inline=False)
                 
-                #TODO implement
-                embed.add_field(name="Per creare una scacchiera: ", value="`!chess design add <Colore primario, ColoreSecondario>`", inline=False)
-                embed.add_field(name="Per eliminare una scacchiera: ", value="`!chess design del <name>`", inline=False)
-                embed.add_field(name="Per vedere una scacchiera: ", value="`!chess design see <name>`", inline=False)
+                
+                embed.add_field(name="\nComandi disponibili:\nPer creare una scacchiera: ", value="`!chess design add <nome> <colore1> <colore2>`", inline=False)
+                embed.add_field(name="Per modificare una scacchiera: ", value="`!chess design edit <nome> <colore1> <colore2>`", inline=False)
+                embed.add_field(name="Per eliminare una scacchiera: ", value="`!chess design del <nome>`", inline=False)
+                embed.add_field(name="Per vedere una scacchiera: ", value="`!chess design see <nome>`\nI colori devono essere in formato HEX e.g.:`B00B1E` N.B. non mettere l'# in quanto discord può interpretarlo come un canale testuale", inline=False)
 
                 #iv. send the embed
                 await ctx.send(embed=embed)
@@ -630,22 +626,75 @@ async def chessGame(ctx : commands.Context):
                             await ctx.send(file=f)
                     else:
                         await ctx.send("Design non trovato, usa `!chess design` per vedere i design disponibili")
-                    return 0
                 else:
                     await ctx.send('Usage: `!chess design see <name>`')
+                return 0
             
             if args[1] == 'del': #delete a guild design
-                if(len(args) == 3):
-                    if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
-                        design = settings[str(ctx.guild.id)]['chessGame']['designs'].pop(args[2])
-                        ctx.send(f'Ho eliminato {args[2]}: {design}')
+                if(len(args) >= 3):
+                    selectedDesign = args[2:]
+                    for d in selectedDesign: 
+                        if d in settings[str(ctx.guild.id)]['chessGame']['designs']:
+                            design = settings[str(ctx.guild.id)]['chessGame']['designs'].pop(d)
+                            await ctx.send(f'Ho eliminato {d}: {design}')
+                            dumpSettings()
+                        else:
+                            await ctx.send("Design non trovato, usa `!chess design` per vedere i design disponibili")
                 else:
                     await ctx.send('Usage: `!chess design del <name>`')
+                return 0
             
+            def parseHEX(hex1, hex2) -> list:
+                colors = [hex1, hex2]
+                possible = ['#', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
+                for i, hex in enumerate(colors): #foreach color
+                    # if it has not an # add it
+                    if hex[0] != '#': hex = '#' + hex
+                    for char in hex: #check if color digits are valid
+                        if char.lower() not in possible:
+                            return '0'
+                    if len(hex) == 4: #if the hex type is #fff expand it to #ffffff
+                        hex = f'#{hex[1]}{hex[1]}{hex[2]}{hex[2]}{hex[3]}{hex[3]}'
+                    if len(hex) != 7:
+                        return '0'
+                    colors[i] = hex
+
+                return colors
+                
+
             if args[1] == 'edit':
-                await ctx.send('edit not supported yet, sorry')
+                #design edit name #0340430 #0359340
+                if len(args) == 5:
+                    if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
+                        colors = parseHEX(args[3], args[4])
+                        if colors == '0':
+                            await ctx.send("Invalid hex")
+                            return -2
+                        settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]] = colors
+                        await ctx.send(f"Design modificato: **{args[2]}**: {colors}")
+                        dumpSettings()
+                    else:
+                        await ctx.send("Design non trovato, usa `!chess design` per vedere i design disponibili")
+                        return -2
+                else:
+                    await ctx.send('Usage: `!chess design edit <nome> <colore1> <colore2>`\ne.g.:`!chess design edit test1 #24AB34 #8E24FF`')
+                return 0
+
             if args[1] == 'add':
-                await ctx.send('add not supported yet, sorry')
+                if len(args) == 5:
+                    if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
+                        await ctx.send(f'Il design esiste già. Usa `!chess design edit {args[2]} {args[3]} {args[4]} se vuoi modificarlo`')
+                        return -2
+                    colors = parseHEX(args[3], args[4])
+                    if colors == '0':
+                        await ctx.send("Invalid hex")
+                        return -2
+                    settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]] = colors
+                    await ctx.send(f"Design aggiunto: **{args[2]}**: {colors}")
+                    dumpSettings()
+                else:
+                    await ctx.send('Usage: `!chess design add <nome> <colore1> <colore2>`\ne.g.:`!chess design edit test1 #24AB34 #8E24FF`')
+                return 0
 
         elif args[0] == 'renderboard' or args[0] == 'render': # renders a FEN and send it in chat
             #i. avoid indexError because of the dumb user
@@ -780,7 +829,8 @@ async def chessGame(ctx : commands.Context):
             await ctx.send(embed=embed)
             return -1
     
-    if design != 'default': #if user asked for a design, check if it exists
+    designName = design
+    if designName != 'default': #if user asked for a design, check if it exists
         #give priority to guild designs
         if design in settings[str(ctx.guild.id)]['chessGame']['designs']:
             designName = design
@@ -791,8 +841,7 @@ async def chessGame(ctx : commands.Context):
             design = 'default'
         else:
             designName = design
-        
-
+    
 
 # 3. All seems good, now let's send the embed to find some players
     #3A. Challenge one user
@@ -978,7 +1027,9 @@ async def on_message(message : discord.Message):
 
     #don't respond to self, commands, messages with less than 2 words
     if message.author == bot.user or message.content[0] in ['!', "/", "?", '|', '$', "&", ">", "<"] or len(message.content.split()) < 2: return
+
     
+
     if 'word' in message.content: #for future implementation, respond to specific string
         pass
         

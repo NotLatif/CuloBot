@@ -2,6 +2,7 @@ import os
 import json
 import os
 from PIL import Image
+import Engine
 
 spritesFolder = 'chessGame/sprites/'
 gamesFolder = f'chessGame/games/'
@@ -40,13 +41,11 @@ def renderBoard(colors, id) -> str:
 	return f'temp/{id}/'
 	
 
-
-
 class GameRenderer():
-	def __init__(self, cg, designName, board) -> None:
+	def __init__(self, cg, designName, boardGS : Engine.GameState) -> None:
 		self.boardFolder = f'{spritesFolder}{designName}'
 
-		self.boardGS = board # list[][] containing board data
+		self.boardGS = boardGS # list[][] containing board data
 		self.bezels = self.getBoardBezels()
 		self.cg = cg
 
@@ -71,7 +70,7 @@ class GameRenderer():
 
 		return sprites
 
-	def drawBoard(self) -> tuple[str]: #TODO if isCheck draw red square
+	def drawBoard(self) -> tuple[str]:
 		"""Responsible for the graphics of the game"""
 		self.mPrint('INFO', 'Drawing board')
 		
@@ -79,13 +78,23 @@ class GameRenderer():
 		boardImg = Image.open(f"{self.boardFolder}/chessboard.png").convert("RGBA")
 		squareSizePx = (boardImg.size[0] - self.bezels['left'] - self.bezels['right']) // 8
 
+		checkPos = self.boardGS.getCheckSquare()
+		if(checkPos != None):
+			if os.path.isfile(f"{self.boardFolder}/king_check.png"):
+				checkSquare = Image.open(f"{self.boardFolder}/king_check.png").convert("RGBA")
+			else:
+				checkSquare = Image.open(f"{self.cg.spritesFolder}/king_check.png").convert("RGBA")
+			pasteCoords = (self.bezels['left'] + checkPos[1] * squareSizePx, self.bezels['top'] + checkPos[0] * squareSizePx)
+			boardImg.paste(checkSquare, (pasteCoords))
+
 		#Drawing the pieces on the board
 		for r, x in zip(range(8), range(7, -1, -1)):
 			for c in range(8):
-				piece = self.boardGS[r][c]
+				piece = self.boardGS.board[r][c]
 				if (piece != "--"):						#r?
 					pasteCoords = (self.bezels['left'] + c * squareSizePx, self.bezels['top'] + x * squareSizePx)
 					boardImg.paste(self.sprites[piece], pasteCoords, self.sprites[piece])
+		
 		self.mPrint('INFO', 'Done')
 		#Compress
 		boardImg.resize((300,300)).save(f'{gamesFolder}{self.cg.gameID}.png')
