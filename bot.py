@@ -989,12 +989,13 @@ async def chessGame(ctx : commands.Context):
 
     else: #players did join in time
 
-        if r1 == reactions[0]: #first player choose white
+        if str(r1.emoji) == reactions[0]: #first player choose white
             player1 = players[1] #white
             player2 = players[0] #black
         else: #first player choose black
             player1 = players[0] #white
             player2 = players[1] #black
+        print(f'p1: {player1}\np2: {player2}')
 
         #iv. Send an embed with the details of the game
         embed = discord.Embed(
