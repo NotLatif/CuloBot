@@ -12,6 +12,8 @@ class GameState():
 		self.halfMoveClock = 0 #https://www.chessprogramming.org/Halfmove_Clock
 		self.fullMoves = 0 #incremented every time black makes a move
 		self.enpassantPossible = () #coords of enpassant capture
+		self.lastMoveStart = ()
+		self.lastMoveEnd = ()
 
 		self.inCheck = False
 		self.checkMate = False
@@ -168,6 +170,8 @@ class GameState():
 		self.board[move.startRow][move.startCol] = "--"
 		self.board[move.endRow][move.endCol] = move.pieceMoved
 		self.moveLog.append(move)
+		self.lastMoveStart = (move.startRow, move.startCol)
+		self.lastMoveEnd = (move.endRow, move.endCol)
 		self.turnCount += 1
 		self.whiteMoves = not self.whiteMoves
 		if move.pieceMoved == 'WK':
@@ -196,6 +200,7 @@ class GameState():
 		"""
 		if (len(self.moveLog) != 0):
 			lastMove = self.moveLog.pop()
+			self.lastMove = lastMove
 			self.board[lastMove.startRow][lastMove.startCol] = lastMove.pieceMoved
 			self.board[lastMove.endRow][lastMove.endCol] = lastMove.pieceCaptured
 			self.turnCount -= 1
@@ -357,15 +362,11 @@ class GameState():
 		return inCheck, pins, checks
 
 	def getCheckSquare(self) -> bool:
-		"""Returns the king square if it is in check"""
-		if self.inCheck:
-			if self.whiteMoves:
-				return self.blackKPos
-				
-			else:
-				return self.whiteKPos
+		if self.whiteMoves:
+			return self.blackKPos
+			
 		else:
-			return None
+			return self.whiteKPos
 		
 	def getAllPossibleMoves(self) -> list:
 		self.mPrint('FUNC', 'getAllPossibleMoves()')

@@ -172,9 +172,9 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					return False
 
 				try:
-					r1, temp = await bot.wait_for('reaction_add', timeout=120.0, check=rematchVoteCheck)
-					if r1 == reactions[1]:
-						r2, temp = await bot.wait_for('reaction_add', timeout=120.0, check=rematchVoteCheck)
+					r1, temp = await bot.wait_for('reaction_add', timeout=30.0, check=rematchVoteCheck)
+					
+					r2, temp = await bot.wait_for('reaction_add', timeout=30.0, check=rematchVoteCheck)
 				except asyncio.TimeoutError:
 					await notEnoughVotes()
 					return 0

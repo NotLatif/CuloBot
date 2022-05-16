@@ -78,8 +78,34 @@ class GameRenderer():
 		boardImg = Image.open(f"{self.boardFolder}/chessboard.png").convert("RGBA")
 		squareSizePx = (boardImg.size[0] - self.bezels['left'] - self.bezels['right']) // 8
 
-		checkPos = self.boardGS.getCheckSquare()
-		if(checkPos != None):
+		
+
+		for row in self.boardGS.board:
+			print(row)
+
+		def invert(n):
+			return 7-n
+		
+		if self.boardGS.lastMoveStart != (): #Esiste una mossa
+			print(f'self.boardGS.lastMoveStart: {self.boardGS.lastMoveStart}')	
+			if os.path.isfile(f"{self.boardFolder}/last_move_start.png"):
+				lastMoveStart = Image.open(f"{self.boardFolder}/last_move_start.png").convert("RGBA")
+				pasteCoords = (self.bezels['left'] + self.boardGS.lastMoveStart[1] * squareSizePx, self.bezels['top'] + invert(self.boardGS.lastMoveStart[0]) * squareSizePx)
+				print(f'pasteCoords: {pasteCoords}')				
+				boardImg.paste(lastMoveStart, pasteCoords)
+			
+		if self.boardGS.lastMoveEnd != (): #Esiste una mossa
+			print(f'self.boardGS.lastMoveEnd: {self.boardGS.lastMoveEnd}')		
+			if os.path.isfile(f"{self.boardFolder}/last_move_end.png"):
+				lastMoveEnd = Image.open(f"{self.boardFolder}/last_move_end.png").convert("RGBA")
+				pasteCoords = (self.bezels['left'] + self.boardGS.lastMoveEnd[1] * squareSizePx, self.bezels['top'] + invert(self.boardGS.lastMoveEnd[0]) * squareSizePx)
+				print(f'pasteCoords: {pasteCoords}')
+				boardImg.paste(lastMoveEnd, pasteCoords)
+				
+			
+
+		if(self.boardGS.inCheck == True):
+			checkPos = self.boardGS.getCheckSquare()
 			if os.path.isfile(f"{self.boardFolder}/king_check.png"):
 				checkSquare = Image.open(f"{self.boardFolder}/king_check.png").convert("RGBA")
 			else:

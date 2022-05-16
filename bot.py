@@ -1012,7 +1012,7 @@ async def chessGame(ctx : commands.Context):
         mainThreadEmbed = (thread, embed)
 
 #5. FINALLY, start the game
-        await chessBridge.loadGame(gameThread, bot, [player2, player1], mainThreadEmbed, board, design)
+        await chessBridge.loadGame(gameThread, bot, [player1, player2], mainThreadEmbed, board, design)
         #                                        #send them backwards (info on chessBrige.py) [black, white]
         await gameThread.edit(archived=True, locked=True)
         designFolder = f'{chessBridge.chessMain.gameRenderer.spritesFolder}{design}'
