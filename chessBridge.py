@@ -50,6 +50,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 	"""
 	
 	score = [0, 0]
+	round = 0
 	emojis = ('🌑', '⚪') #('🖤', '🤍') (black, white) 	< order matters
 #	players  [black, white] because: players[False] -> Black, players[True] -> White
 # 									useful for using with gs.whiteMoves
@@ -57,10 +58,11 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 		os.mkdir(f'{chessMain.gameRenderer.gamesFolder}{threadChannel.guild.id}')
 
 
-	chessGame = chessMain.ChessGame(f'{threadChannel.guild.id}/{threadChannel.id}', players)
+	chessGame = chessMain.ChessGame(f'{threadChannel.guild.id}/{threadChannel.id}', players, threadChannel.guild.name, round)
 	gs = chessMain.Engine.GameState(chessGame)
 
 	while True: #matchloop (iterates every round)
+		round += 1
 		if(selectedBoard[0] == 'FEN'):
 			gs.boardFromFEN(selectedBoard[1])
 		elif(selectedBoard[0] == 'BOARD'):
@@ -68,6 +70,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 		else:
 			await threadChannel.send('Error has occurred chessBridge.FENNotFound')
 			return -1
+		chessGame.FEN = gs.getFEN()
 
 		renderer = chessMain.gameRenderer.GameRenderer(chessGame, designName, gs)
 		
@@ -83,7 +86,8 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 		while True: #gameloop (iterates every turn)
 			turn = gs.whiteMoves #if turn = 1, players[turn] is white, if turn = 0 players[turn is black]
 #									 turn = True						  turn = False
-			lastTurn = not gs.whiteMoves #needed to find winners
+
+			lastTurn = not gs.whiteMoves #If true when checkmate/stalemate, white has won
 
 			#generate board and moves
 			if not didIllegalMove[0]: #no need to regenerate if last move was illegal
@@ -108,6 +112,8 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					e.g.: A2A4\n
 					scrivi "undo" per annullare l'ultima mossa
 					scrivi "stop" per fermare la partita
+					scrivi "board" per rigenerare l'immagine della scacchiera
+					scrivi "draw" per offrire un pareggio
 				''',
 				color = 0xf2f2f2 if (turn == 1) else 0x030303
 			)
@@ -131,15 +137,34 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			#2c. GAMEOVER SCRIPT if checkmate or stalemate modify the embed and end the game
 			async def roundOverActions(reason : str, players : list[discord.Member], rematchMsg : discord.Message):
 				winner = players[lastTurn] #winner is whoever had the turn BEFORE the current one
-				chessGame.mPrint('GAME', f'Game won by {winner}, <gameID:{threadChannel.id}>')
 				
-				#edit and send the main channel embed
-				embed = fetchThread[1]
-				embed.title = f'{reason}\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
-				embed.description = f'Match winner: {str(winner)[:-5]} {emojis[lastTurn]}\nOverall winner: {f"{getOverallWinnerName(players, score)}"}'
-				embed.set_footer(text=f'ID: {threadChannel.id}, now voting for rematch...')
-				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
-				await fetchThread[0].edit(embed=embed)
+				if reason != 'DRAW':
+					chessGame.result = "1-0" if lastTurn else "0-1" #TODO add draw "1/2-1/2" ? idk
+					chessGame.mPrint('GAME', f'Game won by {winner}, <gameID:{threadChannel.id}>')
+
+					pgn = gs.getPGN()
+					await threadChannel.send(f"```{pgn}```")
+
+					#edit and send the main channel embed
+					embed = fetchThread[1]
+					embed.title = f'{reason}\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
+					embed.description = f'Match winner: {str(winner)[:-5]} {emojis[lastTurn]}\nOverall winner: {f"{getOverallWinnerName(players, score)}"}'
+					embed.set_footer(text=f'ID: {threadChannel.id}, now voting for rematch...')
+					embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
+					await fetchThread[0].edit(embed=embed)
+				
+				else:
+					pgn = gs.getPGN()
+					await threadChannel.send(f"```{pgn}```")
+
+					#edit and send the main channel embed
+					embed = fetchThread[1]
+					embed.title = f'Pareggio!'
+					embed.set_footer(text=f'ID: {threadChannel.id}, now voting for rematch...')
+					embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
+					await fetchThread[0].edit(embed=embed)
+
+				
 				
 				#ask for another round
 				reactions = ('⛔', '✅')
@@ -256,6 +281,19 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					#gameOver
 					return 
 			
+			elif gs.draw:
+				embed.title = 'Pareggio!'
+				embed.color = 0x7cdcfe
+				embed.set_footer(text='Rivincita? (vota entro 30 secondi)')
+				rematchMsg = await threadChannel.send(embed=embed)
+				resp = await roundOverActions('DRAW', players, rematchMsg)
+				if(resp):
+					#rematch
+					break
+				else:
+					#gameOver
+					return 
+			
 			#3. send the embed
 			inputAsk = await threadChannel.send(embed=embed)
 
@@ -273,7 +311,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				if(userMessage.content == "stop"):
 					#send embed to thread
 					embed = discord.Embed(title='❌ Partita annullata ❌')
-					await threadChannel.send(embed=embed)
+					pgn = gs.getPGN()
 					#edit and send the main channel embed
 					embed = fetchThread[1]
 					embed.title = f'-- GAME OVER --\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
@@ -281,16 +319,22 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					embed.color = 0xd32c41
 					embed.set_footer(text=f'ID: {threadChannel.id}')
 					await fetchThread[0].edit(embed=embed)
+					await threadChannel.send(f"```{pgn}```")
+					await threadChannel.send(embed=embed)
 					await threadChannel.edit(reason='Partita annullata', locked=True, archived=True)
 					chessGame.mPrint('GAME', f'Game stopped by user, <gameID:{threadChannel.id}, user:{userMessage.author}>')
 					chessGame.mPrint('GAME', f'Game stats: <{gs.getStats()}>')
 					return -1
 				
-				elif(userMessage.content == "undo"): #ctrl-z
+				elif(userMessage.content == "undo"): #ctrl-z TODO last turn must confirm undo
 					gs.undoMove()
 					break
 			
 				elif(userMessage.content == "board"):
+					break
+
+				elif(userMessage.content == "draw"): #TODO opponent must confirm
+					gs.draw = True
 					break
 				
 				#c. check if message author has the turn
@@ -320,6 +364,10 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			#3. Parse user input
 			userMove = userMove.replace('/', '').replace(',','').replace(' ','').lower()
 			chessGame.mPrint('DEBUG', f'userMove: {userMove}')
+			if userMove == 'kg1': userMove = "O-O"
+			if userMove == 'kg8': userMove = "O-O"
+			if userMove == 'kc1': userMove = "O-O-O"
+			if userMove == 'kc8': userMove = "O-O-O"
 
 		#MACRO TASK: move the pieces
 

@@ -21,9 +21,9 @@ class GameState():
 		self.inCheck = False
 		self.checkMate = False
 		self.staleMate = False
-
 		self.pins = [] #pieces that are protecting the king
 		self.checks = [] #pieces that are checking the king
+		self.draw = False
 
 		self.moveLog = []
 		self.moveFunctions = {
@@ -77,7 +77,14 @@ class GameState():
 		
 		if len(FENdata) >= 3: #the castling rights were described
 			if (FENdata[3] != '-'): #check if it was not blank
-				pass
+				if ('Q' in FENdata[3]):
+					self.castleRights.Q = True
+				if ('K' in FENdata[3]):
+					self.castleRights.K = True
+				if ('q' in FENdata[3]):
+					self.castleRights.q = True
+				if ('k' in FENdata[3]):
+					self.castleRights.k = True
 
 		if len(FENdata) >= 4: #enPassant was described
 			if (FENdata[3] != '-'): #check if it was not blank
@@ -137,8 +144,18 @@ class GameState():
 		else: fen += 'b '
 
 		#castling rights (QK)(qk) eg: QKqk: all castling right available; QK only white can castle; k black can only castle kingside
-		fen += '- '
-
+		if self.castleRights == (False, False, False, False):
+			fen += '- '
+		else:
+			if self.castleRights.Q == True:
+				fen += 'Q'
+			if self.castleRights.K == True:
+				fen += 'K'
+			if self.castleRights.q == True:
+				fen += 'q'
+			if self.castleRights.k == True:
+				fen += 'k'
+		
 		#enpassant
 		if self.enpassantPossible != ():
 			fen += f'{Move.colsToFiles[self.enpassantPossible[1]]}{Move.rowsToRanks[self.enpassantPossible[0]]}'
@@ -161,8 +178,24 @@ class GameState():
 			return 'B' if self.whiteMoves else 'W'
 		return None
 
-	def getMoveHistory(self):
-		pass
+	def getPGN(self): #FIXME ADD ROUND
+		pgn = f"""
+[Event "Discord chess"]
+[Site "{self.cg.serverName}"]
+[Date "{self.cg.date}"]
+[Round "{self.cg.round}"]
+[White "{self.cg.players[0]}"]
+[Black "{self.cg.players[1]}"]
+[Result "{self.cg.result}"]
+[FEN {self.cg.FEN}]
+
+"""
+		for i, j in zip(range(0, len(self.moveLog), 2), range(len(self.moveLog))):
+			pgn += f"{j+1}. {self.moveLog[i].algebraicNotation} " #turn. whitemove
+			if (i+1 < len(self.moveLog)):
+				pgn += f"{self.moveLog[i+1].algebraicNotation} " #blackmove
+		
+		return pgn
 	
 	def makeMove(self, move) -> None:
 		"""
@@ -635,7 +668,7 @@ class GameState():
 			self.mPrint('DEBUG', 'kingside squares are free')
 			if not self.squareUnderAttack(r, c+2):
 				self.mPrint('DEBUG', f'moves.append(Move(({r}, {c}), ({r}, {c+2}), ...))')
-				moves.append(Move((r, c), (r, c+2), self.board, castle=True))
+				moves.append(Move((r, c), (r, c+2), self.board, castle=True, kingCastle=True))
 			else:
 				self.mPrint('DEBUG', f'({r}, {c+2}) is under attack, castling not possible')
 
@@ -646,7 +679,7 @@ class GameState():
 			self.mPrint('DEBUG', 'queenside squares are free')
 			if not self.squareUnderAttack(r, c-1) and not self.squareUnderAttack(r, c-2):
 				self.mPrint('DEBUG', f'moves.append(Move(({r}, {c}), ({r}, {c-2}), ...))')
-				moves.append(Move((r, c), (r, c-2), self.board, castle=True))
+				moves.append(Move((r, c), (r, c-2), self.board, castle=True, queenCastle=True))
 
 	#just collapse this ^ and forget about it
 
@@ -665,7 +698,7 @@ class Move():
 	filesToCols = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, "f": 5, "g": 6, "h": 7}
 	colsToFiles = {v: k for k, v in filesToCols.items()}
 
-	def __init__(self, startSq, endSq, boardState, enPassant=False, pawnPromotion = False, castle = False) -> None:
+	def __init__(self, startSq, endSq, boardState, enPassant=False, pawnPromotion = False, castle = False, queenCastle = False, kingCastle = False) -> None:
 		"""
 		Initializes the Move object
 		files: (1->8)   ranks: (A->H)   (1,A)(2,B)
@@ -685,6 +718,8 @@ class Move():
 		self.pawnPromotion = pawnPromotion
 
 		self.isCastle = castle
+		self.kingCastle = kingCastle
+		self.queenCastle = queenCastle
 
 		self.enPassant = enPassant
 		if self.enPassant:
@@ -747,13 +782,20 @@ class Move():
 					else:pass #if the piece is different, there is not ambiguity
 				if(legalMoves[x].pieceCaptured != '--'): #add capture after every check (Nx) / (Ncx)
 					legalMoves[x].algebraicNotation += 'x'
-
 				
 			# if piece is pawn:
 			else:
 				if legalMoves[x].pieceCaptured != '--':
 					legalMoves[x].algebraicNotation += f'{Move.colsToFiles[legalMoves[x].startCol]}x'
 			
+			if(move[0] == 'K'): #check for castling
+				if legalMoves[x].kingCastle == True:
+					legalMoves[x].algebraicNotation = 'O-O'
+					continue
+				if legalMoves[x].queenCastle == True:
+					legalMoves[x].algebraicNotation = 'O-O-O'
+					continue
+
 			print(f'x: {x}, move: {move}')
 			#add endsquare
 			legalMoves[x].algebraicNotation += Move.colsToFiles[legalMoves[x].endCol]

@@ -78,8 +78,6 @@ class GameRenderer():
 		boardImg = Image.open(f"{self.boardFolder}/chessboard.png").convert("RGBA")
 		squareSizePx = (boardImg.size[0] - self.bezels['left'] - self.bezels['right']) // 8
 
-		
-
 		for row in self.boardGS.board:
 			print(row)
 

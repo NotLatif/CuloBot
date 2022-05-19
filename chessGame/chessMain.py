@@ -6,6 +6,7 @@ import Engine as Engine
 import os
 import json
 import gameRenderer
+from datetime import date
 init()
 
 #helper functions
@@ -45,13 +46,20 @@ def renderBoard(fen:str, id, designName = 'default') -> tuple[str]:
 
 
 class ChessGame: #now a class so it can store the gameID, and for future management
-	def __init__(self, gameID, players = [0,0]):
+	def __init__(self, gameID, players = ["",""], serverName = "?", round = "?", result = "?", FEN = "?"):
 		self.gameID = gameID
 		self.spritesFolder = gameRenderer.spritesFolder
 		self.board_filename = f"{self.spritesFolder}chessboard.png"
 		self.outPath = gameRenderer.gamesFolder
 		self.logFile = f'{self.outPath}{self.gameID}.log'
-		self.dimension = 8
+		
+		#PEG SPECIFIC:
+		self.players = players
+		self.date = date.today().strftime("%Y.%m.%d")
+		self.round = round
+		self.serverName = serverName
+		self.result = result
+		self.FEN = FEN #initial fen
 
 		self.boards = getSavedBoards()
 
