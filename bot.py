@@ -3,15 +3,15 @@ import os
 import json
 import random
 import copy
-import shutil
 import sys
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
 from dotenv import load_dotenv
 from datetime import datetime
 from typing import Union
-
 import chessBridge
+import shutil
+import colorsys
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
@@ -20,7 +20,7 @@ load_dotenv()#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}}}}
 #TOIMPLEMENT: use_global_words, chessGame
 
 intents = discord.Intents.all()
@@ -208,7 +208,7 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
     
     return ('parsing error', 'parseWord(str, int, str, list[str]) -> tuple[str, str]')
 
-        
+
 
 #           -----           DISCORD BOT COROUTINES           -----       #
 @bot.event #exception logger
@@ -232,6 +232,11 @@ async def on_ready():
             print('^ Generating settings for guild')
             updateSettings(str(guild.id), reset=True)
 
+
+        for role in guild.roles:
+            print(f"Role: {role} [{role.position}]")
+            
+
         checkSettingsIntegrity(str(guild.id))
 
 @bot.event
@@ -242,6 +247,12 @@ async def on_member_join(member : discord.Member):
 
     await member.guild.system_channel.send(joinString)   
     print("join detected")
+
+@bot.command(name='test')
+async def test(ctx : commands.Context):
+    role = ctx.guild.get_role(974329103685648425)
+    await role.edit(color=0x1ABC9C)
+    await asyncio.sleep(1)
 
 @bot.command(name='rawdump')
 async def rawDump(ctx : commands.Context):
@@ -884,7 +895,7 @@ async def chessGame(ctx : commands.Context):
     await playerFetchMsg.add_reaction("❌") #if the author changes their mind
 
 
-    def fetchChecker(reaction, user) -> bool: #this is one fat checker damn
+    def fetchChecker(reaction : discord.Reaction, user : Union[discord.Member, discord.User]) -> bool: #this is one fat checker damn
         """Checks if user team join request is valid"""
 
         # async def remove(reaction, user): #remove invalid reactions
@@ -895,6 +906,9 @@ async def chessGame(ctx : commands.Context):
         
         #1- prevent bot from joining teams
         if (user == bot.user): 
+            return False
+        
+        if (reaction.message.id != playerFetchMsg.id): #the reaction was given to another message
             return False
 
         if(str(reaction.emoji) == "❌" and user == ctx.message.author):
@@ -1034,7 +1048,7 @@ async def on_message(message : discord.Message):
     if 'word' in message.content: #for future implementation, respond to specific string
         pass
         
-#---------------------------------------------- This is specific to a server
+#---------------------------------------------- This is specific to my server
     if message.author.id == 438269159126859776 and message.guild.id == 694106741436186665:
         if random.randrange(1, 100) < respSettings["response_to_bots_perc"]:
             await asyncio.sleep(random.randrange(1, 3))
@@ -1046,6 +1060,26 @@ async def on_message(message : discord.Message):
                 r = random.choice(['🤣', '😂', '🤢', '🤡'])
                 await message.add_reaction(r)
         return
+    
+    #detect if buttbot buttifies a message
+    if message.author.id == 438269159126859776:
+        repliedMessage = await message.channel.fetch_message(message.reference.message_id)
+        if repliedMessage != None:
+            settings[str(message.guild.id)]['responseSettings']['buttbot_replied'].append(repliedMessage.id)
+            dumpSettings()
+            return
+
+    #to reduce spam avoid answering if buttbott has already buttified
+    await asyncio.sleep(0.6) #give buttbot a chanche to reply
+    if message.id in settings[str(message.guild.id)]['responseSettings']['buttbot_replied']:
+        #we don't need the data anymore so just delete it
+        if len(settings[str(message.guild.id)]['responseSettings']['buttbot_replied']) > 0:
+            settings[str(message.guild.id)]['responseSettings']['buttbot_replied'].remove(message.id)
+            dumpSettings()
+            return
+    
+    
+
 ##---------------------------------------------- you can safely delete until here
     
     #if guild does not want bot responses and sender is a bot, ignore the message

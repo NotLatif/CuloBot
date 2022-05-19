@@ -14,6 +14,9 @@ class GameState():
 		self.enpassantPossible = () #coords of enpassant capture
 		self.lastMoveStart = ()
 		self.lastMoveEnd = ()
+		self.castleRights = CastleRights(True, True, True, True)
+		self.castleRightsLog = [CastleRights(self.castleRights.K, self.castleRights.Q, 
+											self.castleRights.k, self.castleRights.q)]
 
 		self.inCheck = False
 		self.checkMate = False
@@ -192,8 +195,28 @@ class GameState():
 		if move.pawnPromotion:
 			promotedPiece = input('Promote the piece Q, K, B, R, N: ')
 			self.board[move.endRow][move.endCol] = move.pieceMoved[0] + 'Q' #Promote to a queen for now, will figure out later a way
+		#castlemove
+		if move.isCastle:
+			self.mPrint('DEBUG', f'found castle move {move.endCol} {move.startCol}')
+			if move.endCol - move.startCol == 2: #kingside
+				self.mPrint('DEBUG', f'- kingside')
+				#move the rook
+				self.board[move.endRow][move.endCol-1] = self.board[move.endRow][move.endCol+1]
+				#cancel the rook
+				self.board[move.endRow][move.endCol+1] = "--"
+
+			else: #queenside
+				self.mPrint('DEBUG', f'- queenside')
+				#move the rook
+				self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-2]
+				#cancel the rook
+				self.board[move.endRow][move.endCol-2] = "--"
 		
-		
+		#update castling
+		self.updateCastleRight(move)
+		self.castleRightsLog.append(CastleRights(self.castleRights.K, self.castleRights.Q, 
+									self.castleRights.k, self.castleRights.q))
+
 	def undoMove(self) -> None:
 		"""
 		Undo last move
@@ -219,7 +242,41 @@ class GameState():
 			#undo 2 square pawn advance
 			if lastMove.pieceMoved[1] == 'P' and abs(lastMove.startRow - lastMove.endRow) == 2:
 				self.enpassantPossible = ()
-
+			#undo castling rights
+			self.castleRightsLog.pop()
+			self.castleRights = self.castleRightsLog[-1]
+			#undo castle
+			if lastMove.isCastle:
+				if lastMove.endCol - lastMove.startCol == 2: #kingside
+					#move the rook back
+					self.board[lastMove.endRow][lastMove.endCol+1] = self.board[lastMove.endRow][lastMove.endCol-1]
+					#remove the rook
+					self.board[lastMove.endRow][lastMove.endCol-1] = "--"
+				else: #queenside
+					#move the rook back
+					self.board[lastMove.endRow][lastMove.endCol-2] = self.board[lastMove.endRow][lastMove.endCol+1]
+					#remove the rook
+					self.board[lastMove.endRow][lastMove.endCol+1] = "--"
+				
+	def updateCastleRight(self, move):	
+		if move.pieceMoved == 'WK':
+			self.castleRights.K = False
+			self.castleRights.Q = False
+		elif move.pieceMoved == 'BK':
+			self.castleRights.k = False
+			self.castleRights.q = False
+		elif move.pieceMoved == 'WR': #white rook
+			if move.startRow == 0:
+				if move.startCol == 0:
+					self.castleRights.Q = False
+				elif move.startCol == 7:
+					self.castleRights.K = False
+		elif move.pieceMoved == 'BR': #white rook
+			if move.startRow == 7:
+				if move.startCol == 0:
+					self.castleRights.q = False
+				elif move.startCol == 7:
+					self.castleRights.k = False
 
 	def getValidMoves(self) -> list:
 		self.mPrint('VARS', f"Turn: {'White' if self.whiteMoves else 'Black'}")
@@ -232,7 +289,7 @@ class GameState():
 		return moves
 
 	def getValidMovesComplicated(self) -> list: #more efficient but complicated algorithm
-		self.mPrint('INFO', 'using the complicate algorithm to generate moves')
+		self.mPrint('INFO', 'Generating moves')
 		moves = []
 		self.inCheck, self.pins, self.checks = self.checkForPinsAndChecks()
 		self.mPrint('VARS', f'inCheck: {self.inCheck}')
@@ -245,6 +302,7 @@ class GameState():
 		self.mPrint('VARS', f'fullMoves: {self.fullMoves}')
 		self.mPrint('VARS', f'checkmate: {self.checkMate}')
 		self.mPrint('VARS', f'stalemate: {self.staleMate}')
+		self.mPrint('VARS', f'castleRigts: {self.castleRights.getRights()}')
 		for p in self.pins: self.mPrint('VARS', f'pin[x]: {p}')
 		for c in self.checks: self.mPrint('VARS', f'check[x]: {c}')
 
@@ -258,6 +316,7 @@ class GameState():
 		if self.inCheck: #remove moves that expose the king
 			if len(self.checks) == 1: #only 1 check, block the check or move the king
 				moves = self.getAllPossibleMoves()
+
 				#to block a check put a piece in between king and enemy
 				check = self.checks[0]
 				checkRow = check[0]
@@ -276,12 +335,16 @@ class GameState():
 				for i in range(len(moves)-1, -1, -1): #will delete stuff from list so go backwards
 					if moves[i].pieceMoved[1] != 'K': #move does not move king so it is check or capture
 						if not (moves[i].endRow, moves[i].endCol) in validSquares: #move dsen't block check or capture piece
-							moves.remove(moves[i])
-
+							moves.remove(moves[i])						
 			else: #'double check' king has to move
 				self.getKMoves(kingRow, kingCol, moves)
 		else: #not in check so all moves are ok
 			moves = self.getAllPossibleMoves()
+
+		self.mPrint('WARN', f'whiteK: {self.whiteKpos}')
+		self.mPrint('WARN', f'blackK: {self.blackKpos}')
+
+		self.getCastleMoves(kingRow, kingCol, moves)
 
 		if len(moves) == 0:
 			if self.inCheck:
@@ -361,15 +424,27 @@ class GameState():
 
 		return inCheck, pins, checks
 
+	def squareUnderAttack(self, r, c) -> bool:
+		"""Determines if enemy can attack (r, c)"""
+		self.mPrint('FUNC', f'generating opponent moves to check if ({r}, {c}) is under attack')
+		self.whiteMoves = not self.whiteMoves #I want opponent moves
+		opponentMoves = self.getAllPossibleMoves()
+		self.whiteMoves = not self.whiteMoves #reset turn
+		for move in opponentMoves:
+			if move.endRow == r and move.endCol == c: #square under attack
+				self.mPrint('DEBUG', f'FOUND ATTACK FOR SQUARE ({r} {c}) "{move.pieceMoved}"')
+				return True #square under attack
+		self.mPrint('DEBUG', f'No one attacking that square')
+		return False #square not under attack
+
 	def getCheckSquare(self) -> bool:
 		if self.whiteMoves:
 			return self.blackKPos
-			
 		else:
 			return self.whiteKPos
 		
 	def getAllPossibleMoves(self) -> list:
-		self.mPrint('FUNC', 'getAllPossibleMoves()')
+		self.mPrint('FUNC', f'Generating all possible moves for {"white" if self.whiteMoves else "black"}')
 		#generating the moves
 		moves = []
 		for r in range(len(self.board)):  #foreach col
@@ -378,7 +453,6 @@ class GameState():
 				if (pieceColor == "W" and self.whiteMoves) or (pieceColor == 'B' and not self.whiteMoves):
 					piece = self.board[r][c][1]
 					self.moveFunctions[piece](r,c,moves) #calls getXMoves
-		
 		return moves
 	
 	#oh boy here we go
@@ -539,9 +613,51 @@ class GameState():
 						self.whiteKpos = (r, c)
 					else:
 						self.blackKpos = (r, c)
+		
+	def getCastleMoves(self, r, c, moves):
+		self.mPrint('INFO', 'finding castle moves')
+		if self.inCheck:
+			self.mPrint('DEBUG', f'inCheck, castle not possible')
+			return
+		if (self.whiteMoves and self.castleRights.K) or (not self.whiteMoves and self.castleRights.k):
+			self.mPrint('DEBUG', 'getKingSide')
+			self.getKingSideCastleMove(r, c, moves)
+		if (self.whiteMoves and self.castleRights.Q) or (not self.whiteMoves and self.castleRights.q):
+			self.mPrint('DEBUG', 'getQueenSide')
+			self.getQueenSideCastleMove(r, c, moves)
+		self.mPrint('WARN', f'End of getCastleMoves: {r} {c}')
+		#FIXME change WARN tag (was used only to highlight while debugging)
 
+	def getKingSideCastleMove(self, r, c, moves):
+		self.mPrint('DEBUG', f'kingside {r}, {c}')
+		self.mPrint('DEBUG', f'pieces: {self.board[r][c+1]}, {self.board[r][c+2]}')
+		if self.board[r][c+1] == '--'and self.board[r][c+2] == '--':
+			self.mPrint('DEBUG', 'kingside squares are free')
+			if not self.squareUnderAttack(r, c+2):
+				self.mPrint('DEBUG', f'moves.append(Move(({r}, {c}), ({r}, {c+2}), ...))')
+				moves.append(Move((r, c), (r, c+2), self.board, castle=True))
+			else:
+				self.mPrint('DEBUG', f'({r}, {c+2}) is under attack, castling not possible')
+
+	def getQueenSideCastleMove(self, r, c, moves):
+		self.mPrint('DEBUG', f'queenside {r}, {c}')
+		self.mPrint('DEBUG', f'pieces: {self.board[r][c-1]}, {self.board[r][c-2]}, {self.board[r][c-3]}')
+		if self.board[r][c-1] == '--' and self.board[r][c-2] == '--' and self.board[r][c-3] == '--':
+			self.mPrint('DEBUG', 'queenside squares are free')
+			if not self.squareUnderAttack(r, c-1) and not self.squareUnderAttack(r, c-2):
+				self.mPrint('DEBUG', f'moves.append(Move(({r}, {c}), ({r}, {c-2}), ...))')
+				moves.append(Move((r, c), (r, c-2), self.board, castle=True))
 
 	#just collapse this ^ and forget about it
+
+class CastleRights():
+	def __init__(self, K, Q, k, q) -> None:
+		self.K = K
+		self.Q = Q
+		self.k = k
+		self.q = q
+	def getRights(self) -> tuple[bool, bool, bool, bool]:
+		return self.K, self.Q, self.k, self.q
 
 class Move():
 	ranksToRows = {"1": 0, "2": 1, "3": 2, "4": 3, "5": 4, "6": 5, "7": 6, "8": 7}
@@ -568,7 +684,7 @@ class Move():
 		self.promotionChoice = 'Q'
 		self.pawnPromotion = pawnPromotion
 
-		self.castle = castle
+		self.isCastle = castle
 
 		self.enPassant = enPassant
 		if self.enPassant:
@@ -589,7 +705,6 @@ class Move():
 	def findMoveFromAlgebraic(algebraic, moves):
 		algebraic = algebraic.lower()
 		for m in moves:	#compare lowercase, I don't believe it makes a difference
-			print(f'testing: {m.algebraicNotation}')
 			if m.algebraicNotation.lower() == algebraic:
 				return m
 			elif 'x' in m.algebraicNotation and (algebraic == m.algebraicNotation.replace('x', '').lower()): #maybe user forgot to add x (Nxd2 == Nd2)
@@ -639,6 +754,7 @@ class Move():
 				if legalMoves[x].pieceCaptured != '--':
 					legalMoves[x].algebraicNotation += f'{Move.colsToFiles[legalMoves[x].startCol]}x'
 			
+			print(f'x: {x}, move: {move}')
 			#add endsquare
 			legalMoves[x].algebraicNotation += Move.colsToFiles[legalMoves[x].endCol]
 			legalMoves[x].algebraicNotation += Move.rowsToRanks[legalMoves[x].endRow]
@@ -669,6 +785,10 @@ class Move():
 		:return: The rank and file of the piece. "fr"
 		"""
 		return self.colsToFiles[c] + self.rowsToRanks[r]
+
+
+
+
 """
 
 

@@ -160,7 +160,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					
 					embed.title = f'-- GAME OVER --\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
 					embed.color = 0xf2f2f2 if players[lastTurn] else 0x030303
-					embed.set_footer(text=f'ID: {threadChannel.id}')
+					embed.set_footer(text=f'ID: {threadChannel.id} game concluded')
 					await fetchThread[0].edit(embed=embed)
 					await threadChannel.edit(name = f'{newThreadName}', reason=reason, locked=True, archived=True)
 				
@@ -231,7 +231,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				embed.title = 'CHECKMATE!'
 				embed.description = f'Congratulazioni {players[lastTurn]} {emojis[lastTurn]}'
 				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
-				embed.set_footer(text='Rivincita? (vota entro 2 minuti)')
+				embed.set_footer(text='Rivincita? (vota entro 30 secondi)')
 				rematchMsg = await threadChannel.send(embed=embed)
 				resp = await roundOverActions('CHECKMATE', players, rematchMsg)
 				if(resp):
@@ -246,7 +246,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				embed.title = 'Stalemate!'
 				embed.description = f'Congratulazioni {players[lastTurn]}'
 				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303
-				embed.set_footer(text='Rivincita? (vota entro 2 minuti)')
+				embed.set_footer(text='Rivincita? (vota entro 30 secondi)')
 				rematchMsg = await threadChannel.send(embed=embed)
 				resp = await roundOverActions('Stalemate!', players, rematchMsg)
 				if(resp):
