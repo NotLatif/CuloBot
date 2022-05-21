@@ -6,12 +6,12 @@ Ha anche un gioco di scacchi!
 Sistemerò questo readme un giorno futuro...
 
 # Quick start
-Sorry for the poor documentation, will come back and fix later
+Sorry for the poor documentation, I'll improve it later (maybe)
 
 N.B. there will come translations some time in the future, but for now it's a mix of english and italian. Sorry
 
 ## prerequisites
-(this is what I am running, not a minimum or recommended)
+(this is what I am running, not a minimum nor recommended (will figure out later))
 - Python 3.9.2
 - py-cord dev version (discord.py v2.0.0-alpha)
 - Discord account
@@ -21,7 +21,7 @@ N.B. there will come translations some time in the future, but for now it's a mi
 2. create a file named `.env` in the main folder
 3. paste this string: `DISCORD_TOKEN={SUPER_SECRET_TOKEN}`
 4. log in the [Discord Developer Portal](https://discord.com/developers/applications)
-5. create a New Application, change settings as you pleas
+5. create a New Application, change settings as you please
 6. go to `Bot` on the left and click `Add Bot`
 7. click `Reset token` and copy it (WARNING: the token grants access to your bot, do not share your token)
 8. paste your token without quotes in the `.env` file replacing `SUPER_SECRET_TOKEN`
