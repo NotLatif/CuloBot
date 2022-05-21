@@ -243,8 +243,8 @@ async def on_ready():
 async def on_member_join(member : discord.Member):
     joinString = settings[str(member.guild.id)]['responseSettings']['join_message']
     if(joinString == ''): return
-    joinString.replace('%name%', member.name)
-
+    joinString= joinString.replace('%name%', member.name)
+    
     await member.guild.system_channel.send(joinString)   
     print("join detected")
 
@@ -1037,18 +1037,21 @@ async def chessGame(ctx : commands.Context):
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message : discord.Message):
     await bot.process_commands(message)
+    print(f'{message.author}, {message.channel}')
+    print(message.content)
 
     respSettings = settings[str(message.guild.id)]["responseSettings"]
 
     #don't respond to self, commands, messages with less than 2 words
     if message.author == bot.user or message.content[0] in ['!', "/", "?", '|', '$', "&", ">", "<"] or len(message.content.split()) < 2: return
 
-    
-
     if 'word' in message.content: #for future implementation, respond to specific string
         pass
         
 #---------------------------------------------- This is specific to my server
+    if message.channel.id == 695286898989465611:
+        return
+        
     if message.author.id == 438269159126859776 and message.guild.id == 694106741436186665:
         if random.randrange(1, 100) < respSettings["response_to_bots_perc"]:
             await asyncio.sleep(random.randrange(1, 3))

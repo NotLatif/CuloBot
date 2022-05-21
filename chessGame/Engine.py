@@ -6,8 +6,8 @@ class GameState():
 	def __init__(self, cg) -> None:
 		self.cg = cg
 		self.board = [] #list[8][8] it will be generated from FEN
-		self.whiteKpos = (0, 4)
-		self.blackKpos = (7, 4)
+		self.whiteKpos = ()
+		self.blackKpos = ()
 		self.whiteMoves = True
 		self.halfMoveClock = 0 #https://www.chessprogramming.org/Halfmove_Clock
 		self.fullMoves = 0 #incremented every time black makes a move
@@ -35,6 +35,8 @@ class GameState():
 			'K': self.getKMoves
 		}
 		self.turnCount = 0
+		self.whiteCaptured = [] #pieces the white player had captured
+		self.blackCaptured = [] #pieces the black player had captured
 
 	def boardFromFEN(self, FEN : str) -> None:
 		self.mPrint('DEBUG', f'requested board FEN: {FEN}')
@@ -56,12 +58,12 @@ class GameState():
 				elif char.isupper(): #white
 					row.append(f'W{char}')
 					if char == 'K':
-						self.whiteKPos = (r, c)
+						self.whiteKpos = (r, c)
 						self.mPrint('DEBUG', f'Found white king @ ({r}, {c})')
 				else:
 					row.append(f'B{char.upper()}')
 					if char == 'k':
-						self.blackKPos = (r, c)
+						self.blackKpos = (r, c)
 						self.mPrint('DEBUG', f'Found black king @ ({r}, {c})')
 			board.append(row)
 			row = []
@@ -102,7 +104,7 @@ class GameState():
 			else:
 				self.mPrint('WARN', 'FEN fullclock was provived but it\'s not an integer.')
 
-	def getFEN(self) -> str: #TODO: add castling
+	def getFEN(self) -> str:
 		fen = ''
 		consecutiveBlanks = 0
 		whiteKingPresent = False
@@ -202,6 +204,7 @@ class GameState():
 		Makes a move and logs it
 		:param move: the move to be made
 		"""
+		self.mPrint('DEBUG', f'piece moved: {move.pieceMoved}')
 		#we can assume the move is valid
 		self.board[move.startRow][move.startCol] = "--"
 		self.board[move.endRow][move.endCol] = move.pieceMoved
@@ -211,8 +214,10 @@ class GameState():
 		self.turnCount += 1
 		self.whiteMoves = not self.whiteMoves
 		if move.pieceMoved == 'WK':
+			self.mPrint('DEBUG', 'moved white king')
 			self.whiteKpos = (move.endRow, move.endCol)
 		if move.pieceMoved == 'BK':
+			self.mPrint('DEBUG', 'moved black king')
 			self.blackKpos = (move.endRow, move.endCol)
 		if move.pieceMoved[0] == 'B':
 			self.fullMoves += 1
@@ -472,9 +477,9 @@ class GameState():
 
 	def getCheckSquare(self) -> bool:
 		if self.whiteMoves:
-			return self.blackKPos
+			return self.blackKpos
 		else:
-			return self.whiteKPos
+			return self.whiteKpos
 		
 	def getAllPossibleMoves(self) -> list:
 		self.mPrint('FUNC', f'Generating all possible moves for {"white" if self.whiteMoves else "black"}')
@@ -729,6 +734,8 @@ class Move():
 		self.algebraicNotation = ''
 		self.algebraicNotationSuffixes = ''
 
+		self.givesCheckmate = False #TODO implement
+
 	
 		#self.mPrint("ENGINE", f"moveID: {self.moveID} ({self.getChessNotation()})")
 
@@ -752,7 +759,6 @@ class Move():
 		#Not passing self and doing it piece by piece because for the algebrai notation
 		#we need to consider the position of every piece at the same time to calculate ambiguities
 		#returns algebraic notation starting from coordinates
-		#TODO add support for check, double-check and other
 
 		moves = [] #needed to calculate ambiguities
 		for move in legalMoves:
@@ -808,13 +814,13 @@ class Move():
 				#promotion
 				if legalMoves[x].pawnPromotion:
 					legalMoves[x].algebraicNotation += legalMoves[x].promotionChoice
-
+			
+			if legalMoves[x].pieceCaptured[1] == 'K':
+				legalMoves[x].algebraicNotationSuffixes += '+'
+			if legalMoves[x].givesCheckmate:
+				legalMoves[x].algebraicNotationSuffixes += '#'
+			
 		print('Calculated algebraic symbols')
-
-
-		# copy the algorithm already made
-		#detect piece for prefix
-
 
 	def getChessNotation(self) -> str:
 		"""Only use of log/printing purposes """
@@ -895,5 +901,7 @@ e8Q -> white pawn becomes queen (also (e8=Q))
 ♗ White Chess Bishop
 ♘ White Chess Knight
 ♖ White Chess Rook
-
+#those emojis suck so will implement when emojis will be better
+charToBlackEmoji = {'R': '♖', 'N': '♘', 'B': '♗', 'K': '♔', 'Q': '♕', 'P': '♙'}
+charToWhiteEmoji = {'R': '♜', 'N': '♞', 'B': '♝', 'K': '♚', 'Q': '♛', 'P': '♟'}
 """

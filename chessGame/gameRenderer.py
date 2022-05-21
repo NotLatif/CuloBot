@@ -101,15 +101,15 @@ class GameRenderer():
 				boardImg.paste(lastMoveEnd, pasteCoords)
 				
 			
-
-		if(self.boardGS.inCheck == True):
-			checkPos = self.boardGS.getCheckSquare()
+		if(self.boardGS.inCheck == True): #check / checkmate
+			checkPos = self.boardGS.whiteKpos if self.boardGS.whiteMoves else self.boardGS.blackKpos
 			if os.path.isfile(f"{self.boardFolder}/king_check.png"):
 				checkSquare = Image.open(f"{self.boardFolder}/king_check.png").convert("RGBA")
-			else:
-				checkSquare = Image.open(f"{self.cg.spritesFolder}/king_check.png").convert("RGBA")
-			pasteCoords = (self.bezels['left'] + checkPos[1] * squareSizePx, self.bezels['top'] + checkPos[0] * squareSizePx)
-			boardImg.paste(checkSquare, (pasteCoords))
+				pasteCoords = (self.bezels['left'] + checkPos[1] * squareSizePx, self.bezels['top'] + invert(checkPos[0]) * squareSizePx)
+				boardImg.paste(checkSquare, (pasteCoords))
+			#else: #idk maybe if file is not there, that board does not want to show checks
+			#	checkSquare = Image.open(f"{self.cg.spritesFolder}/king_check.png").convert("RGBA")
+			
 
 		#Drawing the pieces on the board
 		for r, x in zip(range(8), range(7, -1, -1)):
