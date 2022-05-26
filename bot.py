@@ -1049,39 +1049,38 @@ async def on_message(message : discord.Message):
         pass
         
 #---------------------------------------------- This is specific to my server
-    if message.channel.id == 695286898989465611:
-        return
+    if message.guild.id == 694106741436186665:
+        if message.channel.id == 695286898989465611:
+            return
+            
+        if message.author.id == 438269159126859776 and message.guild.id == 694106741436186665:
+            if random.randrange(1, 100) < respSettings["response_to_bots_perc"]:
+                await asyncio.sleep(random.randrange(1, 3))
+                m = ''
+                with open('botFiles/antiButt.txt', 'r') as lines:
+                    m = random.choice(lines.read().splitlines())
+                await message.reply(m, mention_author=False)
+                if random.randrange(1, 100) < respSettings["response_to_bots_perc"]/2:
+                    r = random.choice(['🤣', '😂', '🤢', '🤡'])
+                    await message.add_reaction(r)
+            return
         
-    if message.author.id == 438269159126859776 and message.guild.id == 694106741436186665:
-        if random.randrange(1, 100) < respSettings["response_to_bots_perc"]:
-            await asyncio.sleep(random.randrange(1, 3))
-            m = ''
-            with open('botFiles/antiButt.txt', 'r') as lines:
-                m = random.choice(lines.read().splitlines())
-            await message.reply(m, mention_author=False)
-            if random.randrange(1, 100) < respSettings["response_to_bots_perc"]/2:
-                r = random.choice(['🤣', '😂', '🤢', '🤡'])
-                await message.add_reaction(r)
-        return
-    
-    #detect if buttbot buttifies a message
-    if message.author.id == 438269159126859776:
-        repliedMessage = await message.channel.fetch_message(message.reference.message_id)
-        if repliedMessage != None:
-            settings[str(message.guild.id)]['responseSettings']['buttbot_replied'].append(repliedMessage.id)
-            dumpSettings()
-            return
+        #detect if buttbot buttifies a message
+        if message.author.id == 438269159126859776:
+            repliedMessage = await message.channel.fetch_message(message.reference.message_id)
+            if repliedMessage != None:
+                settings[str(message.guild.id)]['responseSettings']['buttbot_replied'].append(repliedMessage.id)
+                dumpSettings()
+                return
 
-    #to reduce spam avoid answering if buttbott has already buttified
-    await asyncio.sleep(0.6) #give buttbot a chanche to reply
-    if message.id in settings[str(message.guild.id)]['responseSettings']['buttbot_replied']:
-        #we don't need the data anymore so just delete it
-        if len(settings[str(message.guild.id)]['responseSettings']['buttbot_replied']) > 0:
-            settings[str(message.guild.id)]['responseSettings']['buttbot_replied'].remove(message.id)
-            dumpSettings()
-            return
-    
-    
+        #to reduce spam avoid answering if buttbott has already buttified
+        await asyncio.sleep(0.6) #give buttbot a chanche to reply
+        if message.id in settings[str(message.guild.id)]['responseSettings']['buttbot_replied']:
+            #we don't need the data anymore so just delete it
+            if len(settings[str(message.guild.id)]['responseSettings']['buttbot_replied']) > 0:
+                settings[str(message.guild.id)]['responseSettings']['buttbot_replied'].remove(message.id)
+                dumpSettings()
+                return
 
 ##---------------------------------------------- you can safely delete until here
     
