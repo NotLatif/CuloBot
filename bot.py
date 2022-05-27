@@ -6,21 +6,20 @@ import copy
 import sys
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.ext import commands
-from dotenv import load_dotenv
 from datetime import datetime
 from typing import Union
 import chessBridge
+import musicBridge
 import shutil
-import colorsys
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
 
-load_dotenv()#Sensitive data is stored in a ".env" file
+#Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{}}}
 #TOIMPLEMENT: use_global_words, chessGame
 
 intents = discord.Intents.all()
@@ -207,6 +206,7 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
         return (article_word[1].split()[0], article_word[1].split()[1])
     
     return ('parsing error', 'parseWord(str, int, str, list[str]) -> tuple[str, str]')
+
 
 
 
@@ -1034,8 +1034,19 @@ async def chessGame(ctx : commands.Context):
         if design.find('\\') != -1 or design.find('/') != -1:
             shutil.rmtree(designFolder)
 
+@bot.command(name='play', pass_context=True, aliases=['p']) #Player
+async def playSong(ctx : commands.Context):
+
+    if len(ctx.message.content.split()) != 2:
+        pass #TODO print help
+    else:
+        await musicBridge.play(ctx.message.content.split()[1], ctx, bot)
+
+
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message : discord.Message):
+    if message.content in musicBridge.cmds:
+        return
     await bot.process_commands(message)
     print(f'{message.author}, {message.channel}')
     print(message.content)
