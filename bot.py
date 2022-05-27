@@ -123,6 +123,7 @@ def checkSettingsIntegrity(id : str):
             print(f'Deleting: {key}')
 
         if(type(settingsToCheck[key]) == dict):
+            if(key ==  "saved_playlists"): continue
             for subkey in settingsToCheck[key]:
                 if(subkey not in SETTINGS_TEMPLATE["id"][key]): #check if there is a subkey that should not be there (avoid useless data)
                     del settings[id][key][subkey]
@@ -1036,11 +1037,28 @@ async def chessGame(ctx : commands.Context):
 
 @bot.command(name='play', pass_context=True, aliases=['p']) #Player
 async def playSong(ctx : commands.Context):
-
-    if len(ctx.message.content.split()) != 2:
-        pass #TODO print help
+    request = ctx.message.content.split()
+    if len(request) == 1:
+        await ctx.send("Usage: !play [song]\nsong can be: [spotify URL | youtube URL | name of a saved playlist | name of the song]")
     else:
-        await musicBridge.play(ctx.message.content.split()[1], ctx, bot)
+        #user searched a link
+        if "open.spotify.com" in request[1] or "youtube.com" in request[1] or "youtu.be" in request[1]:
+            if ctx.message.author.id != 348199387543109654:
+                await ctx.send('youtube currently not supported')
+                return
+            await musicBridge.play(ctx.message.content.split()[1], ctx, bot)
+
+        #user wants a saved playlist
+        elif request[1] in settings[str(ctx.guild.id)]["saved_playlists"]:
+            trackURL = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+            print(f'FOUND SAVED URL: {trackURL}')
+            await musicBridge.play(trackURL, ctx, bot)
+        
+        #user wants to search for a song
+        else:
+            trackURL = musicBridge.musicPlayer.searchYTurl(' '.join(request[1:]))
+            print(f'SEARCHED SONG URL: {trackURL}')
+            await musicBridge.play(trackURL, ctx, bot)
 
 
 @bot.event   ## DETECT AND RESPOND TO MSG
