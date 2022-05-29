@@ -5,12 +5,20 @@ import random
 import copy
 import sys
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
+from discord.utils import get
 from discord.ext import commands
 from datetime import datetime
 from typing import Union
 import chessBridge
 import musicBridge
 import shutil
+
+#This is specific to my own server, you can delete this lines as they do nothing for you
+myServer = True
+try:
+    import myStuff
+except ModuleNotFoundError:
+    myServer = False
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
@@ -36,6 +44,8 @@ bot = commands.Bot(
 bot.remove_command("help")
 
 settingsFile = "botFiles/guildsData.json"
+
+global settings
 settings = {}
 with open(settingsFile, 'a'): pass #make setting file if it does not exist
 
@@ -234,8 +244,8 @@ async def on_ready():
             updateSettings(str(guild.id), reset=True)
 
 
-        for role in guild.roles:
-            print(f"Role: {role} [{role.position}]")
+        # for role in guild.roles:
+        #     print(f"Role: {role} [{role.position}]")
             
 
         checkSettingsIntegrity(str(guild.id))
@@ -1037,6 +1047,10 @@ async def chessGame(ctx : commands.Context):
 
 @bot.command(name='play', pass_context=True, aliases=['p']) #Player
 async def playSong(ctx : commands.Context):
+    voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
+    if voice_client and voice_client.is_connected():
+        return
+
     request = ctx.message.content.split()
     if len(request) == 1:
         await ctx.send("Usage: !play [song]\nsong can be: [spotify URL | youtube URL | name of a saved playlist | name of the song]")
@@ -1063,55 +1077,30 @@ async def playSong(ctx : commands.Context):
 
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message : discord.Message):
-    if message.content in musicBridge.cmds:
-        return
+    global settings
+
+    if message.content.split()[0] in musicBridge.cmds: 
+        return #needed to not conflict with music player
+    
     await bot.process_commands(message)
-    print(f'{message.author}, {message.channel}')
-    print(message.content)
 
     respSettings = settings[str(message.guild.id)]["responseSettings"]
 
+#--------------------------------- This is specific to my server
+    if myServer:
+        value = await myStuff.parseData(message, settings, respSettings, bot)
+    if value != None:
+        settings = value
+        dumpSettings()
+#--------------------------------- you can safely delete this
+
     #don't respond to self, commands, messages with less than 2 words
-    if message.author == bot.user or message.content[0] in ['!', "/", "?", '|', '$', "&", ">", "<"] or len(message.content.split()) < 2: return
+    if message.author == bot.user or message.content[0] in ['!', "/", "?", '|', '$', "&", ">", "<"] or len(message.content.split()) < 2: 
+        return
 
     if 'word' in message.content: #for future implementation, respond to specific string
         pass
         
-#---------------------------------------------- This is specific to my server
-    if message.guild.id == 694106741436186665:
-        if message.channel.id == 695286898989465611:
-            return
-            
-        if message.author.id == 438269159126859776 and message.guild.id == 694106741436186665:
-            if random.randrange(1, 100) < respSettings["response_to_bots_perc"]:
-                await asyncio.sleep(random.randrange(1, 3))
-                m = ''
-                with open('botFiles/antiButt.txt', 'r') as lines:
-                    m = random.choice(lines.read().splitlines())
-                await message.reply(m, mention_author=False)
-                if random.randrange(1, 100) < respSettings["response_to_bots_perc"]/2:
-                    r = random.choice(['🤣', '😂', '🤢', '🤡'])
-                    await message.add_reaction(r)
-            return
-        
-        #detect if buttbot buttifies a message
-        if message.author.id == 438269159126859776:
-            repliedMessage = await message.channel.fetch_message(message.reference.message_id)
-            if repliedMessage != None:
-                settings[str(message.guild.id)]['responseSettings']['buttbot_replied'].append(repliedMessage.id)
-                dumpSettings()
-                return
-
-        #to reduce spam avoid answering if buttbott has already buttified
-        await asyncio.sleep(0.6) #give buttbot a chanche to reply
-        if message.id in settings[str(message.guild.id)]['responseSettings']['buttbot_replied']:
-            #we don't need the data anymore so just delete it
-            if len(settings[str(message.guild.id)]['responseSettings']['buttbot_replied']) > 0:
-                settings[str(message.guild.id)]['responseSettings']['buttbot_replied'].remove(message.id)
-                dumpSettings()
-                return
-
-##---------------------------------------------- you can safely delete until here
     
     #if guild does not want bot responses and sender is a bot, ignore the message
     if message.author.bot and not respSettings["will_respond_to_bots"]: return 0

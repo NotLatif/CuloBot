@@ -4,6 +4,8 @@ guildsData.json
 workspace/
 temp/
 
+myStuff.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
