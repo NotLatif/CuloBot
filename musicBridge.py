@@ -4,11 +4,13 @@ from discord.ext import commands
 import traceback
 import asyncio
 from random import shuffle
+import lyricsgenius as lg
 
 sys.path.insert(0, 'music/')
 import spotifyParser
 import youtubeParser
 import musicPlayer
+
 
 def parseUrl(url):
     if 'open.spotify.com' in url:
@@ -19,7 +21,9 @@ def parseUrl(url):
 
     return tracks
 
-async def play(url, ctx : commands.Context, bot : discord.Client):
+async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : str):
+
+    genius = lg.Genius('Client_Access_Token_Goes_Here', skip_non_songs=True, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
 
     tracks = parseUrl(url)
     shuffle(tracks)
@@ -33,6 +37,7 @@ async def play(url, ctx : commands.Context, bot : discord.Client):
         description=f'Now Playing: **{tracks[0]["trackName"]}**\n▂▂▂▂▂▂▂▂▂▂ (00:00 - 00:00)\n',
         color=0xff866f
     )
+
     if( tracks[0]["artist"] != ''):
         embed.add_field(name='Author:', value=f'{tracks[0]["artist"]}', inline=True)
     embed.add_field(name='Loop:', value=f'False', inline=True)
@@ -55,11 +60,16 @@ async def play(url, ctx : commands.Context, bot : discord.Client):
 
     embedMSG = await ctx.send(embed=embed)
 
-    player = musicPlayer.Player(bot, voice, tracks, embed, embedMSG)
-
+    player = musicPlayer.Player(voice, tracks)
+    messageHandler = musicPlayer.MessageHandler(player, embedMSG)
     
     try:
-        task = asyncio.create_task(player.playNext())
+        # task = asyncio.create_task(player.playNext())
+        # process = multiprocessing.Process(target=player.playNext)
+        # process.start()
+        # print("Task done")
+        playerTask = asyncio.create_task(player.starter())
+        messageTask = asyncio.create_task(messageHandler.start())
 
     except Exception as e:
         print('exception')
@@ -67,12 +77,14 @@ async def play(url, ctx : commands.Context, bot : discord.Client):
         voice.cleanup()
         ex, val, tb = sys.exc_info()
         traceback.print_exception(ex, val, tb)
+        return
 
     def check(m : discord.Message, u=None):	#check if message was sent in thread using ID
         return m.author != bot.user and m.channel.id == ctx.channel.id
 
-    async def userInput(task):
+    async def userInput(pTask):
         while True:
+            
             try:
                 userMessage : discord.Message = await bot.wait_for('message', check=check)	
             except Exception:
@@ -82,45 +94,121 @@ async def play(url, ctx : commands.Context, bot : discord.Client):
                 ex, val, tb = sys.exc_info()
                 traceback.print_exception(ex, val, tb)
 
-
-            if player.done == True:
+            if len(player.queue) == 0:
                 return
 
+            if len(userMessage.content.split()) == 0:
+                continue
+
             if userMessage.content.split()[0] == 'skip':
+                print('[USER] skipped song')
                 skip = userMessage.content.split()
-                task.cancel()
+                pTask.cancel()
+                if pTask.cancelled() == False: print("ERROR: task was not closed.")
+                
                 if len(skip) == 2 and skip[1].isnumeric():
                     for x in range(int(skip[1])-1):
                         player.queue.pop(0)
-                    task = asyncio.create_task(player.skip())
+                    pTask = asyncio.create_task(player.skip())
                     continue
-                task = asyncio.create_task(player.skip())
 
-            elif userMessage.content == 'pause' and userMessage.author.id == 348199387543109654:
-                await player.pause()
+                pTask = asyncio.create_task(player.skip())
+                await messageHandler.updateEmbed()
+
+            elif userMessage.content == 'lyrics':
+                await ctx.send("currently unsupported")
+                return
+                song = player.currentSong["search"]
+                if(GENIOUS_KEY != ''):
+                    try:
+                        genius = lg.Genius(GENIOUS_KEY)
+                        x = genius.search_songs(song)['hits'][0]['result']['url']
+                        lyrics = genius.lyrics(song_url=x)
+                        await ctx.send(f"```{lyrics}```")
+
+                    except Exception:
+                        print('An error occurred')
+                        await userMessage.reply('An error occurred')
+                        ex, val, tb = sys.exc_info()
+                        traceback.print_exception(ex, val, tb)
+                else:
+                    print('ERROR KEY NOT FOUND FOR GENIOUS LYRICS')
 
             elif userMessage.content == 'shuffle':
                 player.shuffle()
                 await userMessage.add_reaction('🔀')
                 await userMessage.add_reaction('✅')
-                
-            elif userMessage.content == 'resume' and userMessage.author.id == 348199387543109654:
-                await player.resume()
+
+            elif userMessage.content == 'pause':# and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
+                player.pause()
+                await messageHandler.updateEmbed()
+
+            elif userMessage.content == 'resume': # and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
+                player.resume()
+                await messageHandler.updateEmbed()
 
             elif userMessage.content == 'stop':
                 await player.stop()
-                task.cancel()
+                pTask.cancel()
+                messageTask.cancel()
                 return 0
             
             elif userMessage.content == 'clear':
                 player.clear()
+                await messageHandler.updateEmbed()
 
-            elif userMessage.content == 'loop' and userMessage.author.id == 348199387543109654:
-                player.loop = True
-                await userMessage.add_reaction('🔂')
+            elif userMessage.content.split()[0] == 'loop': # and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
+                request = userMessage.content.split()
+                if len(request) == 1:
+                    player.loop = True if player.loop == False else False
+                    player.loopQueue = False
+                    await userMessage.add_reaction('🔂')    
+
+                elif request[1] == 'queue':
+                    player.loopQueue = True if player.loopQueue == False else False
+                    player.loop = False
+                    await userMessage.add_reaction('🔁')
+                    
+                elif request[1] in ['song', 'track']:
+                    player.loop = True if player.loop == False else False
+                    player.loopQueue = False
+                    await userMessage.add_reaction('🔂')
+                
+                await messageHandler.updateEmbed()
+
+            elif userMessage.content == 'restart': # and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
+                player.restart()
+                await userMessage.add_reaction('⏮')    
+                await messageHandler.updateEmbed()
 
             elif userMessage.content == 'queue':
-                embedMSG = await ctx.send(embed=player.embed)
+                messageHandler.embedMSG = await ctx.send(embed=messageHandler.getEmbed())
+            
+            elif userMessage.content.split()[0] == 'precision':
+                if len(userMessage.content.split()) == 2:
+                    messageHandler.timelinePrecision = int(userMessage.content.split()[1])
+                await messageHandler.updateEmbed()
+
+            elif userMessage.content.split()[0] == 'remove':
+                request = userMessage.content.split()
+                if len(request) == 1:
+                    await ctx.send("Usage: remove [x]")
+                    continue
+                player.queue.pop(request[1]+1)
+                await messageHandler.updateEmbed()
+            
+            elif userMessage.content.split()[0] == 'mv':
+                request = userMessage.content.split()
+                if len(request) != 3: await ctx.send("Usage: mv start end; eg. mv 3 1")
+                if not request[1].isnumeric() or not request[2].isnumeric():
+                    await ctx.send("Usage: mv start end; eg. mv 3 1")
+                try:
+                    temp = player.queue[int(request[2])-1]
+                    player.queue[int(request[1])-1] = player.queue[int(request[2])-1]
+                    player.queue[int(request[2])-1] = temp
+                except IndexError:
+                    await ctx.send("Errore, la queue non ha così tante canzoni.")
+                await messageHandler.updateEmbed()
 
             elif userMessage.content.split()[0] in ['!play', '!p', 'play', 'p']:
                 request = userMessage.content.split()
@@ -132,7 +220,8 @@ async def play(url, ctx : commands.Context, bot : discord.Client):
                     tracks = parseUrl(request)
                     for t in tracks:
                         player.queue.append(t)
-                    await player.updateEmbed()
+                    await userMessage.add_reaction('🍑')
+                    await messageHandler.updateEmbed()
             
             elif userMessage.content.split()[0] in ['!playnext', '!pnext', 'playnext', 'pnext']:
                 request = userMessage.content.split()
@@ -140,18 +229,19 @@ async def play(url, ctx : commands.Context, bot : discord.Client):
                     userMessage.reply("Devi darmi un link bro")
                 else:
                     request = ' '.join(request[1:])
-                    print(f'Queueedit: {request}')
+                    print(f'QueueEdit: {request}')
                     tracks = parseUrl(request)
                     player.queue = tracks + player.queue
-                    await player.updateEmbed()
+                    await userMessage.add_reaction('🍑')
+                    await messageHandler.updateEmbed()
 
-            if userMessage.content in ['shuffle', 'clear', 'loop']:
-                await player.updateEmbed()
             
+    await asyncio.sleep(0.1)
+    asyncio.create_task(userInput(playerTask))
 
-    asyncio.create_task(userInput(task))
-
-cmds = ['skip', 'pause', 'shuffle', 'resume', 'stop', 'clear', 'loop', 'queue', '!playnext', '!pnext']
+cmds = ['skip', 'shuffle', 'pause', 'resume', 'stop',
+'clear', 'loop', 'restart', 'queue', 'remove', 'mv', 
+'!playnext', '!pnext', 'playnext', 'pnext', 'play', 'p']
 
 # vc.source = discord.PCMVolumeTransformer(vc.source, 1)
 

@@ -27,6 +27,9 @@ except ModuleNotFoundError:
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 
+#TODO what if user has not the keys
+GENIOUS = os.getenv('GENIOUS_SECRET')[1:-1]
+
 SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{}}}
 #TOIMPLEMENT: use_global_words, chessGame
 
@@ -1060,23 +1063,25 @@ async def playSong(ctx : commands.Context):
             if ctx.message.author.id != 348199387543109654:
                 await ctx.send('youtube currently not supported')
                 return
-            await musicBridge.play(ctx.message.content.split()[1], ctx, bot)
+            await musicBridge.play(ctx.message.content.split()[1], ctx, bot, GENIOUS)
 
         #user wants a saved playlist
         elif request[1] in settings[str(ctx.guild.id)]["saved_playlists"]:
             trackURL = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
             print(f'FOUND SAVED URL: {trackURL}')
-            await musicBridge.play(trackURL, ctx, bot)
+            await musicBridge.play(trackURL, ctx, bot, GENIOUS)
         
         #user wants to search for a song
         else:
             trackURL = musicBridge.musicPlayer.searchYTurl(' '.join(request[1:]))
             print(f'SEARCHED SONG URL: {trackURL}')
-            await musicBridge.play(trackURL, ctx, bot)
+            await musicBridge.play(trackURL, ctx, bot, GENIOUS)
 
 
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message : discord.Message):
+    if len(message.content.split()) == 0: return
+
     global settings
 
     if message.content.split()[0] in musicBridge.cmds: 
