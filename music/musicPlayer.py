@@ -260,7 +260,6 @@ class MessageHandler():
         artist = "N/A" if self.player.currentSong["artist"] == "" else self.player.currentSong["artist"]
         
         embed.add_field(name='Author:', value=f'{artist}')
-        embed.add_field(name='Loop:', value=str(self.player.loop or self.player.loopQueue))
         embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
         embed.set_footer(text='🍑 the best bot 🎶 https://notlatif.github.io/CuloBot/#MusicBot')
 

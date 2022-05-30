@@ -40,7 +40,6 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
 
     if( tracks[0]["artist"] != ''):
         embed.add_field(name='Author:', value=f'{tracks[0]["artist"]}', inline=True)
-    embed.add_field(name='Loop:', value=f'False', inline=True)
     if ( last5 != "" ):
         embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
     embed.set_footer(text='🍑 the best bot 🎶 https://notlatif.github.io/CuloBot/#MusicBot')
