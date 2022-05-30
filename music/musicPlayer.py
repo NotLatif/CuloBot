@@ -225,14 +225,14 @@ class MessageHandler():
 
                     #reset time to current step
                     timeDeltaError = timePassed - stepSeconds
-                    initialTime = time.time() - timeDeltaError #FIXME timeline gets bugged easily
+                    initialTime = time.time() - timeDeltaError # BUG timeline gets bugged easily
                     print(f"updating after: {timePassed}s; error: {timeDeltaError}")
                 
                 if currentSong != self.player.currentSong:
                     print("song was skipped")
                     break
 
-                if currentStep == self.timelinePrecision:
+                if currentStep == self.timelinePrecision: # BUG this gets triggered too soon
                     print("Steps finished")
                     break
                 

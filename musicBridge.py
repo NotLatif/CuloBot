@@ -148,6 +148,7 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
             player.shuffle()
             if textInput:
                 await userMessage.add_reaction('🔀')
+            await messageHandler.updateEmbed()
 
         elif userInput == 'pause':# and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
             if player.isPaused == False:

@@ -9,6 +9,7 @@ from discord.utils import get
 from discord.ext import commands
 from datetime import datetime
 from typing import Union
+from git import Repo
 import chessBridge
 import musicBridge
 import shutil
@@ -234,6 +235,18 @@ async def on_error(event, *args, **kwargs):
 
 @bot.event   ## BOT ONLINE
 async def on_ready():
+    print(f'Number of arguments: {len(sys.argv)} arguments.')
+    print(f'Argument List: {str(sys.argv)}')
+
+    if len(sys.argv) == 5 and sys.argv[1] == "RESTART":
+        print("SCRIPT WAS RESTARTED")
+        guild = await bot.fetch_guild(sys.argv[2])
+        channel = await guild.fetch_channel(sys.argv[3])
+        message = await channel.fetch_message(sys.argv[4])
+        await message.reply("Bot restarted")
+        
+
+
     for guild in bot.guilds:
         print(
             f'\nConnected to the following guild:\n'
@@ -262,11 +275,20 @@ async def on_member_join(member : discord.Member):
     await member.guild.system_channel.send(joinString)   
     print("join detected")
 
-@bot.command(name='test')
+@bot.command(name='update')
 async def test(ctx : commands.Context):
-    role = ctx.guild.get_role(974329103685648425)
-    await role.edit(color=0x1ABC9C)
-    await asyncio.sleep(1)
+    #SPECIFIC TO MY SERVER
+    if ctx.message.author.id != 348199387543109654 or ctx.guild.id == 694106741436186665:
+        Repo.clone_from("https://github.com/NotLatif/CuloBot.git", ".")
+    
+@bot.command(name='restart')
+async def test(ctx : commands.Context):
+    #SPECIFIC TO MY SERVER
+    if ctx.message.author.id == 348199387543109654 or ctx.guild.id == 694106741436186665:
+        print("RESTART")
+        await ctx.send("please wait...")
+        os.system(f"bot.py RESTART {ctx.guild.id} {ctx.channel.id} {ctx.message.id}")
+        sys.exit()
 
 @bot.command(name='rawdump')
 async def rawDump(ctx : commands.Context):
