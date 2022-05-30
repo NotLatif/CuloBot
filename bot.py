@@ -9,7 +9,7 @@ from discord.utils import get
 from discord.ext import commands
 from datetime import datetime
 from typing import Union
-from git import Repo
+import git
 import chessBridge
 import musicBridge
 import shutil
@@ -278,8 +278,14 @@ async def on_member_join(member : discord.Member):
 @bot.command(name='update')
 async def test(ctx : commands.Context):
     #SPECIFIC TO MY SERVER
-    if ctx.message.author.id != 348199387543109654 or ctx.guild.id == 694106741436186665:
-        Repo.clone_from("https://github.com/NotLatif/CuloBot.git", ".")
+    if ctx.message.author.id == 348199387543109654 or ctx.guild.id == 694106741436186665:
+        msg = await ctx.message.reply("Pulling repo...")
+        
+        git.Repo().remote().pull()
+    
+        if os.path.isfile("TEST.txt"):
+            with open("TEST.txt", "r") as t:
+                await ctx.send(f"```{t.read()}```")
     
 @bot.command(name='restart')
 async def test(ctx : commands.Context):
