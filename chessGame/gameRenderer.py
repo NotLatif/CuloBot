@@ -4,6 +4,10 @@ import os
 from PIL import Image
 import Engine
 
+from mPrint import mPrint as mp
+def mPrint(tag, text):
+    mp(tag, 'chessRenderer', text)
+
 spritesFolder = 'chessGame/sprites/'
 gamesFolder = f'chessGame/games/'
 
@@ -12,7 +16,7 @@ def doesDesignExist(design) -> bool: return os.path.isdir(f'{spritesFolder}{desi
 def renderBoard(colors, id) -> str:
 	"""Reders a chessboards with the given colors and returns it's path"""
 	#TODO add bezels with letters/numbers
-	print(f'COLORS: {colors}')
+	mPrint('INFO' f'COLORS: {colors}')
 	new = Image.new(mode="RGBA", size=(1000,1000))
 	c1 = Image.new(mode="RGB", size=(125,125), color=colors[0])
 	c2 = Image.new(mode="RGB", size=(125,125), color=colors[1])
@@ -51,9 +55,6 @@ class GameRenderer():
 
 		self.sprites = self.loadSprites()
 
-	def mPrint(self, prefix, value):
-		self.cg.mPrint(prefix, value, 'RENDERER')
-
 	def loadSprites(self) -> dict:
 		"""
 			Inizializza la dict sprites con le immagini delle pedine
@@ -72,7 +73,7 @@ class GameRenderer():
 
 	def drawBoard(self) -> tuple[str]:
 		"""Responsible for the graphics of the game"""
-		self.mPrint('INFO', 'Drawing board')
+		mPrint('INFO', 'Drawing board')
 		
 		# Opening the image file and converting it to RGBA format.
 		boardImg = Image.open(f"{self.boardFolder}/chessboard.png").convert("RGBA")
@@ -85,19 +86,19 @@ class GameRenderer():
 			return 7-n
 		
 		if self.boardGS.lastMoveStart != (): #Esiste una mossa
-			print(f'self.boardGS.lastMoveStart: {self.boardGS.lastMoveStart}')	
+			mPrint('DEBUG', f'self.boardGS.lastMoveStart: {self.boardGS.lastMoveStart}')	
 			if os.path.isfile(f"{self.boardFolder}/last_move_start.png"):
 				lastMoveStart = Image.open(f"{self.boardFolder}/last_move_start.png").convert("RGBA")
 				pasteCoords = (self.bezels['left'] + self.boardGS.lastMoveStart[1] * squareSizePx, self.bezels['top'] + invert(self.boardGS.lastMoveStart[0]) * squareSizePx)
-				print(f'pasteCoords: {pasteCoords}')				
+				mPrint('DEBUG', f'pasteCoords: {pasteCoords}')				
 				boardImg.paste(lastMoveStart, pasteCoords)
 			
 		if self.boardGS.lastMoveEnd != (): #Esiste una mossa
-			print(f'self.boardGS.lastMoveEnd: {self.boardGS.lastMoveEnd}')		
+			mPrint('DEBUG', f'self.boardGS.lastMoveEnd: {self.boardGS.lastMoveEnd}')		
 			if os.path.isfile(f"{self.boardFolder}/last_move_end.png"):
 				lastMoveEnd = Image.open(f"{self.boardFolder}/last_move_end.png").convert("RGBA")
 				pasteCoords = (self.bezels['left'] + self.boardGS.lastMoveEnd[1] * squareSizePx, self.bezels['top'] + invert(self.boardGS.lastMoveEnd[0]) * squareSizePx)
-				print(f'pasteCoords: {pasteCoords}')
+				mPrint('DEBUG', f'pasteCoords: {pasteCoords}')
 				boardImg.paste(lastMoveEnd, pasteCoords)
 				
 			
@@ -119,7 +120,7 @@ class GameRenderer():
 					pasteCoords = (self.bezels['left'] + c * squareSizePx, self.bezels['top'] + x * squareSizePx)
 					boardImg.paste(self.sprites[piece], pasteCoords, self.sprites[piece])
 		
-		self.mPrint('INFO', 'Done')
+		mPrint('INFO', 'Done')
 		#Compress
 		boardImg.resize((300,300)).save(f'{gamesFolder}{self.cg.gameID}.png')
 		
@@ -137,5 +138,5 @@ class GameRenderer():
 			return bezels
 
 		except Exception:
-			self.mPrint('WARN', f'Board {self.boardFolder} has no json file, I\'m  assuming no bezel')
+			mPrint('WARN', f'Board {self.boardFolder} has no json file, I\'m  assuming no bezel')
 			return [0,0]

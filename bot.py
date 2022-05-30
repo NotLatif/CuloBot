@@ -9,10 +9,10 @@ from discord.utils import get
 from discord.ext import commands
 from datetime import datetime
 from typing import Union
-import git
 import chessBridge
 import musicBridge
 import shutil
+from mPrint import mPrint as mp
 
 #This is specific to my own server, you can delete this lines as they do nothing for you
 myServer = True
@@ -32,7 +32,6 @@ GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 GENIOUS = os.getenv('GENIOUS_SECRET')[1:-1]
 
 SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{}}}
-#TOIMPLEMENT: use_global_words, chessGame
 
 intents = discord.Intents.all()
 intents.members = True
@@ -44,7 +43,6 @@ bot = commands.Bot(
 )
 # slash = SlashCommand(bot, sync_commands=True)
 
-
 bot.remove_command("help")
 
 settingsFile = "botFiles/guildsData.json"
@@ -52,6 +50,9 @@ settingsFile = "botFiles/guildsData.json"
 global settings
 settings = {}
 with open(settingsFile, 'a'): pass #make setting file if it does not exist
+
+def mPrint(tag, value):
+    mp(tag, 'bot', value)
 
 #Useful funtions
 def splitString(str, separator = ' ', delimiter = '\"') -> list:
@@ -111,7 +112,7 @@ def updateSettings(id : int, setting :str = None, value :str = None, reset : boo
                 settingFound = True
         if settingFound == False : return -1
 
-        print('settings updated for ' + str(id))
+        mPrint('INFO', 'settings updated for ' + str(id))
         with open(settingsFile, 'w') as f:
             json.dump(settings, f, indent=2)
         return
@@ -126,7 +127,7 @@ def updateSettings(id : int, setting :str = None, value :str = None, reset : boo
   
 def checkSettingsIntegrity(id : str):
     id = str(id)
-    print(f'Checking guildData integrity of ({id})')
+    mPrint('DEBUG', f'Checking guildData integrity of ({id})')
 
     settingsToCheck = copy.deepcopy(settings[id])
     
@@ -134,31 +135,31 @@ def checkSettingsIntegrity(id : str):
     for key in settingsToCheck:
         if(key not in SETTINGS_TEMPLATE["id"]): #check if there is a key that should not be there (avoid useless data)
             del settings[id][key]
-            print(f'Deleting: {key}')
+            mPrint('DEBUG', f'Deleting: {key}')
 
         if(type(settingsToCheck[key]) == dict):
             if(key ==  "saved_playlists"): continue
             for subkey in settingsToCheck[key]:
                 if(subkey not in SETTINGS_TEMPLATE["id"][key]): #check if there is a subkey that should not be there (avoid useless data)
                     del settings[id][key][subkey]
-                    print(f'Deleting: {subkey}')
+                    mPrint('DEBUG', f'Deleting: {subkey}')
 
     #check if data is missing
     for key in SETTINGS_TEMPLATE["id"]:
         if(key not in settings[id]): #check if there is a key that should not be there (avoid useless data)
             settings[id][key] = SETTINGS_TEMPLATE["id"][key]
-            print(f'Missing key: {key}')
+            mPrint('DEBUG', f'Missing key: {key}')
 
         #it it's a dict also check it's keys
         if(type(SETTINGS_TEMPLATE["id"][key]) == dict):
             for subkey in SETTINGS_TEMPLATE["id"][key]:
                 if(subkey not in settings[id][key]): #check if there is a key that should not be there (avoid useless data)
                     settings[id][key][subkey] = SETTINGS_TEMPLATE["id"][key][subkey]
-                    print(f'Missing subkey: {subkey}')
+                    mPrint('DEBUG', f'Missing subkey: {subkey}')
 
     dumpSettings()
 
-    print('####### Done #######')
+    mPrint('DEBUG', 'Done.')
 
 def log(msg): #It's more annoying than it is usefull, maybe 
     return
@@ -196,7 +197,6 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
     #words = 'il culo, i culi'
     
     article_word = words.split(', ') #['il culo', 'i culi']
-    print(article_word)
     #sorry for spaghetti code maybe will reparse later
 
     if len(article_word) == 1: #word has only one form (eg: ['il culo'])
@@ -228,41 +228,32 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
 #           -----           DISCORD BOT COROUTINES           -----       #
 @bot.event #exception logger
 async def on_error(event, *args, **kwargs):
-    print(sys.exc_info())
-    if event == 'on_message':
-        log(f'[ERROR]: Unhandled message: {args[0]}\n')
-    log(sys.exc_info())
+    mPrint('ERROR', sys.exc_info())
+    for x in args:
+        mPrint('ERROR', {x})
 
 @bot.event   ## BOT ONLINE
 async def on_ready():
-    print(f'Number of arguments: {len(sys.argv)} arguments.')
-    print(f'Argument List: {str(sys.argv)}')
 
     if len(sys.argv) == 5 and sys.argv[1] == "RESTART":
-        print("SCRIPT WAS RESTARTED")
+        mPrint("INFO", "BOT WAS RESTARTED")
         guild = await bot.fetch_guild(sys.argv[2])
         channel = await guild.fetch_channel(sys.argv[3])
         message = await channel.fetch_message(sys.argv[4])
         await message.reply("Bot restarted")
         
-
-
     for guild in bot.guilds:
-        print(
+        mPrint("INFO",
             f'\nConnected to the following guild:\n'
             f'{guild.name} (id: {guild.id})'
         )
 
         members = '\n - '.join([member.name for member in guild.members])
-        print(f'Guild Members:\n - {members}')
+        mPrint('DEBUG', f'Guild Members:\n - {members}')
         if (str(guild.id) not in settings):
-            print('^ Generating settings for guild')
+            mPrint('DEBUG', '^ Generating settings for guild')
             updateSettings(str(guild.id), reset=True)
 
-
-        # for role in guild.roles:
-        #     print(f"Role: {role} [{role.position}]")
-            
 
         checkSettingsIntegrity(str(guild.id))
 
@@ -273,13 +264,13 @@ async def on_member_join(member : discord.Member):
     joinString= joinString.replace('%name%', member.name)
     
     await member.guild.system_channel.send(joinString)   
-    print("join detected")
+    mPrint("INFO", "join detected")
     
 @bot.command(name='restart')
 async def test(ctx : commands.Context):
     #SPECIFIC TO MY SERVER
     if ctx.message.author.id == 348199387543109654 or ctx.guild.id == 694106741436186665:
-        print("RESTART")
+        mPrint("WARN", "RESTARTING BOT")
         await ctx.send("please wait...")
         os.system(f"bot.py RESTART {ctx.guild.id} {ctx.channel.id} {ctx.message.id}")
         sys.exit()
@@ -338,7 +329,7 @@ async def perc(ctx : commands.Context):  ## RESP command
     negative = ['false', 'no', 'false']
     validResponse = False
     if(arg[0].strip('s') == 'bot'):
-        print(arg)
+        mPrint("DEBUG", f"resp comand: {arg}")
         if len(arg) == 1:
             await ctx.send(f'Risposta ai bot: {respSettings["will_respond_to_bots"]}\nRispondo ai bot il {respSettings["response_to_bots_perc"] if respSettings["will_respond_to_bots"] else 0}% delle volte')
             return
@@ -399,6 +390,15 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
 
         if args[1].lower() == 'add':
             newWord = ' '.join(args[2:])
+        
+        if args[1].lower() == 'usedefault':
+            if len(args) == 3:
+                settings[str(ctx.guild.id)]["responseSettings"]["use_global_words"] = args[2]
+                await ctx.send(f'useDefault: {args[2]}')
+                dumpSettings()
+                return
+            else:
+                await ctx.send(f'usage: `!words useDefault [true|false]`')
         
         settings[str(ctx.guild.id)]['responseSettings']['custom_words'].append(newWord)
         await ctx.send('Nuova parola imparata!')
@@ -468,6 +468,7 @@ async def embedpages(ctx : commands.Context):
     page1.add_field(name='!resp bot', value= 'controlla le percentuale di risposta verso gli altri bot', inline=False)#ok
     page1.add_field(name='!resp bot [x]%', value= 'Imposta la percentuale di culificazione contro altri bot a [x]%', inline=False)#ok
     page1.add_field(name='!resp bot [True|False]', value= 'abilita/disabilita le culificazioni di messaggi di altri bot', inline=False)#ok
+    page1.add_field(name='!resp useDefault [True|False]', value= 'Indica se il bot può usare le parole globali', inline=False)#ok
     page1.add_field(name='!words', value='Usalo per vedere le parole che il bot conosce', inline=False)
     page1.add_field(name='!words [add <words>|del <id>|edit<id> <word>]', value='Usalo modificare le parole del server', inline=False)
     page1.add_field(name='Struttura di word:', value='Per un esperienza migliore è consigliato usare gli articoli e specificare prima la forma singolare e poi quella plurale divise da una virgola e.g. `il culo, i culi`\n`il culo` `culo` `culo, culi` sono comunque forme accettabili', inline=False)
@@ -588,7 +589,7 @@ async def chessGame(ctx : commands.Context):
 
     #put args inside a list for "easier" parsing, also remove !chess since it's not needed
     args = ctx.message.content.replace('!chess ', '')
-    print(f'chessGame: issued command: chess\nauthor: {ctx.message.author.id}, args: {args}')
+    mPrint('DEBUG', f'chessGame: issued command: chess\nauthor: {ctx.message.author.id}, args: {args}')
 
     #useful for FENs: eg   (!chess) game fen="bla bla bla" < str.strip will return ["game", "fen=bla", "bla", "bla"]
     args = splitString(args)                    #wheras splitString will return ["game", "fen=", "bla", "bla", "bla"]
@@ -778,7 +779,7 @@ async def chessGame(ctx : commands.Context):
                 if image == 'Invalid':
                     await ctx.send('Invalid board')
                     return -1
-                print(f'rendered image: {image}')
+                mPrint('DEBUG', f'rendered image: {image}')
 
                 #iii. Send the image to discord
                 imgpath = (f'{image[0]}{image[1]}.png')
@@ -862,15 +863,15 @@ async def chessGame(ctx : commands.Context):
         for i in args:
             if i.lower()[:4] == 'fen=':
                 gameFEN = i[4:]
-                print(f'found FEN -> {gameFEN}')
+                mPrint('DEBUG', f'found FEN -> {gameFEN}')
 
             if i.lower()[:6] == 'board=':
                 gameBoard = i[6:]
-                print(f'found board -> {gameFEN}')
+                mPrint('DEBUG', f'found board -> {gameFEN}')
             
             if i.lower()[:7] == 'design=':
                 design = i[7:]
-                print(f'found design -> {design}')
+                mPrint('DEBUG', f'found design -> {design}')
 
     #2C. double-check the data retreived
     board = ()
@@ -944,8 +945,8 @@ async def chessGame(ctx : commands.Context):
     availableTeams = [reactions[0], reactions[1]] # Needed to avoid players from joining the same team
     players = [0, 0] #this will store discord.Members
 
-    print('chessGame: challenge["whitelist"]')
-    print(challenge['whitelist'])
+    mPrint('DEBUG','chessGame: challenge["whitelist"]')
+    mPrint('DEBUG', challenge['whitelist'])
 
     #add reactions to the embed that people can use as buttons to join the teams
     await playerFetchMsg.add_reaction(r1)
@@ -959,8 +960,7 @@ async def chessGame(ctx : commands.Context):
         # async def remove(reaction, user): #remove invalid reactions
         #     await reaction.remove(user)   #will figure out some way
 
-        print('chessGame: check1')
-        print(f'chessGame: Check: {reaction}, {user}\nchallenge["whitelist"]: {challenge["whitelist"]}\navailable: {availableTeams}\n--------')
+        mPrint('DEBUG', f'chessGame: Check: {reaction}, {user}\nchallenge["whitelist"]: {challenge["whitelist"]}\navailable: {availableTeams}\n--------')
         
         #1- prevent bot from joining teams
         if (user == bot.user): 
@@ -993,19 +993,19 @@ async def chessGame(ctx : commands.Context):
             
             #if the user joining is the author:
             if user == ctx.message.author and challenge['authorJoined'] == False: #the message author can join even if he does not have the role
-                print('chessGame: User is author') #check the user BEFORE the role, so if the user has the role it does not get deleted
+                mPrint('DEBUG', 'chessGame: User is author') #check the user BEFORE the role, so if the user has the role it does not get deleted
                 challenge['authorJoined'] = True #prevent author from joining 2 teams
                 availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
                 return True 
             
             #if the user joining isn't the author but has the role requested
             elif user.get_role(challengedRole) != None: #user has the role  
-                print('chessGame: User has required role')
+                mPrint('DEBUG', 'chessGame: User has required role')
                 challenge['whitelist'] = [] #delete the role to prevent two players with the role from joining (keeping out the author)
                 availableTeams.remove(str(reaction.emoji)) #prevent player/s from joining the same team
                 return True
 
-            print(f'chessGame: User {user.name} is not allowerd to join (Role challenge)')
+            mPrint('WARN',f'chessGame: User {user.name} is not allowerd to join (Role challenge)')
             return False
 
         #3c- If player challenged everyone:
@@ -1067,7 +1067,7 @@ async def chessGame(ctx : commands.Context):
         else: #first player choose black
             player1 = players[0] #white
             player2 = players[1] #black
-        print(f'p1: {player1}\np2: {player2}')
+        mPrint('INFO', f'p1: {player1}\np2: {player2}')
 
         #iv. Send an embed with the details of the game
         embed = discord.Embed(
@@ -1141,6 +1141,7 @@ async def playSong(ctx : commands.Context):
     else:
         #user searched a link
         if "open.spotify.com" in request[1] or "youtube.com" in request[1] or "youtu.be" in request[1]:
+            mPrint('INFO', f'FOUND SUPPORTED URL: {request[1]}')
             if ctx.message.author.id != 348199387543109654:
                 await ctx.send('youtube currently not supported')
                 return
@@ -1149,13 +1150,13 @@ async def playSong(ctx : commands.Context):
         #user wants a saved playlist
         elif request[1] in settings[str(ctx.guild.id)]["saved_playlists"]:
             trackURL = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
-            print(f'FOUND SAVED URL: {trackURL}')
+            mPrint('INFO', f'FOUND SAVED URL: {trackURL}')
             await musicBridge.play(trackURL, ctx, bot, GENIOUS)
         
         #user wants to search for a song
         else:
             trackURL = musicBridge.musicPlayer.searchYTurl(' '.join(request[1:]))
-            print(f'SEARCHED SONG URL: {trackURL}')
+            mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
             await musicBridge.play(trackURL, ctx, bot, GENIOUS)
 
 
@@ -1223,7 +1224,7 @@ async def on_message(message : discord.Message):
     msg = " ".join(msg) #trasforma messaggio in stringa
 
     await message.reply(msg, mention_author=False)
-    print('responded')
+    mPrint('DEBUG', 'responded to message')
     log(f'[INFO]: responded to message <resp_rate: {respSettings["response_perc"]}%>')
 
 

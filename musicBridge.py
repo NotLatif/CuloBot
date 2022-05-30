@@ -11,6 +11,9 @@ import spotifyParser
 import youtubeParser
 import musicPlayer
 
+from mPrint import mPrint as mp
+def mPrint(tag, text):
+    mp(tag, 'musicBridge', text)
 
 def parseUrl(url):
     if 'open.spotify.com' in url:
@@ -77,16 +80,15 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
         # task = asyncio.create_task(player.playNext())
         # process = multiprocessing.Process(target=player.playNext)
         # process.start()
-        # print("Task done")
+        # mPrint("INFO", "Task done")
         playerTask = asyncio.create_task(player.starter())
         messageTask = asyncio.create_task(messageHandler.start())
 
     except Exception as e:
-        print('exception')
         await voice.disconnect()
         voice.cleanup()
         ex, val, tb = sys.exc_info()
-        traceback.print_exception(ex, val, tb)
+        mPrint('ERROR', traceback.format_exc(ex, val, tb))
         return
 
     def check(m : discord.Message, u=None):	#check if message was sent in thread using ID
@@ -109,11 +111,11 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
             return
 
         if userInput.split()[0] == 'skip':
-            print('[USER] skipped song')
+            mPrint('USER', 'skipped song')
             skip = userInput.split()
             pTask.cancel()
             if pTask.cancelled() == False: 
-                print("ERROR: task was not closed.")
+                mPrint("WARN", "task was not closed.")
                 pTask.cancel()
             
             if len(skip) == 2 and skip[1].isnumeric():
@@ -137,12 +139,12 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
                     await ctx.send(f"```{lyrics}```")
 
                 except Exception:
-                    print('An error occurred')
                     await userMessage.reply('An error occurred')
                     ex, val, tb = sys.exc_info()
-                    traceback.print_exception(ex, val, tb)
+                    traceback.format_exc(ex, val, tb)
+                    mPrint('ERROR', traceback.format_exc(ex, val, tb))
             else:
-                print('ERROR KEY NOT FOUND FOR GENIOUS LYRICS')
+                mPrint('ERROR', 'ERROR KEY NOT FOUND FOR GENIOUS LYRICS')
 
         elif userInput == 'shuffle':
             player.shuffle()
@@ -233,7 +235,7 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
                 userMessage.reply("Devi darmi un link bro")
             else:
                 request = ' '.join(request[1:])
-                print(f'Queueedit: {request}')
+                mPrint('DEBUG', f'Queueedit: {request}')
                 tracks = parseUrl(request)
                 for t in tracks:
                     player.queue.append(t)
@@ -246,7 +248,7 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
                 userMessage.reply("Devi darmi un link bro")
             else:
                 request = ' '.join(request[1:])
-                print(f'QueueEdit: {request}')
+                mPrint('DEBUG', f'QueueEdit: {request}')
                 tracks = parseUrl(request)
                 player.queue = tracks + player.queue
                 await userMessage.add_reaction('🍑')
@@ -257,11 +259,10 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
             try:
                 userMessage : discord.Message = await bot.wait_for('message', check=check)	
             except Exception:
-                print('USERINPUT WAITFOR EXCEPTION')
                 await voice.disconnect()
                 voice.cleanup()
                 ex, val, tb = sys.exc_info()
-                traceback.print_exception(ex, val, tb)
+                mPrint('ERROR', f'USERINPUT WAITFOR EXCEPTION {traceback.format_exc(ex, val, tb)}')
             await actions(pTask, userMessage)
 
     async def emojiInput(pTask):
@@ -271,19 +272,16 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
                 emoji, user = await bot.wait_for('reaction_add', check=checkEmoji)
                 for e in emojis:
                     if str(emoji) == emojis[e]:
-                        print(f"EmojiInput: {e}")
+                        mPrint('USER', f"EmojiInput: {e}")
                         await actions(pTask, e, False)
 
                 await embedMSG.remove_reaction(str(emoji), user)	
 
             except Exception:
-                print('EMOJIINPUT WAITFOR EXCEPTION')
                 await voice.disconnect()
                 voice.cleanup()
                 ex, val, tb = sys.exc_info()
-                traceback.print_exception(ex, val, tb)
-
-            
+                mPrint('ERROR', f'EMOJIINPUT WAITFOR EXCEPTION {traceback.format_exc(ex, val, tb)}')
 
             
     await asyncio.sleep(0.1)

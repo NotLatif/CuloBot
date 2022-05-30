@@ -15,28 +15,24 @@ def stampToSec(str : str):
 def getSongs(url):
     tracks = None
     if "www.youtube.com" not in url:
+        #query youtube for the url of the first result
         url = VideosSearch(url).result()["result"][0]['link']
 
     if tracks == None:
         try:
             tracks = Playlist.getVideos(url)["videos"] # None if unavailable
-            print("found playlist")
-            print(len(tracks))
-            with open("tests/youtubeAPIplaylist.json", 'w') as f:
-                json.dump(tracks, f, indent=2)
         except AttributeError:
-            pass
+            pass #link was not a playlist
 
     if tracks == None:
+        #if link was not a playlist, search for a video
         tracks = [Video.get(url)]
-        print("found video")
 
     for t in tracks:
         if type(t['duration']) == dict:
             t['duration'] = t['duration']['secondsText']
         else:
             t['duration'] = stampToSec(t['duration'])
-
 
     return [{
             'trackName': t["title"],

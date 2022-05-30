@@ -1,3 +1,7 @@
+from mPrint import mPrint as mp
+def mPrint(tag, text):
+    mp(tag, 'chessEngine', text)
+
 #TODO ask choice for pawn promotion
 class GameState():
 	"""
@@ -39,13 +43,13 @@ class GameState():
 		self.blackCaptured = [] #pieces the black player had captured
 
 	def boardFromFEN(self, FEN : str) -> None:
-		self.mPrint('DEBUG', f'requested board FEN: {FEN}')
+		mPrint('DEBUG', f'requested board FEN: {FEN}')
 		
 		board = []
 		row = []
 		boardFEN = FEN.split()[0]
 		if('k' not in boardFEN or 'K' not in boardFEN):
-			self.mPrint('ERROR', f'king is missing from FEN | missing king: {"black" if "k" not in boardFEN else ""} {"white" if "K" not in boardFEN else ""} ')
+			mPrint('ERROR', f'king is missing from FEN | missing king: {"black" if "k" not in boardFEN else ""} {"white" if "K" not in boardFEN else ""} ')
 			return -1
 		
 		#very hard to read, will probably rewrite at some point
@@ -59,12 +63,12 @@ class GameState():
 					row.append(f'W{char}')
 					if char == 'K':
 						self.whiteKpos = (r, c)
-						self.mPrint('DEBUG', f'Found white king @ ({r}, {c})')
+						mPrint('DEBUG', f'Found white king @ ({r}, {c})')
 				else:
 					row.append(f'B{char.upper()}')
 					if char == 'k':
 						self.blackKpos = (r, c)
-						self.mPrint('DEBUG', f'Found black king @ ({r}, {c})')
+						mPrint('DEBUG', f'Found black king @ ({r}, {c})')
 			board.append(row)
 			row = []
 	
@@ -72,7 +76,7 @@ class GameState():
 		if len(FENdata) >= 1: #the board was descrbed (this should always be True)
 			self.board = board
 		else:																#random letters for searching in the code
-			self.mPrint('ERROR', 'Unexpected condition result (False) (expected:True) jiaejriajifea')
+			mPrint('ERROR', 'Unexpected condition result (False) (expected:True) jiaejriajifea')
 			return
 		if len(FENdata) >= 2: #the turn is described
 			self.whiteMoves = True if FENdata[1].lower() == 'w' else False
@@ -96,13 +100,13 @@ class GameState():
 			if (FENdata[4].isnumeric()):
 				self.halfMoveClock = int(FENdata[4])
 			else:
-				self.mPrint('WARN', 'FEN halfclock was provived but it\'s not an integer.')
+				mPrint('WARN', 'FEN halfclock was provived but it\'s not an integer.')
 		
 		if len(FENdata) >= 6: #the full Clock was described
 			if (FENdata[5].isnumeric()):
 				self.fullMoves = int(FENdata[5])
 			else:
-				self.mPrint('WARN', 'FEN fullclock was provived but it\'s not an integer.')
+				mPrint('WARN', 'FEN fullclock was provived but it\'s not an integer.')
 
 	def getFEN(self) -> str:
 		fen = ''
@@ -128,7 +132,7 @@ class GameState():
 					if colPiece[1] == 'K': blackKingPresent=True
 					fen += colPiece[1].lower()
 				else:
-					self.mPrint('ERROR', f'<ERROR generating FEN @ tile({row},{col}); piece="{colPiece}">')
+					mPrint('ERROR', f'<ERROR generating FEN @ tile({row},{col}); piece="{colPiece}">')
 					return None
 			#at the end of each row
 			if consecutiveBlanks: #0 acts like False
@@ -138,7 +142,7 @@ class GameState():
 		fen = fen[:-1] #remove the last '/'
 		if(not whiteKingPresent or not blackKingPresent):
 			#sorry for the long string, it's just an "UI" thing
-			self.mPrint('ERROR', f'<ERROR generating FEN: {"white King" if not whiteKingPresent else ""}{" and " if not whiteKingPresent and not blackKingPresent else ""}{"black King" if not blackKingPresent else ""} is not present on the board>')
+			mPrint('ERROR', f'<ERROR generating FEN: {"white King" if not whiteKingPresent else ""}{" and " if not whiteKingPresent and not blackKingPresent else ""}{"black King" if not blackKingPresent else ""} is not present on the board>')
 			return None
 		
 		fen += ' '
@@ -172,9 +176,6 @@ class GameState():
 				f'stalemate: {self.staleMate}', f'turn: {self.turnCount}', f'inCheck: {self.inCheck}', 
 				f'pins: {self.pins}', f'checks: {self.checks}', f'whiteMoves: {self.whiteMoves}')
 
-	def mPrint(self, prefix, value):
-		self.cg.mPrint(prefix, value, 'ENGINE')
-
 	def getWinner(self):
 		if self.checkMate or self.staleMate:
 			return 'B' if self.whiteMoves else 'W'
@@ -204,7 +205,7 @@ class GameState():
 		Makes a move and logs it
 		:param move: the move to be made
 		"""
-		self.mPrint('DEBUG', f'piece moved: {move.pieceMoved}')
+		mPrint('DEBUG', f'piece moved: {move.pieceMoved}')
 		#we can assume the move is valid
 		self.board[move.startRow][move.startCol] = "--"
 		self.board[move.endRow][move.endCol] = move.pieceMoved
@@ -214,10 +215,10 @@ class GameState():
 		self.turnCount += 1
 		self.whiteMoves = not self.whiteMoves
 		if move.pieceMoved == 'WK':
-			self.mPrint('DEBUG', 'moved white king')
+			mPrint('DEBUG', 'moved white king')
 			self.whiteKpos = (move.endRow, move.endCol)
 		if move.pieceMoved == 'BK':
-			self.mPrint('DEBUG', 'moved black king')
+			mPrint('DEBUG', 'moved black king')
 			self.blackKpos = (move.endRow, move.endCol)
 		if move.pieceMoved[0] == 'B':
 			self.fullMoves += 1
@@ -235,16 +236,16 @@ class GameState():
 			self.board[move.endRow][move.endCol] = move.pieceMoved[0] + 'Q' #Promote to a queen for now, will figure out later a way
 		#castlemove
 		if move.isCastle:
-			self.mPrint('DEBUG', f'found castle move {move.endCol} {move.startCol}')
+			mPrint('DEBUG', f'found castle move {move.endCol} {move.startCol}')
 			if move.endCol - move.startCol == 2: #kingside
-				self.mPrint('DEBUG', f'- kingside')
+				mPrint('DEBUG', f'- kingside')
 				#move the rook
 				self.board[move.endRow][move.endCol-1] = self.board[move.endRow][move.endCol+1]
 				#cancel the rook
 				self.board[move.endRow][move.endCol+1] = "--"
 
 			else: #queenside
-				self.mPrint('DEBUG', f'- queenside')
+				mPrint('DEBUG', f'- queenside')
 				#move the rook
 				self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-2]
 				#cancel the rook
@@ -317,32 +318,32 @@ class GameState():
 					self.castleRights.k = False
 
 	def getValidMoves(self) -> list:
-		self.mPrint('VARS', f"Turn: {'White' if self.whiteMoves else 'Black'}")
+		mPrint('VARS', f"Turn: {'White' if self.whiteMoves else 'Black'}")
 		#return self.getValidMovesNaive() #not very good but should work
 		moves =  self.getValidMovesComplicated()#better method
 		
 		Move.setAlgebraicNotation(moves) #pass every move so it can set the notation
 		for m in moves:
-			self.mPrint("MOVE", f"legalMove {m.moveID}: ({m.getChessNotation()}) ({m.algebraicNotation}{m.algebraicNotationSuffixes})")
+			mPrint("MOVE", f"legalMove {m.moveID}: ({m.getChessNotation()}) ({m.algebraicNotation}{m.algebraicNotationSuffixes})")
 		return moves
 
 	def getValidMovesComplicated(self) -> list: #more efficient but complicated algorithm
-		self.mPrint('INFO', 'Generating moves')
+		mPrint('INFO', 'Generating moves')
 		moves = []
 		self.inCheck, self.pins, self.checks = self.checkForPinsAndChecks()
-		self.mPrint('VARS', f'inCheck: {self.inCheck}')
-		self.mPrint('VARS', f'checks: {self.checks}')
-		self.mPrint('VARS', f'pins: {self.pins}')
-		self.mPrint('VARS', f'enPassant: {self.enpassantPossible}')
-		self.mPrint('VARS', f'whiteK: {self.whiteKpos}')
-		self.mPrint('VARS', f'blackK: {self.blackKpos}')
-		self.mPrint('VARS', f'halfMoves: {self.halfMoveClock}')
-		self.mPrint('VARS', f'fullMoves: {self.fullMoves}')
-		self.mPrint('VARS', f'checkmate: {self.checkMate}')
-		self.mPrint('VARS', f'stalemate: {self.staleMate}')
-		self.mPrint('VARS', f'castleRigts: {self.castleRights.getRights()}')
-		for p in self.pins: self.mPrint('VARS', f'pin[x]: {p}')
-		for c in self.checks: self.mPrint('VARS', f'check[x]: {c}')
+		mPrint('VARS', f'inCheck: {self.inCheck}')
+		mPrint('VARS', f'checks: {self.checks}')
+		mPrint('VARS', f'pins: {self.pins}')
+		mPrint('VARS', f'enPassant: {self.enpassantPossible}')
+		mPrint('VARS', f'whiteK: {self.whiteKpos}')
+		mPrint('VARS', f'blackK: {self.blackKpos}')
+		mPrint('VARS', f'halfMoves: {self.halfMoveClock}')
+		mPrint('VARS', f'fullMoves: {self.fullMoves}')
+		mPrint('VARS', f'checkmate: {self.checkMate}')
+		mPrint('VARS', f'stalemate: {self.staleMate}')
+		mPrint('VARS', f'castleRigts: {self.castleRights.getRights()}')
+		for p in self.pins: mPrint('VARS', f'pin[x]: {p}')
+		for c in self.checks: mPrint('VARS', f'check[x]: {c}')
 
 		if self.whiteMoves:
 			kingRow = self.whiteKpos[0]
@@ -379,8 +380,8 @@ class GameState():
 		else: #not in check so all moves are ok
 			moves = self.getAllPossibleMoves()
 
-		self.mPrint('WARN', f'whiteK: {self.whiteKpos}')
-		self.mPrint('WARN', f'blackK: {self.blackKpos}')
+		mPrint('WARN', f'whiteK: {self.whiteKpos}')
+		mPrint('WARN', f'blackK: {self.blackKpos}')
 
 		self.getCastleMoves(kingRow, kingCol, moves)
 
@@ -464,15 +465,15 @@ class GameState():
 
 	def squareUnderAttack(self, r, c) -> bool:
 		"""Determines if enemy can attack (r, c)"""
-		self.mPrint('FUNC', f'generating opponent moves to check if ({r}, {c}) is under attack')
+		mPrint('FUNC', f'generating opponent moves to check if ({r}, {c}) is under attack')
 		self.whiteMoves = not self.whiteMoves #I want opponent moves
 		opponentMoves = self.getAllPossibleMoves()
 		self.whiteMoves = not self.whiteMoves #reset turn
 		for move in opponentMoves:
 			if move.endRow == r and move.endCol == c: #square under attack
-				self.mPrint('DEBUG', f'FOUND ATTACK FOR SQUARE ({r} {c}) "{move.pieceMoved}"')
+				mPrint('DEBUG', f'FOUND ATTACK FOR SQUARE ({r} {c}) "{move.pieceMoved}"')
 				return True #square under attack
-		self.mPrint('DEBUG', f'No one attacking that square')
+		mPrint('DEBUG', f'No one attacking that square')
 		return False #square not under attack
 
 	def getCheckSquare(self) -> bool:
@@ -482,7 +483,7 @@ class GameState():
 			return self.whiteKpos
 		
 	def getAllPossibleMoves(self) -> list:
-		self.mPrint('FUNC', f'Generating all possible moves for {"white" if self.whiteMoves else "black"}')
+		mPrint('FUNC', f'Generating all possible moves for {"white" if self.whiteMoves else "black"}')
 		#generating the moves
 		moves = []
 		for r in range(len(self.board)):  #foreach col
@@ -653,37 +654,37 @@ class GameState():
 						self.blackKpos = (r, c)
 		
 	def getCastleMoves(self, r, c, moves):
-		self.mPrint('INFO', 'finding castle moves')
+		mPrint('INFO', 'finding castle moves')
 		if self.inCheck:
-			self.mPrint('DEBUG', f'inCheck, castle not possible')
+			mPrint('DEBUG', f'inCheck, castle not possible')
 			return
 		if (self.whiteMoves and self.castleRights.K) or (not self.whiteMoves and self.castleRights.k):
-			self.mPrint('DEBUG', 'getKingSide')
+			mPrint('DEBUG', 'getKingSide')
 			self.getKingSideCastleMove(r, c, moves)
 		if (self.whiteMoves and self.castleRights.Q) or (not self.whiteMoves and self.castleRights.q):
-			self.mPrint('DEBUG', 'getQueenSide')
+			mPrint('DEBUG', 'getQueenSide')
 			self.getQueenSideCastleMove(r, c, moves)
-		self.mPrint('WARN', f'End of getCastleMoves: {r} {c}')
+		mPrint('WARN', f'End of getCastleMoves: {r} {c}')
 		#FIXME change WARN tag (was used only to highlight while debugging)
 
 	def getKingSideCastleMove(self, r, c, moves):
-		self.mPrint('DEBUG', f'kingside {r}, {c}')
-		self.mPrint('DEBUG', f'pieces: {self.board[r][c+1]}, {self.board[r][c+2]}')
+		mPrint('DEBUG', f'kingside {r}, {c}')
+		mPrint('DEBUG', f'pieces: {self.board[r][c+1]}, {self.board[r][c+2]}')
 		if self.board[r][c+1] == '--'and self.board[r][c+2] == '--':
-			self.mPrint('DEBUG', 'kingside squares are free')
+			mPrint('DEBUG', 'kingside squares are free')
 			if not self.squareUnderAttack(r, c+2):
-				self.mPrint('DEBUG', f'moves.append(Move(({r}, {c}), ({r}, {c+2}), ...))')
+				mPrint('DEBUG', f'moves.append(Move(({r}, {c}), ({r}, {c+2}), ...))')
 				moves.append(Move((r, c), (r, c+2), self.board, castle=True, kingCastle=True))
 			else:
-				self.mPrint('DEBUG', f'({r}, {c+2}) is under attack, castling not possible')
+				mPrint('DEBUG', f'({r}, {c+2}) is under attack, castling not possible')
 
 	def getQueenSideCastleMove(self, r, c, moves):
-		self.mPrint('DEBUG', f'queenside {r}, {c}')
-		self.mPrint('DEBUG', f'pieces: {self.board[r][c-1]}, {self.board[r][c-2]}, {self.board[r][c-3]}')
+		mPrint('DEBUG', f'queenside {r}, {c}')
+		mPrint('DEBUG', f'pieces: {self.board[r][c-1]}, {self.board[r][c-2]}, {self.board[r][c-3]}')
 		if self.board[r][c-1] == '--' and self.board[r][c-2] == '--' and self.board[r][c-3] == '--':
-			self.mPrint('DEBUG', 'queenside squares are free')
+			mPrint('DEBUG', 'queenside squares are free')
 			if not self.squareUnderAttack(r, c-1) and not self.squareUnderAttack(r, c-2):
-				self.mPrint('DEBUG', f'moves.append(Move(({r}, {c}), ({r}, {c-2}), ...))')
+				mPrint('DEBUG', f'moves.append(Move(({r}, {c}), ({r}, {c-2}), ...))')
 				moves.append(Move((r, c), (r, c-2), self.board, castle=True, queenCastle=True))
 
 	#just collapse this ^ and forget about it
@@ -737,7 +738,7 @@ class Move():
 		self.givesCheckmate = False #TODO implement
 
 	
-		#self.mPrint("ENGINE", f"moveID: {self.moveID} ({self.getChessNotation()})")
+		#mPrint("ENGINE", f"moveID: {self.moveID} ({self.getChessNotation()})")
 
 	def __eq__(self, other: object) -> bool:
 			if isinstance(other, Move):
@@ -773,12 +774,12 @@ class Move():
 				
 				#if ANY of the moves another piece (of the same type) has the same endSquare:
 				for y in legalMoves: #compare move with every other move
-			#		print(f'y in legalMoves: {y.pieceMoved}')
-			#		print(f'pieceMoved: {y.pieceMoved[1]} - {move[0]}')
+			#		mPrint('DEBUG', f'y in legalMoves: {y.pieceMoved}')
+			#		mPrint('DEBUG', f'pieceMoved: {y.pieceMoved[1]} - {move[0]}')
 					if y.pieceMoved[1] == move[0]: #it's the same piece
-			#			print(f'startSq: {(y.startRow, y.startCol)} - {move[1]}')
+			#			mPrint('DEBUG', f'startSq: {(y.startRow, y.startCol)} - {move[1]}')
 						if (y.startRow, y.startCol) != move[1]: #check if the startSq is different
-			#				print(f"endSq: {(y.endRow, y.endCol)} - {move[2]}")
+			#				mPrint('DEBUG', f"endSq: {(y.endRow, y.endCol)} - {move[2]}")
 							if (y.endRow, y.endCol) == move[2]: #check if they are going in the same square
 								#ambiguity found add the column to the prefix (e.g. Ncxd2)
 								legalMoves[x].algebraicNotation += Move.colsToFiles[legalMoves[x].startCol]
@@ -802,7 +803,7 @@ class Move():
 					legalMoves[x].algebraicNotation = 'O-O-O'
 					continue
 
-			print(f'x: {x}, move: {move}')
+			mPrint('DEBUG', f'x: {x}, move: {move}')
 			#add endsquare
 			legalMoves[x].algebraicNotation += Move.colsToFiles[legalMoves[x].endCol]
 			legalMoves[x].algebraicNotation += Move.rowsToRanks[legalMoves[x].endRow]
@@ -820,7 +821,7 @@ class Move():
 			if legalMoves[x].givesCheckmate:
 				legalMoves[x].algebraicNotationSuffixes += '#'
 			
-		print('Calculated algebraic symbols')
+		mPrint('DEBUG', 'Calculated algebraic symbols')
 
 	def getChessNotation(self) -> str:
 		"""Only use of log/printing purposes """

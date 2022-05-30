@@ -3,7 +3,11 @@ import random
 import discord
 import sys
 import os
-  
+
+from mPrint import mPrint as mp
+def mPrint(tag, text):
+    mp(tag, 'chessBridge', text)
+
 sys.path.insert(0, 'chessGame/') #needed since Main is in another folder
 import chessMain
 
@@ -135,7 +139,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				
 				if reason != 'DRAW':
 					# Printing the result of the game.
-					chessGame.mPrint('GAME', f'Game won by {winner}, <gameID:{threadChannel.id}>')
+					mPrint('GAME', f'Game won by {winner}, <gameID:{threadChannel.id}>')
 
 					pgn = gs.getPGN()
 					await threadChannel.send(f"```{pgn}```")
@@ -183,7 +187,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					await threadChannel.edit(name = f'{newThreadName}', reason=reason, locked=True, archived=True)
 				
 				def rematchVoteCheck(reaction, user): #check if the different reactions are from different user (and not one user reacting 2 times)
-					chessGame.mPrint('DEBUG', f'CHECK1, {user}, {[v.id for v in votingPlayers]}')
+					mPrint('DEBUG', f'CHECK1, {user}, {[v.id for v in votingPlayers]}')
 					if user in votingPlayers:
 						votingPlayers.remove(user)
 						return str(reaction.emoji) in reactions and user != bot.user
@@ -198,9 +202,9 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					return 0
 				else:
 					del temp # don't really need it
-					print(f'reactions: {r1} {r2} == {reactions[1]}')
+					mPrint('DEBUG', f'reactions: {r1} {r2} == {reactions[1]}')
 					if r1.emoji == reactions[1] and r2.emoji == reactions[1]: #both votes are yes
-						chessGame.mPrint('INFO', 'will rematch')
+						mPrint('INFO', 'will rematch')
 						newEmbedTitle = f'{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
 						newThreadName = f'{str(players[0])[:-5]} {score[0]}-VS-{score[1]} {str(players[1])[:-5]}'
 						
@@ -216,10 +220,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 						embed.title = f'*Generating rematch...*\n{newEmbedTitle}'
 						embed.color = 0xf4900c
 						embed.set_footer(text=f'ID: {threadChannel.id}')
-						print('landmark0')
 						await fetchThread[0].edit(embed=embed)
-						print('landmark1')
-					
 
 						#switch players
 						p = players[0]
@@ -230,10 +231,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 						score[0] = score[1]
 						score[1] = s
 
-						print('before sleep')
 						await asyncio.sleep(random.randrange(2, 5))
-						print('after sleep')
-						print(newThreadName)
 						#await threadChannel.edit(name=newThreadName) #BUG game halts after 3rd round?
 
 						embed.title = f'Round {score[0] + score[1] + 1}\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
@@ -319,8 +317,8 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					await threadChannel.send(f"```{pgn}```")
 					await threadChannel.send(embed=embed)
 					await threadChannel.edit(reason='Partita annullata', locked=True, archived=True)
-					chessGame.mPrint('GAME', f'Game stopped by user, <gameID:{threadChannel.id}, user:{userMessage.author}>')
-					chessGame.mPrint('GAME', f'Game stats: <{gs.getStats()}>')
+					mPrint('GAME', f'Game stopped by user, <gameID:{threadChannel.id}, user:{userMessage.author}>')
+					mPrint('GAME', f'Game stats: <{gs.getStats()}>')
 					return -1
 				
 				elif(userMessage.content == "undo"): #TODO last turn must confirm undo (won't do for now idc)
@@ -368,7 +366,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			
 			#5. delete the embed to avoid clutter
 			await inputAsk.delete()
-			chessGame.mPrint("USER", f'{userMessage.author}, comando: {userMessage.content}')
+			mPrint("USER", f'{userMessage.author}, comando: {userMessage.content}')
 
 			if(userMessage.content in ['undo', 'board']):
 				continue
@@ -384,7 +382,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			
 			#3. Parse user input
 			userMove = userMove.replace('/', '').replace(',','').replace(' ','').lower()
-			chessGame.mPrint('DEBUG', f'userMove: {userMove}')
+			mPrint('DEBUG', f'userMove: {userMove}')
 			if userMove == 'kg1': userMove = "O-O"
 			if userMove == 'kg8': userMove = "O-O"
 			if userMove == 'kc1': userMove = "O-O-O"
@@ -406,18 +404,18 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				
 				#b. send the move to the engine for elaboration
 				move = chessMain.Engine.Move(userMove[0], userMove[1], gs.board)
-				chessGame.mPrint("USER", userMove)
+				mPrint("USER", userMove)
 			
 			else: #move was probably written in algebraic notation
-				chessGame.mPrint('DEBUG', 'parsing algebraic')
+				mPrint('DEBUG', 'parsing algebraic')
 				move = chessMain.Engine.Move.findMoveFromAlgebraic(userMove, validMoves)
-				chessGame.mPrint('INFO', f'Correspondence found: {move}')
+				mPrint('INFO', f'Correspondence found: {move}')
 
 			moveMade = False
 			#2. detect if move is valid
 			for i in range(len(validMoves)):
 				if move == validMoves[i]:
-					chessGame.mPrint("GAME", f"Valid move: {move.getChessNotation()}")
+					mPrint("GAME", f"Valid move: {move.getChessNotation()}")
 					gs.makeMove(validMoves[i]) #play the move generated by the engine
 					moveMade = True
 			if not moveMade:	
@@ -425,8 +423,8 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				#3F. if move is invalid notify the user and ask again for input
 				didIllegalMove = [True, f'Illegal move {userMove}']
 				await userMessage.delete()
-				chessGame.mPrint("GAMEErr", "Invalid move.")
-				chessGame.mPrint("GAME", f"your move: {userMove}")
+				mPrint("GAMEErr", "Invalid move.")
+				mPrint("GAME", f"your move: {userMove}")
 
 
 def getBoards() -> list:
@@ -436,5 +434,5 @@ def doesBoardExist(board : str) -> bool:
 	return chessMain.doesBoardExist(board)
 
 def getBoardImgPath(board, id) -> tuple[str]:
-	print(f'RENDERING {board}')
+	mPrint('DEBUG', f'RENDERING {board}')
 	return chessMain.renderBoard(board, id)
