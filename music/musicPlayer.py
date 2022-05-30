@@ -262,7 +262,8 @@ class MessageHandler():
         embed.add_field(name='Author:', value=f'{artist}')
         embed.add_field(name='Loop:', value=str(self.player.loop or self.player.loopQueue))
         embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
-        
+        embed.set_footer(text='🍑 the best bot 🎶 https://notlatif.github.io/CuloBot/#MusicBot')
+
         #print(f'DEBUG EMBED VALUES:\nAuthor: {self.player.currentSong["artist"]}\nLoop: {str(self.player.loop)}\nLast5: {last5}')
         
         return embed

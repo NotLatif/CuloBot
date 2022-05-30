@@ -43,7 +43,7 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
     embed.add_field(name='Loop:', value=f'False', inline=True)
     if ( last5 != "" ):
         embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
-    embed.set_footer(text='🍑 the best bot 🎶')
+    embed.set_footer(text='🍑 the best bot 🎶 https://notlatif.github.io/CuloBot/#MusicBot')
      
     try: #try connecting to vc
         vchannel = bot.get_channel(ctx.author.voice.channel.id)
