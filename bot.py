@@ -472,10 +472,10 @@ async def embedpages(ctx : commands.Context):
     page2.add_field(name='stop', value="Cancella la queue ed esce dal canale vocale", inline=False)#ok
     page2.add_field(name='clear', value="Cancella la queue", inline=False)#ok
     page2.add_field(name='loop [song | queue]', value="default=song; [song] mette in loop la traccia; [queue] rimette le tracce in queue quando finisce di riprodurle", inline=False)#ok
-    page2.add_field(name='loop restart', value="ripete la traccia corrente", inline=False)#ok
+    page2.add_field(name='restart', value="ripete la traccia corrente", inline=False)#ok
     page2.add_field(name='queue', value="rimanda il messaggio con la queue", inline=False)#ok
-    page2.add_field(name='remove [x]', value="rimuove la traccia in posizone [x]", inline=False)#ok
-    page2.add_field(name='mv [x] [y]', value="sposta la traccia dalla posizone [x] alla posizione [y] (x,y > 0)", inline=False)#ok
+    page2.add_field(name='remove <x>', value="rimuove la traccia in posizone x", inline=False)#ok
+    page2.add_field(name='mv <x> <y>', value="sposta la traccia dalla posizone x alla posizione y (x,y > 0)", inline=False)#ok
     page2.add_field(name='!play <song>', value="Aggiunge una traccia in coda", inline=False)#ok
     page2.add_field(name='!p <song>', value="Lo stesso di !play", inline=False)#ok
     page2.add_field(name='!playnext <song>', value="Aggiunge una traccia in testa", inline=False)#ok
