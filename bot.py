@@ -437,7 +437,7 @@ async def embedpages(ctx : commands.Context):
         title = 'CuloBot',
         description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza artificiale',
         colour = 0xf39641
-    ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa.')
+    ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa. https://notlatif.github.io/CuloBot/#MusicBot')
     
     e.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
 
