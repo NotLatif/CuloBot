@@ -32,3 +32,5 @@ N.B. there will come translations some time in the future, but for now it's a mi
 13. start bot.py
 14. everything should be good, probably, maybe not, idk...
 15. submit all the Issues you had
+
+test
