@@ -154,7 +154,6 @@ class Player():
 
     def clear(self):
         self.queue = []
-    
 
     async def stop(self):
         await self.voiceClient.disconnect()
@@ -195,8 +194,9 @@ class MessageHandler():
             #update timestamp every "step" seconds
             currentStep = 1
             print(f"Step sec: {stepSeconds}")
+            timeDeltaError = 0
             while True:
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.5)
             
                 if self.player.pauseEnd - self.player.pauseStart != 0: #pause started
                     if self.player.pauseEnd == 0:
@@ -211,9 +211,6 @@ class MessageHandler():
                 timePassed = time.time() - initialTime + self.pauseDiff
                 if self.player.isPaused == False and timePassed >= stepSeconds:
                     self.pauseDiff = 0
-                    initialTime = time.time()
-                    print(f"updating after: {timePassed}s")
-                    #reset time to current step
                     
                     self.stepProgress = stepSeconds * (currentStep)
                     #update timebar
@@ -225,6 +222,11 @@ class MessageHandler():
                     #update message
                     currentStep += 1
                     await self.updateEmbed()
+
+                    #reset time to current step
+                    timeDeltaError = timePassed - stepSeconds
+                    initialTime = time.time() - timeDeltaError #FIXME timeline gets bugged easily
+                    print(f"updating after: {timePassed}s; error: {timeDeltaError}")
                 
                 if currentSong != self.player.currentSong:
                     print("song was skipped")
@@ -239,6 +241,9 @@ class MessageHandler():
                     self.player.skipped = False
                     await asyncio.sleep(0.5) #wait for player to set it's vars
                     break
+
+                if len(self.player.queue) == 0:
+                    return
 
     def getEmbed(self):
         last5 = f'__**0.** {self.player.currentSong["trackName"]} [{self.player.currentSong["artist"]}]__\n'
@@ -255,7 +260,7 @@ class MessageHandler():
         artist = "N/A" if self.player.currentSong["artist"] == "" else self.player.currentSong["artist"]
         
         embed.add_field(name='Author:', value=f'{artist}')
-        embed.add_field(name='Loop:', value=str(self.player.loop))
+        embed.add_field(name='Loop:', value=str(self.player.loop or self.player.loopQueue))
         embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
         
         #print(f'DEBUG EMBED VALUES:\nAuthor: {self.player.currentSong["artist"]}\nLoop: {str(self.player.loop)}\nLast5: {last5}')

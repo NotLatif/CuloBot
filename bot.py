@@ -441,11 +441,12 @@ async def embedpages(ctx : commands.Context):
     
     e.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
 
-    page1 = e.copy().set_author(name='Help 1/3, culo!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page2 = e.copy().set_author(name='Help 2/3, CHECKMATE', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page3 = e.copy().set_author(name='Help 3/3, misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page1 = e.copy().set_author(name='Help 1/4, culo!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page2 = e.copy().set_author(name='Help 2/4, Music!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page3 = e.copy().set_author(name='Help 3/4, CHECKMATE', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page4 = e.copy().set_author(name='Help 4/4, misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     
-    #Page 1
+    #Page 1 settings
     page1.add_field(name='!resp', value='Chiedi al bot la percentuale di culificazione', inline=False)#ok
     page1.add_field(name='!resp [x]%', value='Imposta la percentuale di culificazione a [x]%', inline=False)#ok
     page1.add_field(name='!resp bot', value= 'controlla le percentuale di risposta verso gli altri bot', inline=False)#ok
@@ -455,34 +456,61 @@ async def embedpages(ctx : commands.Context):
     page1.add_field(name='!words [add <words>|del <id>|edit<id> <word>]', value='Usalo modificare le parole del server', inline=False)
     page1.add_field(name='Struttura di word:', value='Per un esperienza migliore è consigliato usare gli articoli e specificare prima la forma singolare e poi quella plurale divise da una virgola e.g. `il culo, i culi`\n`il culo` `culo` `culo, culi` sono comunque forme accettabili', inline=False)
 
-    #Page 2
-    page2.add_field(name='!chess [@user | @role] [fen="<FEN>" | board=<boardname>] [design=<deisgn>]', 
+    #Page 2 music
+    page2.add_field(name='!playlist', value='Vedi le playlist salvate', inline=False)#ok
+    page2.add_field(name='!playlist [add|edit] <name> <link>', value='Salva una nuova playlist', inline=False)#ok
+    page2.add_field(name='!playlist [remove|del] <name>', value='Rimuovi una playlist', inline=False)#ok
+    page2.add_field(name='!play <song>', value="Fa partire una canzone, per usarlo devi essere in un canale vocale\n<song> può essere [link spotify | link youtube | nome di una playlist salvata | titolo di una canzone]", inline=False)#ok
+    page2.add_field(name='!p <song>', value="Lo stesso di !play", inline=False)#ok
+    page2.add_field(name='Comandi del player', value="Sono i comandi che puoi usare quando il bot riproduce una canzone (N.B. non tutti i comandi usano '!')", inline=False)#ok
+    page2.add_field(name='skip', value="Passa alla prossima traccia", inline=False)#ok
+    page2.add_field(name='skip [x]', value="salta [x] tracce (default = 1)", inline=False)#ok
+    #page2.add_field(name='lyrics', value="Mostra il testo di una traccia", inline=False)#ok
+    page2.add_field(name='shuffle', value="Scambia in modo casuale la queue", inline=False)#ok
+    page2.add_field(name='pause', value="Mette in pausa la traccia corrente", inline=False)#ok
+    page2.add_field(name='resume', value="Fa ripartire la traccia", inline=False)#ok
+    page2.add_field(name='stop', value="Cancella la queue ed esce dal canale vocale", inline=False)#ok
+    page2.add_field(name='clear', value="Cancella la queue", inline=False)#ok
+    page2.add_field(name='loop [song | queue]', value="default=song; [song] mette in loop la traccia; [queue] rimette le tracce in queue quando finisce di riprodurle", inline=False)#ok
+    page2.add_field(name='loop restart', value="ripete la traccia corrente", inline=False)#ok
+    page2.add_field(name='queue', value="rimanda il messaggio con la queue", inline=False)#ok
+    page2.add_field(name='remove [x]', value="rimuove la traccia in posizone [x]", inline=False)#ok
+    page2.add_field(name='mv [x] [y]', value="sposta la traccia dalla posizone [x] alla posizione [y] (x,y > 0)", inline=False)#ok
+    page2.add_field(name='!play <song>', value="Aggiunge una traccia in coda", inline=False)#ok
+    page2.add_field(name='!p <song>', value="Lo stesso di !play", inline=False)#ok
+    page2.add_field(name='!playnext <song>', value="Aggiunge una traccia in testa", inline=False)#ok
+    page2.add_field(name='!pnext <song>', value="Lo stesso di !playnext", inline=False)#ok
+    
+
+
+    #Page 3 chess
+    page3.add_field(name='!chess [@user | @role] [fen="<FEN>" | board=<boardname>] [design=<deisgn>]', 
     value='Gioca ad una partita di scacchi!\n\
      [@user]: Sfida una persona a scacchi\n\
      [@role]: Sfida un ruolo a scacchi\n\
      [fen="<FEN>"]: usa una scacchiera preimpostata\n\
      [board=<boardname>]: usa una delle scacchiere salvate\n\
      [design=<design>: usa uno dei design disponibili', inline=False)#ok
-    page2.add_field(name='e.g.:', value='```!chess board=board2\n!chess\n!chess @Admin\n!chess fen="k7/8/8/8/8/8/8/7K"```')
+    page3.add_field(name='e.g.:', value='```!chess board=board2\n!chess\n!chess @Admin\n!chess fen="k7/8/8/8/8/8/8/7K"```')
 
-    page2.add_field(name='!chess boards', value='vedi i FEN disponibili', inline=False)#ok
-    page2.add_field(name='!chess design [see|add|del|edit]', value='vedi le scacchiere disponibili `!chess design` per più informazioni', inline=False)#ok
-    page2.add_field(name='!chess render <name | FEN>', value='genera l\'immagine della scacchiera', inline=False)#ok
-    page2.add_field(name='!chess add <name> <FEN>', value='aggiungi una scacchiera', inline=False)#ok
-    page2.add_field(name='!chess remove <name>', value='rimuovi una scacchiera', inline=False)#ok
-    page2.add_field(name='!chess rename <name> <newName>', value='rinomina una scacchiera', inline=False)#ok
-    page2.add_field(name='!chess edit <name> <FEN>', value='modifica una scacchiera', inline=False)#ok
+    page3.add_field(name='!chess boards', value='vedi i FEN disponibili', inline=False)#ok
+    page3.add_field(name='!chess design [see|add|del|edit]', value='vedi le scacchiere disponibili `!chess design` per più informazioni', inline=False)#ok
+    page3.add_field(name='!chess render <name | FEN>', value='genera l\'immagine della scacchiera', inline=False)#ok
+    page3.add_field(name='!chess add <name> <FEN>', value='aggiungi una scacchiera', inline=False)#ok
+    page3.add_field(name='!chess remove <name>', value='rimuovi una scacchiera', inline=False)#ok
+    page3.add_field(name='!chess rename <name> <newName>', value='rinomina una scacchiera', inline=False)#ok
+    page3.add_field(name='!chess edit <name> <FEN>', value='modifica una scacchiera', inline=False)#ok
 
-    #Page 3
-    page3.add_field(name='!ping', value='Pong!', inline=False)#ok
-    page3.add_field(name='!rawdump', value='manda un messaggio con tutti i dati salvati di questo server', inline=False)#ok
-    page3.add_field(name='joinmsg [msg]', value="Mostra il messaggio di benvenuto del bot, usa `!joinmsg help` per più informazioni\n", inline=False)
+    #Page 4 misc
+    page4.add_field(name='!ping', value='Pong!', inline=False)#ok
+    page4.add_field(name='!rawdump', value='manda un messaggio con tutti i dati salvati di questo server', inline=False)#ok
+    page4.add_field(name='joinmsg [msg]', value="Mostra il messaggio di benvenuto del bot, usa `!joinmsg help` per più informazioni\n", inline=False)
 
     #fotter for page 1
     page1.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
     page1.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
     
-    pages = [page1, page2, page3]
+    pages = [page1, page2, page3, page4]
 
     msg = await ctx.send(embed = page1)
 
@@ -1048,6 +1076,43 @@ async def chessGame(ctx : commands.Context):
         if design.find('\\') != -1 or design.find('/') != -1:
             shutil.rmtree(designFolder)
 
+@bot.command(name='playlist', pass_context=True) #Player
+async def playSong(ctx : commands.Context):
+    request = ctx.message.content.split()
+    if len(request) == 1:
+        embed = discord.Embed(
+            title=f"Saved playlists for {ctx.guild.name}",
+            description="Commands: !playlist [add|edit] <name> <link>\n!playlist remove <name>",
+            color=0x1ed760
+        )
+        for plist in settings[str(ctx.guild.id)]["saved_playlists"]:
+            embed.add_field(name=plist, value=settings[str(ctx.guild.id)]["saved_playlists"][plist])
+        await ctx.send(embed=embed)
+        return    
+
+    else:       
+        if request[1] in ["add", "edit"]:
+            if len(request) == 4:
+                settings[str(ctx.guild.id)]["saved_playlists"][request[2]] == request[3]
+                await ctx.send(f"Playlist -> {request[2]}: {request[3]}")
+                dumpSettings()
+                await ctx.message.add_reaction("👌")
+                return
+        
+        if request[1] in ["remove", "del"]:
+            if len(request) == 3:
+                try:
+                    del settings[str(ctx.guild.id)]["saved_playlists"][request[2]]
+                    await ctx.send(f"Deleted {request[2]}.")
+                    dumpSettings()
+                except KeyError:
+                    await ctx.send("La playlist non esisteva.")
+                return
+    
+    await ctx.send("Usage: !playlist [add|edit] <name> <link>\n!playlist remove <name>")
+
+
+
 @bot.command(name='play', pass_context=True, aliases=['p']) #Player
 async def playSong(ctx : commands.Context):
     voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
@@ -1056,7 +1121,7 @@ async def playSong(ctx : commands.Context):
 
     request = ctx.message.content.split()
     if len(request) == 1:
-        await ctx.send("Usage: !play [song]\nsong can be: [spotify URL | youtube URL | name of a saved playlist | name of the song]")
+        await ctx.send("Usage: !play <song>\nsong can be: [spotify URL | youtube URL | name of a saved playlist | name of the song]")
     else:
         #user searched a link
         if "open.spotify.com" in request[1] or "youtube.com" in request[1] or "youtu.be" in request[1]:
