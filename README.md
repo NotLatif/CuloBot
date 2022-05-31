@@ -1,10 +1,7 @@
 # CuloBot (CURRENTLY WIP)
 A discord bot that can play music, let's you play chess and do other things
 
-<div style="text-align: center;">
-    <img src="docs/logo.png">
-</div>
-
+<img align="right" src="docs/logo.png" width="150px">
 
 ## About
 Sorry for the poor documentation, I'll improve it later (maybe)
