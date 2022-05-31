@@ -1,36 +1,38 @@
-# CuloBot
- Meme bot per gli amici del discord
- Progettato per uso su un singolo server
+# CuloBot (CURRENTLY WIP)
+A discord bot that can play music, let's you play chess and do other things
 
-Ha anche un gioco di scacchi!
-Sistemerò questo readme un giorno futuro...
+<div style="text-align: center;">
+    ![Alt text](docs/logo.png)
+</div>
 
-# Quick start
+
+## About
 Sorry for the poor documentation, I'll improve it later (maybe)
 
 N.B. there will come translations some time in the future, but for now it's a mix of english and italian. Sorry
 
-## prerequisites
-(this is what I am running, not a minimum nor recommended (will figure out later))
+### built with:
 - Python 3.9.2
 - py-cord dev version (discord.py v2.0.0-alpha)
-- Discord account
 
-## steps
-1. clone repository in a folder
-2. create a file named `.env` in the main folder
-3. paste this string: `DISCORD_TOKEN={SUPER_SECRET_TOKEN}`
-4. log in the [Discord Developer Portal](https://discord.com/developers/applications)
-5. create a New Application, change settings as you please
-6. go to `Bot` on the left and click `Add Bot`
-7. click `Reset token` and copy it (WARNING: the token grants access to your bot, do not share your token)
-8. paste your token without quotes in the `.env` file replacing `SUPER_SECRET_TOKEN`
-9. on the Developer portal, enable everything under `Privileged gateway intents`
-10. click on `OAuth2` -> `Url generator`
-11. check `Bot` in the middle and give the permissions you want, I don't know yet which are needed for the bot to work sorry about that
-12. Add the bot to your server
-13. start bot.py
-14. everything should be good, probably, maybe not, idk...
-15. submit all the Issues you had
+othre requirements are in the `requirements.txt` file
 
-test
+### how to self-host the bot
+#### Prerequisites:
+- The discord token of your bot [create a bot here](https://discord.com/developers/applications)
+- [optional] The spotify key and user id [You can get them here](https://developer.spotify.com/dashboard/applications)
+
+#### steps:
+1. clone repository in a folder `git clone https://github.com/NotLatif/CuloBot .`
+1. Start the `bot.py` file (if necessary install the modules in the `requirements.txt` file
+1. Edit the `.env` file adding your keys without quotes
+1. on the Developer portal, enable intents under `Privileged gateway intents`
+1. click on `OAuth2` -> `Url generator`
+1. check `Bot` in the middle, administrator permissions should be good for your own server
+1. Add the bot to your server
+1. start bot.py
+1. everything should be good, probably, maybe not, idk...
+1. submit all the Issues you had
+
+## Discord commands
+You can find them here https://notlatif.github.io/CuloBot/

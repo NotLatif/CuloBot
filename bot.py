@@ -4,11 +4,12 @@ import json
 import random
 import copy
 import sys
+import traceback
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.utils import get
 from discord.ext import commands
-from datetime import datetime
 from typing import Union
+from PIL import Image, ImageOps, ImageDraw, ImageFont
 import chessBridge
 import musicBridge
 import shutil
@@ -21,17 +22,21 @@ try:
 except ModuleNotFoundError:
     myServer = False
 
+#generate file if first startup:
+if not os.path.isfile(".env"):
+    with open('.env', 'w') as f:
+        f.write("DISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nGENIOUS_SECRET={}\n")
+
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
 
 #Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
-GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 
-#TODO what if user has not the keys
+#TODO what if user has not the keys, same for spotify in spotifyParser.py
 GENIOUS = os.getenv('GENIOUS_SECRET')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","leave_message":"Salutiamo felicemente il coglione di %name%","response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","join_image":True,"leave_message":"Salutiamo felicemente il coglione di %name%","response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{}}}
 
 intents = discord.Intents.all()
 intents.members = True
@@ -202,19 +207,82 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
     
     return ('parsing error', 'parseWord(str, int, str, list[str]) -> tuple[str, str]')
 
+def getJoinImageData(membername) -> tuple[Image.Image, ImageFont.truetype, tuple[str, list[int]], tuple[int, list[int]]]:
+    image_path = 'botFiles/join_images/'
+    images = os.listdir(image_path)
+    image_path = f'{image_path}{random.choice(images)}'
 
+    if image_path[-5:] == '.json': 
+        image_path = image_path[:-5] + '.png'
+    image = Image.open(image_path)
 
+    if os.path.isfile(f'{image_path[:-4]}.json'):
+        with open(f'{image_path[:-4]}.json', 'r') as f:
+            data = json.load(f)
+    else:
+        mPrint('WARN', f'{image_path[:-4]} HAS NO JSON EQUIVALENT, CREATE ONE TO ENSURE THE IMAGE IS GOOD')
+        data = {
+            "avatar_position": [10, 10],
+            "avatar_size": 300,
+            "text_position": [400,50],
+            "text": "Benvenuto %name%!",
+            "font_size": 50
+        }
+
+    font = ImageFont.truetype("botFiles/PTSerif-Bold.ttf", data["font_size"])
+    if '%name%' in data["text"]:
+        data["text"] = data["text"].replace('%name%', membername, -1)
+
+    return (
+        image, 
+        font, 
+        [data["text"], data["text_position"]],
+        (data["avatar_size"], data["avatar_position"])
+    )
+
+async def joinImageSend(member : discord.Member, guild : discord.Guild, channel : discord.TextChannel = None):
+    imagepath = f'botFiles/{member.id}.png'
+    try:
+        await member.avatar.save(imagepath)
+    except AttributeError:
+        await member.default_avatar.save(imagepath)
+
+    #load join image and add text
+    joinImage, font, textData, avatarData = getJoinImageData(member.name)
+
+    ImageDraw.Draw(joinImage).text((textData[1][0], textData[1][1]),f"{textData[0]}",(255,255,255),font=font)
+    
+    #edit avatar and paste it to joinimage
+    mask = Image.open('botFiles/avatar_mask.png').convert("L").resize((avatarData[0],avatarData[0]))
+    avatar = Image.open(imagepath).convert('RGBA').resize((avatarData[0],avatarData[0]))
+    avatar = ImageOps.fit(avatar, mask.size, centering=(0.5, 0.5))
+    avatar.putalpha(mask)
+    joinImage.paste(avatar, (avatarData[1][0],avatarData[1][1]), avatar)
+
+    #send image to discord and delete it
+    joinImage.save(imagepath)
+
+    joinImage.close()
+    mask.close()
+    avatar.close()
+
+    f = discord.File(imagepath)
+    if channel == None:
+        await guild.system_channel.send(file=f)
+    else:
+        await channel.send(file=f)
+    os.remove(imagepath)
 
 #           -----           DISCORD BOT COROUTINES           -----       #
 @bot.event #exception logger
 async def on_error(event, *args, **kwargs):
-    mPrint('ERROR', sys.exc_info())
+    mPrint('ERROR', f"DISCORDPY on_error:\n{traceback.format_exc()}")
+    mPrint('WARN', "ARGS:")
     for x in args:
         mPrint('ERROR', {x})
 
 @bot.event   ## BOT ONLINE
 async def on_ready():
-
     if len(sys.argv) == 5 and sys.argv[1] == "RESTART":
         mPrint("INFO", "BOT WAS RESTARTED")
         guild = await bot.fetch_guild(sys.argv[2])
@@ -234,17 +302,19 @@ async def on_ready():
             mPrint('DEBUG', '^ Generating settings for guild')
             updateSettings(str(guild.id), reset=True)
 
-
         checkSettingsIntegrity(str(guild.id))
 
 @bot.event
 async def on_member_join(member : discord.Member):
-    joinString = settings[str(member.guild.id)]['responseSettings']['join_message']
-    if(joinString == ''): return
-    joinString= joinString.replace('%name%', member.name)
-    
-    await member.guild.system_channel.send(joinString)   
     mPrint("INFO", "join detected")
+    joinString = settings[str(member.guild.id)]['responseSettings']['join_message']
+    
+    if(joinString != ''):
+        joinString= joinString.replace('%name%', member.name)
+        await member.guild.system_channel.send(joinString)
+
+    if settings[str(member.guild.id)]['responseSettings']['join_image']:
+        await joinImageSend(member, member.guild)
 
 @bot.event
 async def on_member_remove(member : discord.Member):
@@ -255,6 +325,14 @@ async def on_member_remove(member : discord.Member):
     await member.guild.system_channel.send(leaveString)   
     mPrint("INFO", "join detected") 
     
+@bot.command(name='getimage')
+async def test(ctx : commands.Context):
+    if ctx.author.id != 348199387543109654:
+        return
+    user = ctx.message.content.split()[1][2:-1]
+    member = await ctx.guild.fetch_member(int(user))
+    await joinImageSend(member, ctx.guild, ctx.channel)
+
 @bot.command(name='restart')
 async def test(ctx : commands.Context):
     #SPECIFIC TO MY SERVER
@@ -304,7 +382,7 @@ async def joinmsg(ctx : commands.Context):
         await ctx.send(f"Il nuovo messaggio di benvenuto è:\n{settings[str(ctx.guild.id)]['responseSettings']['join_message']}")
 
 @bot.command(name='leavemsg')
-async def joinmsg(ctx : commands.Context):
+async def leavemsg(ctx : commands.Context):
     args = ctx.message.content.split()
     if len(args) == 1:
         #if join message is not empty
@@ -323,6 +401,18 @@ async def joinmsg(ctx : commands.Context):
         settings[str(ctx.guild.id)]['responseSettings']['leave_message'] = ' '.join(args[1:])
         dumpSettings()
         await ctx.send(f"Il nuovo messaggio di addio è:\n{settings[str(ctx.guild.id)]['responseSettings']['join_message']}")
+
+@bot.command(name='joinimage')
+async def joinmsg(ctx : commands.Context):
+    args = ctx.message.content.split()
+    if len(args) != 1:
+        if args[2].lower == 'true':
+            settings[str(ctx.guild.id)]['responseSettings']['join_image'] = True
+        else:
+            settings[str(ctx.guild.id)]['responseSettings']['join_image'] = False
+        dumpSettings()
+
+    await ctx.send(f"joinimage: {settings[str(ctx.guild.id)]['responseSettings']['join_image']}")
 
 @bot.command(name='resp') 
 async def perc(ctx : commands.Context):  ## RESP command
@@ -467,11 +557,15 @@ async def embedpages(ctx : commands.Context):
     
     e.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
 
-    page1 = e.copy().set_author(name='Help 1/4, culo!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page2 = e.copy().set_author(name='Help 2/4, Music!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page3 = e.copy().set_author(name='Help 3/4, CHECKMATE', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page4 = e.copy().set_author(name='Help 4/4, misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page0 = e.copy().set_author(name='Help 0/5, informazioni', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page1 = e.copy().set_author(name='Help 1/5, culo!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page2 = e.copy().set_author(name='Help 2/5, Music!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page3 = e.copy().set_author(name='Help 3/5, CHECKMATE', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page4 = e.copy().set_author(name='Help 4/5, misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     
+    #Page 0 Info
+    page0.add_field(name="CONSIGLIO:", value="Per una leggibilità migliore, puoi vedere i comandi al sito del bot https://notlatif.github.io/CuloBot/")
+
     #Page 1 settings
     page1.add_field(name='!resp', value='Chiedi al bot la percentuale di culificazione', inline=False)#ok
     page1.add_field(name='!resp [x]%', value='Imposta la percentuale di culificazione a [x]%', inline=False)#ok
@@ -511,7 +605,7 @@ async def embedpages(ctx : commands.Context):
 
 
     #Page 3 chess
-    page3.add_field(name='!chess [@user | @role] [fen="<FEN>" | board=<boardname>] [design=<deisgn>]', 
+    page3.add_field(name='!chess [@user | @role] [fen="<FEN>"] [board=<boardname>] [design=<deisgn>]', 
     value='Gioca ad una partita di scacchi!\n\
      [@user]: Sfida una persona a scacchi\n\
      [@role]: Sfida un ruolo a scacchi\n\
@@ -522,7 +616,7 @@ async def embedpages(ctx : commands.Context):
 
     page3.add_field(name='!chess boards', value='vedi i FEN disponibili', inline=False)#ok
     page3.add_field(name='!chess design [see|add|del|edit]', value='vedi le scacchiere disponibili `!chess design` per più informazioni', inline=False)#ok
-    page3.add_field(name='!chess render <name | FEN>', value='genera l\'immagine della scacchiera', inline=False)#ok
+    page3.add_field(name='!chess see <name | FEN>', value='genera l\'immagine della scacchiera', inline=False)#ok
     page3.add_field(name='!chess add <name> <FEN>', value='aggiungi una scacchiera', inline=False)#ok
     page3.add_field(name='!chess remove <name>', value='rimuovi una scacchiera', inline=False)#ok
     page3.add_field(name='!chess rename <name> <newName>', value='rinomina una scacchiera', inline=False)#ok
@@ -533,14 +627,18 @@ async def embedpages(ctx : commands.Context):
     page4.add_field(name='!rawdump', value='manda un messaggio con tutti i dati salvati di questo server', inline=False)#ok
     page4.add_field(name='joinmsg [msg]', value="Mostra il messaggio di benvenuto del bot, usa `!joinmsg help` per più informazioni\n", inline=False)
     page4.add_field(name='leavemsg [msg]', value="Mostra il messaggio di addio del bot, usa `!joinmsg help` per più informazioni\n", inline=False)
+    page4.add_field(name='joinimage [True|False]', value="Specifica se il bot può inviare o meno un immagine casuale quando entra qualcuno nel server\n", inline=False)
 
     #fotter for page 1
+    page0.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
+    page0.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
+    
     page1.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
     page1.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
     
-    pages = [page1, page2, page3, page4]
+    pages = [page0, page1, page2, page3, page4]
 
-    msg = await ctx.send(embed = page1)
+    msg = await ctx.send(embed = pages[0])
 
     await msg.add_reaction('◀')
     await msg.add_reaction('▶')
@@ -557,11 +655,11 @@ async def embedpages(ctx : commands.Context):
                 i -= 1
                 await msg.edit(embed = pages[i])
         elif str(emoji) == '▶':
-            if i < 2:
+            if i < len(pages) - 1:
                 i += 1
                 await msg.edit(embed = pages[i])
         elif str(emoji) == '⏭':
-            i = 2
+            i = len(pages) -1
             await msg.edit(embed = pages[i])
         
         def check(reaction, user):
@@ -691,12 +789,11 @@ async def chessGame(ctx : commands.Context):
                     #design exists in guildData
                     if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
                         colors = settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]]
-                        design = chessBridge.chessMain.gameRenderer.renderBoard(colors, ctx.message.id)
-                        path = chessBridge.chessMain.gameRenderer.spritesFolder + design
-                        with open(path+'chessboard.png', "rb") as fh:
-                            f = discord.File(fh, filename=(path + 'chessboard.png'))
+                        designPath = chessBridge.chessMain.gameRenderer.renderBoard(colors, ctx.message.id)
+                        with open(designPath+'chessboard.png', "rb") as fh:
+                            f = discord.File(fh, filename=(designPath + 'chessboard.png'))
                             await ctx.send(file=f)
-                        shutil.rmtree(path, ignore_errors=False, onerror=None)
+                        shutil.rmtree(designPath, ignore_errors=False, onerror=None)
                         return 0
                     
                     #design does not exist in guildData, search if exists in sprites folder
@@ -727,8 +824,9 @@ async def chessGame(ctx : commands.Context):
             
             def parseHEX(hex1, hex2) -> list:
                 colors = [hex1, hex2]
-                possible = ['#', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
+                possible = ['#', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f']
                 for i, hex in enumerate(colors): #foreach color
+                    mPrint('DEBUG', f'parsing hex {hex}')
                     # if it has not an # add it
                     if hex[0] != '#': hex = '#' + hex
                     for char in hex: #check if color digits are valid
@@ -749,7 +847,7 @@ async def chessGame(ctx : commands.Context):
                     if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
                         colors = parseHEX(args[3], args[4])
                         if colors == '0':
-                            await ctx.send("Invalid hex")
+                            await ctx.send(f"Invalid hex {args[3]} {args[4]}")
                             return -2
                         settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]] = colors
                         await ctx.send(f"Design modificato: **{args[2]}**: {colors}")
@@ -768,7 +866,7 @@ async def chessGame(ctx : commands.Context):
                         return -2
                     colors = parseHEX(args[3], args[4])
                     if colors == '0':
-                        await ctx.send("Invalid hex")
+                        await ctx.send(f"Invalid hex {args[3]} {args[4]}")
                         return -2
                     settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]] = colors
                     await ctx.send(f"Design aggiunto: **{args[2]}**: {colors}")
@@ -777,7 +875,7 @@ async def chessGame(ctx : commands.Context):
                     await ctx.send('Usage: `!chess design add <nome> <colore1> <colore2>`\ne.g.:`!chess design edit test1 #24AB34 #8E24FF`')
                 return 0
 
-        elif args[0] == 'renderboard' or args[0] == 'render': # renders a FEN and send it in chat
+        elif args[0] == 'seeboard' or args[0] == 'see': # renders a FEN and send it in chat
             #i. avoid indexError because of the dumb user
             if len(args) >= 2:
                 #ii. let the Engine make the image
@@ -1059,7 +1157,7 @@ async def chessGame(ctx : commands.Context):
         embed.color = 0x77b255
         await playerFetchMsg.edit(embed=embed)
         #iii. fake sleep for professionality
-        await asyncio.sleep(random.randrange(2,4))
+        await asyncio.sleep(random.randrange(0,2))
 
     except asyncio.TimeoutError: #players did not join in time
         embed = discord.Embed(
@@ -1200,14 +1298,13 @@ async def on_message(message : discord.Message):
 
     if 'word' in message.content: #for future implementation, respond to specific string
         pass
-        
     
     #if guild does not want bot responses and sender is a bot, ignore the message
     if message.author.bot and not respSettings["will_respond_to_bots"]: return 0
 
     #culificazione
     articoli = ['il', 'lo', 'la', 'i', 'gli', 'le'] #Italian specific
- 
+
     if random.randrange(1, 100) > respSettings["response_perc"]: #implement % of answering
         return
 

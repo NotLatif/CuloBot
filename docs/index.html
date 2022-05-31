@@ -27,7 +27,7 @@
                 <div class="row">
                     <div class="col-xl-9 mx-auto">
                         <h1 class="title">CuloBot</h3>
-                        <h3 class="subtitle">Un bot scritto in discord.py che fa musica e scacchi!</h3>
+                        <h3 class="subtitle">Un bot scritto in python che fa musica e scacchi!</h3>
                         <h3 class="subtitle">WARNING: CuloBot IS CURRENTLY WIP, EXPECT BUGS</h3>
                         <a class="btn" href="https://github.com/NotLatif/CuloBot">View on github!</a>
                     </div>
@@ -53,133 +53,220 @@
                     </tr>
                     <tr>
                         <td><code>!resp</code></td>
-                        <td class="row2">Mostra la percentuale di risposta</td>
+                        <td>Mostra la percentuale di risposta</td>
                     </tr>
                     <tr>
                         <td><code>!resp [x]%</code></td>
-                        <td class="row2">Imposta la percentuale di risposta a x%</td>
+                        <td>Imposta la percentuale di risposta a x%</td>
                     </tr>
                     <tr>
                         <td><code>!resp bot</code></td>
-                        <td class="row2">Mostra la percentuale di risposta verso altri bot</td>
+                        <td>Mostra la percentuale di risposta verso altri bot</td>
                     </tr>
                     <tr>
                         <td><code>!resp bot [x|True|False]</code></td>
-                        <td class="row2">Imposta la percentuale di risposta verso altri bot a x% (True = 100%, False=0%)</td>
+                        <td>Imposta la percentuale di risposta verso altri bot a x% (True = 100%, False=0%)</td>
                     </tr>
                     <tr>
                         <td><code>Struttura di &lt;word&gt;</code></td>
-                        <td class="row2">Per un esperienza migliore è consigliato usare gli articoli e specificare prima la forma singolare e poi quella plurale divise da una virgola e.g. `il culo, i culi`\n`il culo` `culo` `culo, culi` sono comunque forme accettabil</td>
+                        <td>Per un esperienza migliore è consigliato usare gli articoli e specificare prima la forma singolare e poi quella plurale divise da una virgola e.g. `il culo, i culi`\n`il culo` `culo` `culo, culi` sono comunque forme accettabil</td>
                     </tr>
                     <tr>
                         <td><code>!words</code></td>
-                        <td class="row2">Mostra le parole che il bot conosce</td>
+                        <td>Mostra le parole che il bot conosce</td>
                     </tr>
                     <tr>
                         <td><code>!words [add &lt;words&gt;]</code></td>
-                        <td class="row2">Insegna una parola al bot</td>
+                        <td>Insegna una parola al bot</td>
                     </tr>
                     <tr>
                         <td><code>!words [edit&lt;id&gt; &lt;word&gt;]</code></td>
-                        <td class="row2">Modifica una parola del bot</td>
+                        <td>Modifica una parola del bot</td>
                     </tr>
                     <tr>
                         <td><code>!words [del &lt;id&gt;]</code></td>
-                        <td class="row2">Fai dimenticare una parola al bot</td>
+                        <td>Fai dimenticare una parola al bot</td>
                     </tr>
 
                 </table>
+            </div>
 
-                <div class="main-content container commands text-center">
-                    <table class="table">
-                        <tr style="color: #ff896e; font-size: 26px;">
-                            <th colspan="2" id="MusicBot">MusicBot</th>
-                        </tr>
-                        <tr style="color: #ff896e;">
-                            <th>Comando</th>
-                            <th>Descrizione</th>
-                        </tr>
-                        <tr>
-                            <td><code>!playlist</code></td>
-                            <td class="row2">Ogni server può salvare link a playlist di youtube/spotify, usa questo comando per vederle</td>
-                        </tr>
-                        <tr>
-                            <td><code>!playlist [add|edit] &lt;name> &gt;link></code></td>
-                            <td class="row2">Salva una nuova playlist, 'link' deve essere un url di youtube o spotify</td>
-                        </tr>
-                        <tr>
-                            <td><code>!playlist [del|remove] &lt;name></code></td>
-                            <td class="row2">Elimina la playlist "name"</td>
-                        </tr>
-                        <tr>
-                            <td><code>Struttura di &lt;song&gt;</code></td>
-                            <td class="row2">&lt;song&gt; può essere il nome di una canzone, un link di spotify o un link di youtube</td>
-                        </tr>
-                        <tr>
-                            <td><code>!play &lt;song> | !p &lt;song></code></td>
-                            <td class="row2">Imposta la percentuale di risposta verso altri bot a x% (True = 100%, False=0%)</td>
-                        </tr>
-                        <tr>
-                            <td colspan="2"><code>Comandi del player (N.B. non tutti i comandi usano il prefisso !)</code></td>
-                        </tr>
-                        <tr>
-                            <td><code>skip [x]</code></td>
-                            <td class="row2">Salta [x] tracce (di default una sola)</td>
-                        </tr>
-                        <tr>
-                            <td><code>shuffle</code></td>
-                            <td class="row2">Mischia la playlist</td>
-                        </tr>
-                        <tr>
-                            <td><code>pause</code></td>
-                            <td class="row2">Mette in pausa la traccia corrente</td>
-                        </tr>
-                        <tr>
-                            <td><code>resume</code></td>
-                            <td class="row2">Fa ripartire la traccia messa in pausa</td>
-                        </tr>
-                        <tr>
-                            <td><code>stop</code></td>
-                            <td class="row2">Cancella la queue ed esce dal canale vocale</td>
-                        </tr>
-                        <tr>
-                            <td><code>clear</code></td>
-                            <td class="row2">Cancella la queue</td>
-                        </tr>
-                        <tr>
-                            <td><code>loop [song | queue]</code></td>
-                            <td class="row2">default=song; [song] mette in loop la traccia; [queue] rimette le tracce in queue quando finisce di riprodurle</td>
-                        </tr>
-                        <tr>
-                            <td><code>restart</code></td>
-                            <td class="row2">ricomincia da capo la traccia corrente</td>
-                        </tr>
-                        <tr>
-                            <td><code>queue</code></td>
-                            <td class="row2">rimanda il messaggio con la queue (utile quando viene spinto in alto da altri messaggi)</td>
-                        </tr>
-                        <tr>
-                            <td><code>remove &lt;x></code></td>
-                            <td class="row2">rimuove la traccia in posizone x</td>
-                        </tr>
-                        <tr>
-                            <td><code>mv &lt;x> &lt;y></code></td>
-                            <td class="row2">sposta la traccia dalla posizone x alla posizione y (x,y > 0)</td>
-                        </tr>
-                        <tr>
-                            <td><code>!play &lt;song> | !p &lt;song></td>
-                            <td class="row2">Aggiunge una traccia in coda</td>
-                        </tr>
-                        <tr>
-                            <td><code>!play &lt;song> | !p &lt;song></code></td>
-                            <td class="row2">Aggiunge una traccia in testa</td>
-                        </tr>
+            <div class="main-content container commands text-center">
+                <table class="table">
+                    <tr style="color: #ff896e; font-size: 26px;">
+                        <th colspan="2" id="MusicBot">MusicBot</th>
+                    </tr>
+                    <tr style="color: #ff896e;">
+                        <th>Comando</th>
+                        <th>Descrizione</th>
+                    </tr>
+                    <tr>
+                        <td><code>!playlist</code></td>
+                        <td>Ogni server può salvare link a playlist di youtube/spotify, usa questo comando per vederle</td>
+                    </tr>
+                    <tr>
+                        <td><code>!playlist [add|edit] &lt;name> &gt;link></code></td>
+                        <td>Salva una nuova playlist, 'link' deve essere un url di youtube o spotify</td>
+                    </tr>
+                    <tr>
+                        <td><code>!playlist [del|remove] &lt;name></code></td>
+                        <td>Elimina la playlist "name"</td>
+                    </tr>
+                    <tr>
+                        <td><code>Struttura di &lt;song&gt;</code></td>
+                        <td>&lt;song&gt; può essere il nome di una canzone, un link di spotify o un link di youtube</td>
+                    </tr>
+                    <tr>
+                        <td><code>!play &lt;song> | !p &lt;song></code></td>
+                        <td>Imposta la percentuale di risposta verso altri bot a x% (True = 100%, False=0%)</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2", style="text-align: center;"><code>Comandi del player (N.B. non tutti i comandi usano il prefisso !)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>!play &lt;song> | !p &lt;song></td>
+                        <td>Aggiunge una traccia in coda</td>
+                    </tr>
+                    <tr>
+                        <td><code>!playnext &lt;song> | !pnext &lt;song></code></td>
+                        <td>Aggiunge una traccia in testa</td>
+                    </tr>
+                    <tr>
+                        <td><code>skip [x]</code></td>
+                        <td>Salta [x] tracce (di default una sola)</td>
+                    </tr>
+                    <tr>
+                        <td><code>shuffle</code></td>
+                        <td>Mischia la playlist</td>
+                    </tr>
+                    <tr>
+                        <td><code>pause</code></td>
+                        <td>Mette in pausa la traccia corrente</td>
+                    </tr>
+                    <tr>
+                        <td><code>resume</code></td>
+                        <td>Fa ripartire la traccia messa in pausa</td>
+                    </tr>
+                    <tr>
+                        <td><code>stop</code></td>
+                        <td>Cancella la queue ed esce dal canale vocale</td>
+                    </tr>
+                    <tr>
+                        <td><code>clear</code></td>
+                        <td>Cancella la queue</td>
+                    </tr>
+                    <tr>
+                        <td><code>loop [song | queue]</code></td>
+                        <td>default=song; [song] mette in loop la traccia; [queue] rimette le tracce in queue quando finisce di riprodurle</td>
+                    </tr>
+                    <tr>
+                        <td><code>restart</code></td>
+                        <td>ricomincia da capo la traccia corrente</td>
+                    </tr>
+                    <tr>
+                        <td><code>queue</code></td>
+                        <td>rimanda il messaggio con la queue (utile quando viene spinto in alto da altri messaggi)</td>
+                    </tr>
+                    <tr>
+                        <td><code>remove &lt;x></code></td>
+                        <td>rimuove la traccia in posizone x</td>
+                    </tr>
+                    <tr>
+                        <td><code>mv &lt;x> &lt;y></code></td>
+                        <td>sposta la traccia dalla posizone x alla posizione y (x,y > 0)</td>
+                    </tr>
+                </table>
+            </div>
 
-    
-                    </table>
-                
+            <div class="main-content container commands text-center">
+                <table class="table">
+                    <tr style="color: #ff896e; font-size: 26px;">
+                        <th colspan="2" id="MusicBot">ChessGame</th>
+                    </tr>
+                    <tr style="color: #ff896e;">
+                        <th>Comando</th>
+                        <th>Descrizione</th>
+                    </tr>
+                    <tr>
+                        <td><code>!chess [@user|@role] [fen="&lt;FEN>"] [board=&lt;boardname>] [design=&lt;deisgn>]</code></td>
+                        <td>
+                            Gioca ad una partita di scacchi: <br>
+                            <code>!chess</code> ➜ Sfida una persona chiunque a scacchi <br>
+                            <code>!chess [@user]</code> ➜ sfida una persona specifica a scacchi<br>
+                            <code>!chess [@role]</code> ➜ sfida una persona che ha il ruolo "role" a scacchi<br>
+                            <code>!chess [fen="&lt;FEN>"]</code> ➜ N.B. metti il FEN tra virgolette! specifica un inizio scacchiera personalizzato, puoi generare un FEN <a href="http://www.netreal.de/Forsyth-Edwards-Notation/index.php">qui</a><br>
+                            <code>!chess [board=&lt;board_name>]</code> ➜ specifica uno tra i FEN salvati<br>
+                            <code>!chess [design=&lt;design_name>]</code> ➜ specifica uno tra i design salvati
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>!chess design [see|add|del|edit]</code></td>
+                        <td>
+                            Operazioni sui design delle scacchiere salvati:<br>
+                            <code>!chess design</code> ➜ Mostra i design salvate ed i comandi disponibili<br>
+                            <code>!chess design see &lt;name></code> ➜ renderizza e invia l'immagine della scacchiera con il design scelto<br>
+                            <code>!chess design [add|edit] &lt;name> &lt;HEX1> &lt;HEX2></code> ➜ genera un nuovo design (n.b. non mettere l'# nell'hex in quanto discord potrebbe interpretarlo come un canale vocale)<br>
+                            <code>!chess design del &lt;name></code> ➜ Elimina un design<br>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>!chess render &lt;board_name | "FEN"></code></td>
+                        <td>Genera il layout delle pedine sulla scacchiera default<br>
+                            N.B. Metti il FEN tra virgolette
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>!chess [board|see|add|del|edit]</code></td>
+                        <td>
+                            Operazioni sui design delle scacchiere salvati:<br>
+                            <code>!chess board</code> ➜ Mostra i FEN salvate ed i comandi disponibili<br>
+                            <code>!chess see &lt;name></code> ➜ renderizza e invia l'immagine della scacchiera con il layout scelto<br>
+                            <code>!chess [add|edit] &lt;name> &lt;FEN></code> ➜ salva/modifica un FEN<br>
+                            <code>!chess del &lt;name></code> ➜ Elimina un FEN<br>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="main-content container commands text-center">
+                <table class="table">
+                    <tr style="color: #ff896e; font-size: 26px;">
+                        <th colspan="2" id="MusicBot">Misc</th>
+                    </tr>
+                    <tr style="color: #ff896e;">
+                        <th>Comando</th>
+                        <th>Descrizione</th>
+                    </tr>
+                    <tr>
+                        <td><code>!ping</code></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><code>!joinmsg [msg|False]</code></td>
+                        <td>
+                            Modifica il messaggio di benvenuto, puoi usare %name% per specificare il nome di chi entra<br>
+                            !joinmsg False ➜ disattiva il messaggio di benvenuto
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>!leavemsg [msg]</code></td>
+                        <td>Stesso di join, ma per chi esce dal server</td>
+                    </tr>
+                    <tr>
+                        <td><code>!joinimage [True|False]</code></td>
+                        <td>Specifica se il bot può inviare o meno un immagine casuale quando entra qualcuno nel server</td>
+                    </tr>
+                </table>
             </div>
         </main>
 
+
+        <!-- Footer -->
+        <footer class="bg-dark text-center text-white">
+        <div class="text-center p-3" style="background-color: rgba(18, 10, 0, 0.2);">
+            Made with 💖 by <a class="text-white" href="https://github.com/NotLatif">NotLatif</a> © 2022:
+        </div>
+        <!-- Copyright -->
+        </footer>
+        <!-- Footer -->
     </body>
 </html>

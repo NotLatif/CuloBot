@@ -50,7 +50,7 @@ def mPrint(tag, source, text):
         style = Style.BRIGHT
     elif tag == 'DEBUG':
         logString = False
-        tag = f"{Fore.LIGHTMAGENTA_EX}[{tag}]"
+        tag = f"{Fore.MAGENTA}[{tag}]"
     elif tag == 'FUNC':
         logString = False
         tag = f"{Fore.LIGHTBLACK_EX}[{tag}]"

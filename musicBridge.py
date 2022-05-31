@@ -4,7 +4,7 @@ from discord.ext import commands
 import traceback
 import asyncio
 from random import shuffle
-import lyricsgenius as lg
+#import lyricsgenius as lg
 
 sys.path.insert(0, 'music/')
 import spotifyParser
@@ -34,7 +34,7 @@ def parseUrl(url):
     return tracks
 
 async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : str):
-    genius = lg.Genius('Client_Access_Token_Goes_Here', skip_non_songs=True, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
+    #genius = lg.Genius('Client_Access_Token_Goes_Here', skip_non_songs=True, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
 
     tracks = parseUrl(url)
     if tracks == None:
@@ -89,10 +89,6 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
     messageHandler = musicPlayer.MessageHandler(player, embedMSG)
     
     try:
-        # task = asyncio.create_task(player.playNext())
-        # process = multiprocessing.Process(target=player.playNext)
-        # process.start()
-        # mPrint("INFO", "Task done")
         playerTask = asyncio.create_task(player.starter())
         messageTask = asyncio.create_task(messageHandler.start())
 
@@ -152,23 +148,23 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
             pTask = asyncio.create_task(player.skip())
             await messageHandler.updateEmbed()
 
-        elif userInput == 'lyrics':
-            await ctx.send("currently unsupported")
-            return
-            song = player.currentSong["search"]
-            if(GENIOUS_KEY != ''):
-                try:
-                    genius = lg.Genius(GENIOUS_KEY)
-                    x = genius.search_songs(song)['hits'][0]['result']['url']
-                    lyrics = genius.lyrics(song_url=x)
-                    await ctx.send(f"```{lyrics}```")
+        # elif userInput == 'lyrics':
+        #     await ctx.send("currently unsupported")
+        #     return
+        #     song = player.currentSong["search"]
+        #     if(GENIOUS_KEY != ''):
+        #         try:
+        #             genius = lg.Genius(GENIOUS_KEY)
+        #             x = genius.search_songs(song)['hits'][0]['result']['url']
+        #             lyrics = genius.lyrics(song_url=x)
+        #             await ctx.send(f"```{lyrics}```")
 
-                except Exception:
-                    await userMessage.reply('An error occurred')
-                    ex, val, tb = sys.exc_info()
-                    mPrint('ERROR', traceback.format_exc())
-            else:
-                mPrint('ERROR', 'ERROR KEY NOT FOUND FOR GENIOUS LYRICS')
+        #         except Exception:
+        #             await userMessage.reply('An error occurred')
+        #             ex, val, tb = sys.exc_info()
+        #             mPrint('ERROR', traceback.format_exc())
+        #     else:
+        #         mPrint('ERROR', 'ERROR KEY NOT FOUND FOR GENIOUS LYRICS')
 
         elif userInput == 'shuffle':
             player.shuffle()

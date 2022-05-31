@@ -10,13 +10,14 @@ def mPrint(tag, text):
 
 spritesFolder = 'chessGame/sprites/'
 gamesFolder = f'chessGame/games/'
+tempFolder = 'chessGame/temp/'
 
 def doesDesignExist(design) -> bool: return os.path.isdir(f'{spritesFolder}{design}')
 
 def renderBoard(colors, id) -> str:
 	"""Reders a chessboards with the given colors and returns it's path"""
 	#TODO add bezels with letters/numbers
-	mPrint('INFO' f'COLORS: {colors}')
+	mPrint('INFO', f'COLORS: {colors}')
 	new = Image.new(mode="RGBA", size=(1000,1000))
 	c1 = Image.new(mode="RGB", size=(125,125), color=colors[0])
 	c2 = Image.new(mode="RGB", size=(125,125), color=colors[1])
@@ -30,11 +31,11 @@ def renderBoard(colors, id) -> str:
 				new.paste(c2, (i*125, j*125))
 			turn = not turn
 
-	path = f'{spritesFolder}temp/{id}/chessboard'
+	path = f'{tempFolder}{id}/chessboard'
 	
-	if not (os.path.exists(spritesFolder + 'temp/')):
-		os.mkdir(spritesFolder + 'temp/')
-	os.mkdir(spritesFolder + f'temp/{id}')
+	if not (os.path.exists(tempFolder)): #temp folder stores render of custom boards
+		os.mkdir(tempFolder)
+	os.mkdir(f'{tempFolder}/{id}')
 
 	new.save(f'{path}.png')
 
@@ -42,7 +43,7 @@ def renderBoard(colors, id) -> str:
 	with open(f'{path}.json', 'w') as f:
 		json.dump(bezels, f, indent=2)
 	
-	return f'temp/{id}/'
+	return f'{tempFolder}/{id}/'
 	
 
 class GameRenderer():

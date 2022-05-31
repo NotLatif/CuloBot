@@ -8,7 +8,7 @@ load_dotenv()#Sensitive data is stored in a ".env" file
 CLIENT_ID = os.getenv('SPOTIFY_ID')[1:-1]
 CLIENT_SECRET = os.getenv('SPOTIFY_SECRET')[1:-1]
 
-#Authentication - without user
+#Authentication
 client_credentials_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 
