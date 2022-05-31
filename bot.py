@@ -31,7 +31,7 @@ GUILD = os.getenv('DISCORD_GUILD')[1:-1]
 #TODO what if user has not the keys
 GENIOUS = os.getenv('GENIOUS_SECRET')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","response_perc":35,"other_response":20,"response_to_bots_perc":25,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","leave_message":"Salutiamo felicemente il coglione di %name%","response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{}}}
 
 intents = discord.Intents.all()
 intents.members = True
@@ -161,26 +161,6 @@ def checkSettingsIntegrity(id : str):
 
     mPrint('DEBUG', 'Done.')
 
-def log(msg): #It's more annoying than it is usefull, maybe 
-    return
-    """
-    It takes a string as an argument, gets the current time, formats it, and writes the message to a file
-
-    please add [STATE]: before message, e.g: `log('[INFO]: bot reloaded.')`
-
-    possible states:
-        `INFO, WARN, ERROR, FATAL, DEBUG`
-
-    :param msg: The message to be logged
-    """
-    if msg[-1] != "\n":
-        msg = msg + "\n"
-
-    now = datetime.now()
-    current_time = now.strftime("[%d/%m/%y %H:%M:%S]")
-    with open('bot.log', 'a') as f:
-        f.write(f'{current_time} {msg}')
-
 def getWord(all=False) -> Union[str,list]:
     """
     :return: A random line from the words.txt file.
@@ -265,6 +245,15 @@ async def on_member_join(member : discord.Member):
     
     await member.guild.system_channel.send(joinString)   
     mPrint("INFO", "join detected")
+
+@bot.event
+async def on_member_remove(member : discord.Member):
+    leaveString = settings[str(member.guild.id)]['responseSettings']['leave_message']
+    if(leaveString == ''): return
+    leaveString= leaveString.replace('%name%', member.name)
+    
+    await member.guild.system_channel.send(leaveString)   
+    mPrint("INFO", "join detected") 
     
 @bot.command(name='restart')
 async def test(ctx : commands.Context):
@@ -314,6 +303,27 @@ async def joinmsg(ctx : commands.Context):
         dumpSettings()
         await ctx.send(f"Il nuovo messaggio di benvenuto è:\n{settings[str(ctx.guild.id)]['responseSettings']['join_message']}")
 
+@bot.command(name='leavemsg')
+async def joinmsg(ctx : commands.Context):
+    args = ctx.message.content.split()
+    if len(args) == 1:
+        #if join message is not empty
+        if(settings[str(ctx.guild.id)]['responseSettings']['leave_message'] != ''):
+            await ctx.send(settings[str(ctx.guild.id)]['responseSettings']['leave_message'])
+        else:
+            await ctx.send('Il server non ha un messaggio di addio, `!leavemsg help` per informazioni')
+    else:
+        if args[1] == 'help':
+            await ctx.send('`!leave [msg]`: cambia il messaggio di addio\nPuoi usare %name% nel messaggio per riferirti ad un utente eg: `!joinmsg A %name% piace il culo 🍑`\nUsa `!joinmsg false` per disattivarlo')
+            return
+        elif args[1].lower() == 'false':
+            settings[str(ctx.guild.id)]['responseSettings']['leave_message'] = ''
+            await ctx.send('Hai disattivato la risposta')
+            return
+        settings[str(ctx.guild.id)]['responseSettings']['leave_message'] = ' '.join(args[1:])
+        dumpSettings()
+        await ctx.send(f"Il nuovo messaggio di addio è:\n{settings[str(ctx.guild.id)]['responseSettings']['join_message']}")
+
 @bot.command(name='resp') 
 async def perc(ctx : commands.Context):  ## RESP command
     arg = ctx.message.content.replace('!resp', '')
@@ -361,7 +371,7 @@ async def perc(ctx : commands.Context):  ## RESP command
     respSettings["response_perc"] = newPerc
     await ctx.send(f"ok, risponderò il {newPerc}% delle volte")
 
-    log(f'[INFO]: {ctx.author} set response to {arg}%')
+    mPrint('INFO', f'{ctx.author} set response to {arg}%')
     updateSettings(str(ctx.guild.id) , 'response', newPerc)
     updateSettings(str(ctx.guild.id) , 'other_response', newPerc//2)
 
@@ -522,6 +532,7 @@ async def embedpages(ctx : commands.Context):
     page4.add_field(name='!ping', value='Pong!', inline=False)#ok
     page4.add_field(name='!rawdump', value='manda un messaggio con tutti i dati salvati di questo server', inline=False)#ok
     page4.add_field(name='joinmsg [msg]', value="Mostra il messaggio di benvenuto del bot, usa `!joinmsg help` per più informazioni\n", inline=False)
+    page4.add_field(name='leavemsg [msg]', value="Mostra il messaggio di addio del bot, usa `!joinmsg help` per più informazioni\n", inline=False)
 
     #fotter for page 1
     page1.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
@@ -570,7 +581,7 @@ async def embedpages(ctx : commands.Context):
 async def ping(ctx : commands.Context):
     pingms = round(bot.latency*1000)
     await ctx.send(f'Pong! {pingms}ms')
-    log(f'[INFO]: ping detected: {pingms} ms')
+    mPrint('INFO', f'ping detected: {pingms} ms')
 
 @bot.command(name='user')
 async def user(ctx : commands.Context):
@@ -1109,7 +1120,7 @@ async def playSong(ctx : commands.Context):
     else:       
         if request[1] in ["add", "edit"]:
             if len(request) == 4:
-                settings[str(ctx.guild.id)]["saved_playlists"][request[2]] == request[3]
+                settings[str(ctx.guild.id)]["saved_playlists"][request[2]] = request[3]
                 await ctx.send(f"Playlist -> {request[2]}: {request[3]}")
                 dumpSettings()
                 await ctx.message.add_reaction("👌")
@@ -1224,12 +1235,8 @@ async def on_message(message : discord.Message):
     msg = " ".join(msg) #trasforma messaggio in stringa
 
     await message.reply(msg, mention_author=False)
-    mPrint('DEBUG', 'responded to message')
-    log(f'[INFO]: responded to message <resp_rate: {respSettings["response_perc"]}%>')
+    mPrint('DEBUG', f'responded to message <resp_rate: {respSettings["response_perc"]}%>')
 
 
 loadSettings()
-
-# updateSettings("694106741436186665", 'response', 534) #testing purposes
-
 bot.run(TOKEN)

@@ -4,6 +4,26 @@ init()
 useColors = True
 log = False
 
+def log(msg): #It's more annoying than it is usefull, maybe 
+    return
+    """
+    It takes a string as an argument, gets the current time, formats it, and writes the message to a file
+
+    please add [STATE]: before message, e.g: `log('[INFO]: bot reloaded.')`
+
+    possible states:
+        `INFO, WARN, ERROR, FATAL, DEBUG`
+
+    :param msg: The message to be logged
+    """
+    if msg[-1] != "\n":
+        msg = msg + "\n"
+
+    now = datetime.now()
+    current_time = now.strftime("[%d/%m/%y %H:%M:%S]")
+    with open('bot.log', 'a') as f:
+        f.write(f'{current_time} {msg}')
+
 def mPrint(tag, source, text):
     """
     Custom print function to use colors
@@ -18,7 +38,7 @@ def mPrint(tag, source, text):
 
     #tags
     if tag == 'INFO':
-        tag = f"{Fore.LIGHTCYAN_EX}{tag}"
+        tag = f"{Fore.LIGHTCYAN_EX}[{tag}]"
         logString = False
     elif tag == 'WARN':
         logString = True
@@ -34,6 +54,9 @@ def mPrint(tag, source, text):
     elif tag == 'FUNC':
         logString = False
         tag = f"{Fore.LIGHTBLACK_EX}[{tag}]"
+    elif tag == 'TEST':
+        logString = False
+        tag = f"{Fore.LIGHTBLUE_EX}[{tag}]"
     elif tag == 'USER':
         logString = True
         tag = f"{Fore.CYAN}[{tag}]"

@@ -32,11 +32,12 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
     shuffle(tracks)
 
     last5 = ''
-    for i, x in enumerate(tracks[:6]):
-        last5 += f'**{i}**- {x["trackName"]} [by: {x["artist"]}]\n'
+    for i in range(6):
+        last5 += f"**{i}**- `                                      `\n"
+        #last5 += f'**{i}**- {x["trackName"]} [by: {x["artist"]}]\n'
      
     embed = discord.Embed(
-        title=f'Queue: {len(tracks)} songs.',
+        title=f'Loading...',
         description=f'Now Playing: **{tracks[0]["trackName"]}**\n▂▂▂▂▂▂▂▂▂▂ (00:00 - 00:00)\n',
         color=0xff866f
     )
@@ -64,8 +65,8 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
 
     emojis = {
         "stop": "⏹",
-        "resume": "▶",
-        "pause": "⏸",
+        "previous": "⏮",
+        "play_pause": "⏯",
         "skip": "⏭",
         "shuffle": "🔀",
         "loop": "🔂",
@@ -91,7 +92,7 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
         mPrint('ERROR', traceback.format_exc(ex, val, tb))
         return
 
-    def check(m : discord.Message, u=None):	#check if message was sent in thread using ID
+    def check(m : discord.Message):	#check if message was sent in thread using ID
         return m.author != bot.user and m.channel.id == ctx.channel.id
 
     def checkEmoji(reaction : discord.Reaction, user):
@@ -109,6 +110,20 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
 
         if len(userInput.split()) == 0:
             return
+
+        if userInput.split()[0] == 'previous':
+            mPrint('USER', 'previous song')
+            pTask.cancel()
+            if pTask.cancelled() == False: 
+                mPrint("WARN", "task was not closed.")
+                pTask.cancel()
+            
+            if(player.currentSong != player.previousSong):
+                player.queue.insert(0, player.currentSong)
+            player.queue.insert(0, player.previousSong)
+            
+            pTask = asyncio.create_task(player.skip())
+            await messageHandler.updateEmbed()
 
         if userInput.split()[0] == 'skip':
             mPrint('USER', 'skipped song')
@@ -197,7 +212,7 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
         elif userInput == 'restart': # and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
             player.restart()
             if textInput:
-                await userMessage.add_reaction('⏮')    
+                await userMessage.add_reaction('⏪')    
             await messageHandler.updateEmbed()
 
         elif userInput == 'queue':
@@ -274,6 +289,12 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
                     if str(emoji) == emojis[e]:
                         mPrint('USER', f"EmojiInput: {e}")
                         await actions(pTask, e, False)
+                    if str(emoji) == '⏯':
+                        if player.isPaused:
+                           await actions(pTask, "resume", False)
+                        else:
+                            await actions(pTask, "pause", False)
+                        break
 
                 await embedMSG.remove_reaction(str(emoji), user)	
 
@@ -291,6 +312,8 @@ async def play(url, ctx : commands.Context, bot : discord.Client, GENIOUS_KEY : 
         await embedMSG.add_reaction(emojis[e])
 
     asyncio.create_task(emojiInput(playerTask))
+
+    
 
 cmds = ['skip', 'shuffle', 'pause', 'resume', 'stop',
 'clear', 'loop', 'restart', 'queue', 'remove', 'mv', 

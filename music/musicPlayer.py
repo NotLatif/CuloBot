@@ -65,15 +65,19 @@ class Player():
         self.loop = False
         self.loopQueue = False
         self.currentSong = None
+        self.previousSong = None
         self.duration = 0
         self.stepProgress = 0 #keep track of seconds passed in 10 chuncks
+
         
         #flags needed to communicate with EmbedHandler
         self.skipped = False
         self.isPaused = False
         self.songStartTime = 0
+        self.songStarted = False
         self.pauseStart = 0
         self.pauseEnd = 0
+        self.endOfPlaylist = False
 
     def getVideoURL(self): #gets the url of the first song in queue (the one to play)
         mPrint('DEBUG', f'searching for url (QUERY: {self.currentSong["search"]})')
@@ -92,18 +96,27 @@ class Player():
         if error != None: mPrint('ERROR', f"{error}")
 
         if len(self.queue) != 0 and self.loop == False:
-            self.currentSong = self.queue.pop(0)
-            mPrint('DEBUG', f'POP: {self.currentSong}')
+            if self.currentSong == None:
+                mPrint('DEBUG', 'Playing song')
+                self.currentSong = self.queue.pop(0)
+                self.previousSong = self.currentSong
+            else:
+                self.previousSong = self.currentSong
+                self.currentSong = self.queue.pop(0)
+
+            mPrint('MUSIC', f'POP: {self.currentSong}')
             if self.loopQueue:
                 mPrint('INFO', "looping queue, append song to end")
                 self.queue.append(self.currentSong)
             
         else:
             if self.loop == False: 
+                self.endOfPlaylist = True
                 mPrint('MUSIC', 'End of playlist.')
                 return
 
         self.playSong()
+        
 
     def playSong(self):
         try:
@@ -117,6 +130,7 @@ class Player():
 
                 mPrint('MUSIC', f'Now Playing: ({self.currentSong["trackName"]}) ')
                 self.songStartTime = time.time()
+                self.songStarted = True
                 self.voiceClient.play(discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS), after= self.playNext)
                
 
@@ -138,7 +152,7 @@ class Player():
             await self.stop()
 
     def restart(self):
-        self.queue.insert(1, self.currentSong)
+        self.queue.insert(0, self.currentSong)
         mPrint('MUSIC', f'restarted track ({self.currentSong["trackName"]})')
         self.voiceClient.stop()
 
@@ -169,7 +183,7 @@ class MessageHandler():
         self.embedMSG = embedMSG
 
         self.timelinePrecision = 14
-        self.timelineChars = ('▂', '▄')
+        self.timelineChars = ('▂', '▅')
         self.timeBar = []
 
         self.stepProgress = 0
@@ -178,11 +192,25 @@ class MessageHandler():
 
     async def start(self):
         await self.embedLoop()
-        mPrint('DEBUG', 'started embed handler')
+        mPrint('DEBUG', 'Embed handler finished')
 
     async def embedLoop(self):
         while True: #foreach song
-            currentSong = self.player.currentSong 
+            if self.player.endOfPlaylist:
+                mPrint("DEBUG","EOPlaylist, stopping embedloop")
+                await self.updateEmbed(True)
+                await self.player.stop()
+                return
+
+            if not self.player.songStarted:
+                mPrint("WARN", "Song has not started yet, waiting...")
+                await asyncio.sleep(0.3)
+                continue #don't do anything if player did not change song
+
+            self.player.songStarted = False
+
+            currentSong = self.player.currentSong
+
             self.timeBar = [self.timelineChars[0] for x in range(self.timelinePrecision)]
             
             mPrint('MUSIC', f'Song name: {currentSong["trackName"]}')
@@ -201,7 +229,7 @@ class MessageHandler():
             timeDeltaError = 0
             while True:
                 await asyncio.sleep(0.5)
-            
+
                 if self.player.pauseEnd - self.player.pauseStart != 0: #pause started
                     if self.player.pauseEnd == 0:
                         continue
@@ -214,45 +242,44 @@ class MessageHandler():
 
                 timePassed = time.time() - initialTime + self.pauseDiff
                 if self.player.isPaused == False and timePassed >= stepSeconds:
+                    timeDeltaError = timePassed - stepSeconds
+                    initialTime = time.time() - timeDeltaError #idk, I think it's good now?
+
                     self.pauseDiff = 0
                     
                     self.stepProgress = stepSeconds * (currentStep)
                     #update timebar
-                    for i, y in enumerate(self.timeBar):
-                        if y == self.timelineChars[0]:
-                            self.timeBar[i] = self.timelineChars[1]
-                            break
-                    
+                    for i in range(currentStep):
+                        self.timeBar[i] = self.timelineChars[1]
+                                    
                     #update message
                     currentStep += 1
                     await self.updateEmbed()
-
+        
                     #reset time to current step
-                    timeDeltaError = timePassed - stepSeconds
-                    initialTime = time.time() - timeDeltaError # BUG timeline gets bugged easily
-                    mPrint('DEBUG', f"updating after: {timePassed}s; error: {timeDeltaError}")
-                
-                if currentSong != self.player.currentSong:
-                    mPrint('DEBUG', "[EMBEDLOOP] song was skipped, getting next song")
-                    break
-
-                if currentStep == self.timelinePrecision: # BUG this gets triggered too soon
-                    mPrint('DEBUG', "[EMBEDLOOP] Steps finished, getting next song")
+                    mPrint('TEST', f"updating after: {timePassed}s; error: {timeDeltaError}")
+                    mPrint('TEST', f'step: {currentStep-1} of {self.timelinePrecision}')
+                    
+                if currentStep-1 == self.timelinePrecision: # BUG this gets triggered too soon
+                    mPrint('DEBUG', "[EMBEDLOOP] Steps finished")
                     break
                 
                 if self.player.skipped:
-                    mPrint('DEBUG', "[EMBEDLOOP] Skip detected, getting next song")
+                    mPrint('DEBUG', "[EMBEDLOOP] Skip detected")
                     self.player.skipped = False
                     await asyncio.sleep(0.5) #wait for player to set it's vars
                     break
 
-                if len(self.player.queue) == 0:
+                if self.player.endOfPlaylist:
+                    await self.updateEmbed(True)
+                    await self.player.stop()
+                    mPrint("DEBUG","EOPlaylist, stopping embedloop")
                     return
 
-    def getEmbed(self):
-        last5 = f'__**0.** {self.player.currentSong["trackName"]} [{self.player.currentSong["artist"]}]__\n'
+    def getEmbed(self, stop = False):
+        last5 = f'__**0-** {self.player.currentSong["trackName"]} [{self.player.currentSong["artist"]}]__\n'
         for i, x in enumerate(self.player.queue[:5]):
-            last5 += f'**{i+1}**- {x["trackName"]} [by: {x["artist"]}]\n'
+            last5 += f'**{i+1}-** {x["trackName"]} [by: {x["artist"]}]\n'
 
         last5 = last5[:-1]
 
@@ -264,18 +291,23 @@ class MessageHandler():
         artist = "N/A" if self.player.currentSong["artist"] == "" else self.player.currentSong["artist"]
         
         embed.add_field(name='Author:', value=f'{artist}')
-        embed.add_field(name='Latency:', value=f'{self.player.voiceClient.latency}ms')
+        latency = "N/A" if self.player.voiceClient.latency == float('inf') else ("%.3fms" % self.player.voiceClient.latency)
+        embed.add_field(name='Latency:', value=f'{latency}')
         embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
-        embed.set_footer(text='🍑 the best bot 🎶 https://notlatif.github.io/CuloBot/#MusicBot')
+        if stop:
+            embed.add_field(name='Queue finita', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
+        embed.set_footer(text='🍑 Comandi del player: https://notlatif.github.io/CuloBot/#MusicBot')
 
-        #mPrint('DEBUG', f'EMBED VALUES:\nAuthor: {self.player.currentSong["artist"]}\nLoop: {str(self.player.loop)}\nLast5: {last5}')
-        
+        #mPrint('TEST', f'EMBED VALUES:\nAuthor: {self.player.currentSong["artist"]}\nLoop: {str(self.player.loop)}\nLast5: {last5}')    
         return embed
 
-    async def updateEmbed(self):
+    async def updateEmbed(self, stop = False):
         await asyncio.sleep(0.5)
         try:
-            await self.embedMSG.edit(embed=self.getEmbed())
+            if stop:
+                await self.embedMSG.edit(embed=self.getEmbed(True))
+            else:
+                await self.embedMSG.edit(embed=self.getEmbed())
         except discord.errors.HTTPException:
             ex, val, tb = sys.exc_info()
             mPrint('ERROR', f"DISCORD ERROR (probably embed had blank value)\n{traceback.format_exc(ex, val, tb)}")
