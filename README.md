@@ -2,7 +2,7 @@
 A discord bot that can play music, let's you play chess and do other things
 
 <div style="text-align: center;">
-    ![Alt text](docs/logo.png)
+    <img src="docs/logo.png">
 </div>
 
 
