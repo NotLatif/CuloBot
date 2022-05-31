@@ -61,7 +61,7 @@ class Player():
         self.queue : list = queue
         self.voiceClient = vc
         self.isConnected = True
-        
+
         self.loop = False
         self.loopQueue = False
         self.currentSong = None
@@ -69,7 +69,6 @@ class Player():
         self.duration = 0
         self.stepProgress = 0 #keep track of seconds passed in 10 chuncks
 
-        
         #flags needed to communicate with EmbedHandler
         self.skipped = False
         self.isPaused = False
@@ -136,7 +135,7 @@ class Player():
                
         except discord.ClientException:
             #bot got disconnected
-            mPrint('WARN', 'Bot is not connected to vc')
+            mPrint('FATAL', 'Bot is not connected to vc')
             self.voiceClient.cleanup()
             self.isConnected = False
             return
@@ -203,7 +202,7 @@ class MessageHandler():
                 return
 
             if not self.player.songStarted:
-                mPrint("WARN", "Song has not started yet, waiting...")
+                mPrint("TEST", "Song has not started yet, waiting...")
                 await asyncio.sleep(0.3)
                 continue #don't do anything if player did not change song
 
@@ -307,6 +306,7 @@ class MessageHandler():
         try:
             if stop:
                 await self.embedMSG.edit(embed=self.getEmbed(True))
+                await self.embedMSG.clear_reactions()
             else:
                 await self.embedMSG.edit(embed=self.getEmbed())
         except discord.errors.HTTPException:

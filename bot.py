@@ -44,7 +44,9 @@ intents.messages = True
 bot = commands.Bot(
     command_prefix=commands.when_mentioned_or('!'),
     intents=intents,
-    owner_id=348199387543109654
+    owner_id=348199387543109654,
+    status=discord.Status.online,
+    activity = discord.Activity(type=discord.ActivityType.listening, name="!help")
 )
 # slash = SlashCommand(bot, sync_commands=True)
 
@@ -1207,7 +1209,7 @@ async def playSong(ctx : commands.Context):
     if len(request) == 1:
         embed = discord.Embed(
             title=f"Saved playlists for {ctx.guild.name}",
-            description="Commands: !playlist [add|edit] <name> <link>\n!playlist remove <name>",
+            description="**Commands:** \n!playlist [add|edit] <name> <link>\n!playlist remove <name>",
             color=0x1ed760
         )
         for plist in settings[str(ctx.guild.id)]["saved_playlists"]:
@@ -1218,7 +1220,13 @@ async def playSong(ctx : commands.Context):
     else:       
         if request[1] in ["add", "edit"]:
             if len(request) == 4:
-                #if ' request[3] TODO check if url is good before saving
+                tracks = musicBridge.parseUrl(request[3])
+                if tracks == None:
+                    await ctx.send(f"Error, Could not find playlist {request[3]}")
+                    return
+                elif len(tracks) == 1:
+                    await ctx.send(f"Error, link is a song, not a playlist")
+                    return
                 settings[str(ctx.guild.id)]["saved_playlists"][request[2]] = request[3]
                 await ctx.send(f"Playlist -> {request[2]}: {request[3]}")
                 dumpSettings()
@@ -1255,20 +1263,19 @@ async def playSong(ctx : commands.Context):
             if ctx.message.author.id != 348199387543109654:
                 await ctx.send('youtube currently not supported')
                 return
-            await musicBridge.play(ctx.message.content.split()[1], ctx, bot, GENIOUS)
+            await musicBridge.play(ctx.message.content.split()[1], ctx, bot)
 
         #user wants a saved playlist
         elif request[1] in settings[str(ctx.guild.id)]["saved_playlists"]:
             trackURL :str = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
             mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL}')
-            await musicBridge.play(trackURL, ctx, bot, GENIOUS)
+            await musicBridge.play(trackURL, ctx, bot)
         
-
         #user wants to search for a song
         else:
             trackURL = musicBridge.musicPlayer.searchYTurl(' '.join(request[1:]))
             mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
-            await musicBridge.play(trackURL, ctx, bot, GENIOUS)
+            await musicBridge.play(trackURL, ctx, bot)
 
 
 @bot.event   ## DETECT AND RESPOND TO MSG
