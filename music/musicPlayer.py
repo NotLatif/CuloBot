@@ -131,9 +131,9 @@ class Player():
                 mPrint('MUSIC', f'Now Playing: ({self.currentSong["trackName"]}) ')
                 self.songStartTime = time.time()
                 self.songStarted = True
-                self.voiceClient.play(discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS), after= self.playNext)
+                source = discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS)
+                self.voiceClient.play(source, after= self.playNext)
                
-
         except discord.ClientException:
             #bot got disconnected
             mPrint('WARN', 'Bot is not connected to vc')
@@ -257,8 +257,8 @@ class MessageHandler():
                     await self.updateEmbed()
         
                     #reset time to current step
-                    mPrint('TEST', f"updating after: {timePassed}s; error: {timeDeltaError}")
-                    mPrint('TEST', f'step: {currentStep-1} of {self.timelinePrecision}')
+                    # mPrint('TEST', f"updating after: {timePassed}s; error: {timeDeltaError}")
+                    # mPrint('TEST', f'step: {currentStep-1} of {self.timelinePrecision}')
                     
                 if currentStep-1 == self.timelinePrecision: # BUG this gets triggered too soon
                     mPrint('DEBUG', "[EMBEDLOOP] Steps finished")
@@ -296,6 +296,7 @@ class MessageHandler():
         embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
         if stop:
             embed.add_field(name='Queue finita', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
+            embed.color = 0x1e1e1e
         embed.set_footer(text='🍑 Comandi del player: https://notlatif.github.io/CuloBot/#MusicBot')
 
         #mPrint('TEST', f'EMBED VALUES:\nAuthor: {self.player.currentSong["artist"]}\nLoop: {str(self.player.loop)}\nLast5: {last5}')    
@@ -309,7 +310,6 @@ class MessageHandler():
             else:
                 await self.embedMSG.edit(embed=self.getEmbed())
         except discord.errors.HTTPException:
-            ex, val, tb = sys.exc_info()
-            mPrint('ERROR', f"DISCORD ERROR (probably embed had blank value)\n{traceback.format_exc(ex, val, tb)}")
+            mPrint('ERROR', f"DISCORD ERROR (probably embed had blank value)\n{traceback.format_exc()}")
     
         

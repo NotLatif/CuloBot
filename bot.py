@@ -1113,13 +1113,14 @@ async def playSong(ctx : commands.Context):
             color=0x1ed760
         )
         for plist in settings[str(ctx.guild.id)]["saved_playlists"]:
-            embed.add_field(name=plist, value=settings[str(ctx.guild.id)]["saved_playlists"][plist])
+            embed.add_field(name=plist, value=settings[str(ctx.guild.id)]["saved_playlists"][plist], inline=False)
         await ctx.send(embed=embed)
         return    
 
     else:       
         if request[1] in ["add", "edit"]:
             if len(request) == 4:
+                #if ' request[3] TODO check if url is good before saving
                 settings[str(ctx.guild.id)]["saved_playlists"][request[2]] = request[3]
                 await ctx.send(f"Playlist -> {request[2]}: {request[3]}")
                 dumpSettings()
@@ -1160,10 +1161,11 @@ async def playSong(ctx : commands.Context):
 
         #user wants a saved playlist
         elif request[1] in settings[str(ctx.guild.id)]["saved_playlists"]:
-            trackURL = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
-            mPrint('INFO', f'FOUND SAVED URL: {trackURL}')
+            trackURL :str = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+            mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL}')
             await musicBridge.play(trackURL, ctx, bot, GENIOUS)
         
+
         #user wants to search for a song
         else:
             trackURL = musicBridge.musicPlayer.searchYTurl(' '.join(request[1:]))

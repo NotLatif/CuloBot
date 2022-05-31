@@ -12,19 +12,27 @@ def stampToSec(str : str):
         seconds += int(str[2]) * 60
     return seconds
 
-def getSongs(url):
+def getSongs(url : str):
     tracks = None
     if "www.youtube.com" not in url:
         #query youtube for the url of the first result
-        url = VideosSearch(url).result()["result"][0]['link']
+        if "music.youtube.com" in url:
+            url = url.replace("music.youtube.com", "www.youtube.com", 1)
+            try:
+                url = url.split('&list=')[0]
+            except:
+                pass
+        else:
+            url = VideosSearch(url).result()["result"][0]['link']
 
-    if tracks == None:
+
+    if 'list=' in url:
         try:
             tracks = Playlist.getVideos(url)["videos"] # None if unavailable
         except AttributeError:
             pass #link was not a playlist
 
-    if tracks == None:
+    else:
         #if link was not a playlist, search for a video
         tracks = [Video.get(url)]
 
@@ -49,4 +57,8 @@ def getSongs(url):
 # url = 'https://www.youtube.com/watch?v=jNQXAC9IVRw'
 # url = 'https://www.youtube.com/watch?v=56lkofpjOAs'
 # url = 'https://www.youtube.com/watch?v=Bv5bOJekegA&list=PLRrWCmzNJAWo0vKTtO5DpYMgxC1iHnycF'
+
+# url = 'https://music.youtube.com/watch?v=jH8Yox66CtQ&list=RDAMVMjH8Yox66CtQ'
+# url = 'https://music.youtube.com/playlist?list=OLAK5uy_kg7ISwHyM0ZuQ1jWshC74yrnPmPdNNRoY'
+# url = 'https://music.youtube.com/watch?v=J7p4bzqLvCw&list=RDAMVMJ7p4bzqLvCw'
 # getSongs(url)
