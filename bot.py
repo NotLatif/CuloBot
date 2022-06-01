@@ -385,7 +385,7 @@ async def leavemsg(ctx : commands.Context):
             await ctx.send(strings["bot.leavemsg.none"])
     else:
         if args[1] == 'help':
-            await ctx.send(strings["bot.joinmsg.info"])
+            await ctx.send(strings["bot.leavemsg.info"])
             return
         elif args[1].lower() == 'false':
             settings[str(ctx.guild.id)]['responseSettings']['leave_message'] = ''
