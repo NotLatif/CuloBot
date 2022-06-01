@@ -5,6 +5,7 @@ import random
 import copy
 import sys
 import traceback
+import codecs
 import discord #using py-cord dev version (discord.py v2.0.0-alpha)
 from discord.utils import get
 from discord.ext import commands
@@ -57,6 +58,10 @@ settingsFile = "botFiles/guildsData.json"
 global settings
 settings = {}
 with open(settingsFile, 'a'): pass #make setting file if it does not exist
+
+with codecs.open('botFiles/lang.json', 'r', 'utf-8') as f:
+    strings : dict[str:str] = json.load(f)['IT']#TODO add setting to change the language
+
 
 def mPrint(tag, value):
     mp(tag, 'bot', value)
@@ -337,7 +342,7 @@ async def test(ctx : commands.Context):
 
 @bot.command(name='restart')
 async def test(ctx : commands.Context):
-    #SPECIFIC TO MY SERVER
+    #ONLY FOR TESTING PURPOSES. DO NOT ABUSE THIS COMMAND
     if ctx.message.author.id == 348199387543109654 or ctx.guild.id == 694106741436186665:
         mPrint("WARN", "RESTARTING BOT")
         await ctx.send("please wait...")
@@ -348,20 +353,6 @@ async def test(ctx : commands.Context):
 async def rawDump(ctx : commands.Context):
     await ctx.send(f'```JSON dump for {ctx.guild.name}:\n{json.dumps(settings[str(ctx.guild.id)], indent=3)}```')
 
-@bot.command(name='rawchange')
-async def rawChange(ctx : commands.Context):
-    args = ctx.message.content.split()[1:]
-    id = str(ctx.guild.id)
-    if len(args) == 2:
-        if (args[1].isnumeric()): args[1] = int(args[1])
-        r = updateSettings(id, args[0], args[1])
-        if r == -1:
-            await ctx.send(f'```Setting "{args[0]}" not found\nuse !rawdump to see the data```')
-        else:
-           await ctx.send(f'```"{args[0]}" = {args[1]}```')
-    else:
-        await ctx.send('huh?')
-
 @bot.command(name='joinmsg')
 async def joinmsg(ctx : commands.Context):
     args = ctx.message.content.split()
@@ -370,18 +361,18 @@ async def joinmsg(ctx : commands.Context):
         if(settings[str(ctx.guild.id)]['responseSettings']['join_message'] != ''):
             await ctx.send(settings[str(ctx.guild.id)]['responseSettings']['join_message'])
         else:
-            await ctx.send('Il server non ha un messaggio di benvenuto, `!joinmsg help` per informazioni')
+            await ctx.send(strings['bot.joinmsg.none'])
     else:
         if args[1] == 'help':
-            await ctx.send('`!joinmsg [msg]`: cambia il messaggio di benvenuto\nPuoi usare %name% nel messaggio per riferirti ad un utente eg: `!joinmsg A %name% piace il culo 🍑`\nUsa `!joinmsg false` per disattivarlo')
+            await ctx.send(strings["bot.joinmsg.info"])
             return
         elif args[1].lower() == 'false':
             settings[str(ctx.guild.id)]['responseSettings']['join_message'] = ''
-            await ctx.send('Hai disattivato la risposta')
+            await ctx.send(strings["bot.joinmsg.deactivated"])
             return
         settings[str(ctx.guild.id)]['responseSettings']['join_message'] = ' '.join(args[1:])
         dumpSettings()
-        await ctx.send(f"Il nuovo messaggio di benvenuto è:\n{settings[str(ctx.guild.id)]['responseSettings']['join_message']}")
+        await ctx.send(strings["bot.joinmsg.new_message"].replace("$str0", settings[str(ctx.guild.id)]['responseSettings']['join_message']))
 
 @bot.command(name='leavemsg')
 async def leavemsg(ctx : commands.Context):
@@ -391,18 +382,18 @@ async def leavemsg(ctx : commands.Context):
         if(settings[str(ctx.guild.id)]['responseSettings']['leave_message'] != ''):
             await ctx.send(settings[str(ctx.guild.id)]['responseSettings']['leave_message'])
         else:
-            await ctx.send('Il server non ha un messaggio di addio, `!leavemsg help` per informazioni')
+            await ctx.send(strings["bot.leavemsg.none"])
     else:
         if args[1] == 'help':
-            await ctx.send('`!leave [msg]`: cambia il messaggio di addio\nPuoi usare %name% nel messaggio per riferirti ad un utente eg: `!joinmsg A %name% piace il culo 🍑`\nUsa `!joinmsg false` per disattivarlo')
+            await ctx.send(strings["bot.joinmsg.info"])
             return
         elif args[1].lower() == 'false':
             settings[str(ctx.guild.id)]['responseSettings']['leave_message'] = ''
-            await ctx.send('Hai disattivato la risposta')
+            await ctx.send(strings["bot.joinmsg.deactivated"])
             return
         settings[str(ctx.guild.id)]['responseSettings']['leave_message'] = ' '.join(args[1:])
         dumpSettings()
-        await ctx.send(f"Il nuovo messaggio di addio è:\n{settings[str(ctx.guild.id)]['responseSettings']['join_message']}")
+        await ctx.send(strings["bot.leavemsg.new_message"].replace("$str0", settings[str(ctx.guild.id)]['responseSettings']['leave_message']))
 
 @bot.command(name='joinimage')
 async def joinmsg(ctx : commands.Context):
@@ -422,7 +413,7 @@ async def perc(ctx : commands.Context):  ## RESP command
     respSettings = settings[str(ctx.guild.id)]["responseSettings"]
 
     if(arg == ''):
-        await ctx.send(f'Rispondo il {respSettings["response_perc"]}% delle volte')
+        await ctx.send(strings["bot.resp.info"].replace("$perc", str(respSettings["response_perc"])))
         return
     
     arg = arg.lower().split()
@@ -433,22 +424,22 @@ async def perc(ctx : commands.Context):  ## RESP command
     if(arg[0].strip('s') == 'bot'):
         mPrint("DEBUG", f"resp comand: {arg}")
         if len(arg) == 1:
-            await ctx.send(f'Risposta ai bot: {respSettings["will_respond_to_bots"]}\nRispondo ai bot il {respSettings["response_to_bots_perc"] if respSettings["will_respond_to_bots"] else 0}% delle volte')
+            await ctx.send(strings["bot.resp.resp_to_bots.info"].replace("$s1",respSettings["will_respond_to_bots"]).replace("$s2", f'{respSettings["response_to_bots_perc"] if respSettings["will_respond_to_bots"] else 0}'))
             return
 
         if(arg[1].isnumeric()):
-            await ctx.send(f'Okay, risponderò ai bot il {arg[1]}% delle volte')
+            await ctx.send(strings["bot.resp.resp_to_bots.edit"].replace('$s1', f'{arg[1]}'))
             updateSettings(str(ctx.guild.id), 'response_to_bots_perc', int(arg[1]))
             return
         
         if arg[1] in affirmative:
-            response = 'Okay, culificherò anche i bot 🍑'
+            response = strings['bot.resp.resp_to_bots.affirmative']
             validResponse = True
         elif arg[1] in negative:
-            response = 'Niente culi per i bot 🤪'
+            response = strings['bot.resp.resp_to_bots.negative']
             validResponse = True
         else:
-            response = 'Ehm, non ho capito? cosa vuoi fare con i bot?'
+            response = strings['bot.resp.resp_to_bots.invalid']
         await ctx.send(response)
         if validResponse:
             updateSettings(ctx.guild.id, 'will_respond_to_bots', arg[1])
@@ -457,11 +448,11 @@ async def perc(ctx : commands.Context):  ## RESP command
     newPerc = int(arg[0].strip("%"))
 
     if (respSettings['response_perc'] == newPerc):
-        await ctx.send(f"non è cambiato niente.")
+        await ctx.send(strings['nothing_changed'])
         return
 
     respSettings["response_perc"] = newPerc
-    await ctx.send(f"ok, risponderò il {newPerc}% delle volte")
+    await ctx.send(strings['bot.resp.newperc'].replace("$s2", str(newPerc)))
 
     mPrint('INFO', f'{ctx.author} set response to {arg}%')
     updateSettings(str(ctx.guild.id) , 'response', newPerc)
@@ -476,18 +467,18 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
             delWord = int(args[2])
             if len(settings[str(ctx.guild.id)]['responseSettings']['custom_words']) > delWord:
                 del settings[str(ctx.guild.id)]['responseSettings']['custom_words'][delWord]
-                await ctx.send('Fatto')
+                await ctx.send(strings['done'])
             else:
-                await ctx.send('Id parola non trovato, `!words` per la lista di parole')
+                await ctx.send(strings['bot.words.id_not_found'])
             return
         
         if args[1].lower() == 'edit':
             editWord = int(args[2])
             if len(settings[str(ctx.guild.id)]['responseSettings']['custom_words']) > editWord:
                 settings[str(ctx.guild.id)]['responseSettings']['custom_words'][editWord] = ' '.join(args[3:])
-                await ctx.send('Fatto')
+                await ctx.send(strings['done'])
             else:
-                await ctx.send('Id parola non trovato, `!words` per la lista di parole')
+                await ctx.send(strings['bot.words.id_not_found'])
             return
 
         if args[1].lower() == 'add':
@@ -503,28 +494,19 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
                 await ctx.send(f'usage: `!words useDefault [true|false]`')
         
         settings[str(ctx.guild.id)]['responseSettings']['custom_words'].append(newWord)
-        await ctx.send('Nuova parola imparata!')
+        await ctx.send(strings['bot.words.learned'])
         dumpSettings()
-
         return
 
     #1. Send a description
     custom_words = settings[str(ctx.guild.id)]['responseSettings']['custom_words']
-    description = f'''Comandi disponibili:\n`!words del <x>` per eliminare una parola
-                        `!words edit <x> <parola>` per cambiare una parola
-                        `!words <parola>` per aggiungere una parola nuova
-                        `!words del <id>` per rimuovere una parola nuova
-                        `!words useDefault [true|false]` per scegliere se usare le parole di default
-                        eg: `!words il culo, i culi` < per un esperienza migliore specifica l'articolo e la forma singolare(plurale)
-                        eg: `!words culo` < specificare le forme non è obbligatorio
-                        Puoi modificare solo le parole di {ctx.guild.name}
-    '''
+    description = strings['bot.words.info'].replace('$s1', ctx.guild.name)
 
     if not settings[str(ctx.guild.id)]['responseSettings']['use_global_words']:
-       description += f'{ctx.guild.name} non usa le parole di default, quindi non verranno mostrate, per mostrarle usare il comando: `!words useDefault `'
+       description += strings['bot.words.use_global_words'].replace('$s1', ctx.guild.name)
         
     embed = discord.Embed(
-        title = 'Ecco le parole che conosco: ',
+        title = strings['bot.words.known_words'],
         description = description,
         colour = 0xf39641
     )
@@ -537,14 +519,14 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
     if settings[str(ctx.guild.id)]['responseSettings']['use_global_words']:
         #is server uses default words
         value = '\n'.join(botWords)
-        embed.add_field(name = 'Parole del bot:', value=value)
+        embed.add_field(name = strings['bot.words.bot_words'], value=value)
         value = '' 
 
     #2c. append the guild(local) words to value
     for i, cw in enumerate(custom_words):
         value += f'[`{i}`]: {cw}\n'
-    if value == '': value='Nessuna parola impostata, usa `!words help` per più informazioni'
-    embed.add_field(name = f'Parole di {ctx.guild.name}:', value=value)
+    if value == '': value=strings['bot.words.no_guild_words']
+    embed.add_field(name = strings['bot.words.guild_words'].replace('$s1', ctx.guild.name), value=value)
     
     #3. send the words
     await ctx.send(embed=embed)
@@ -553,58 +535,58 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
 async def embedpages(ctx : commands.Context):
     e = discord.Embed (
         title = 'CuloBot',
-        description = 'I comandi vanno preceduti da "!", questo bot fa uso di ignoranza artificiale',
+        description = strings["bot.help.description"],
         colour = 0xf39641
-    ).set_footer(text='Ogni cosa è stata creata da @NotLatif, se riscontrare bug sapete a chi dare la colpa. https://notlatif.github.io/CuloBot/')
+    ).set_footer(text=strings["bot.help.footer"])
     
     e.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
 
-    page0 = e.copy().set_author(name='Help 0/5, informazioni', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page1 = e.copy().set_author(name='Help 1/5, culo!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page0 = e.copy().set_author(name='Help 0/5, Info', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page1 = e.copy().set_author(name='Help 1/5, Culo!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     page2 = e.copy().set_author(name='Help 2/5, Music!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     page3 = e.copy().set_author(name='Help 3/5, CHECKMATE', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page4 = e.copy().set_author(name='Help 4/5, misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page4 = e.copy().set_author(name='Help 4/5, Misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     
     #Page 0 Info
-    page0.add_field(name="CONSIGLIO:", value="Per una leggibilità migliore, puoi vedere i comandi al sito del bot https://notlatif.github.io/CuloBot/")
+    page0.add_field(name=strings["bot.help.advice"][0], value=strings["bot.help.advice"][1])
 
     #Page 1 settings
-    page1.add_field(name='!resp', value='Chiedi al bot la percentuale di culificazione', inline=False)#ok
-    page1.add_field(name='!resp [x]%', value='Imposta la percentuale di culificazione a [x]%', inline=False)#ok
-    page1.add_field(name='!resp bot', value= 'controlla le percentuale di risposta verso gli altri bot', inline=False)#ok
-    page1.add_field(name='!resp bot [x]%', value= 'Imposta la percentuale di culificazione contro altri bot a [x]%', inline=False)#ok
-    page1.add_field(name='!resp bot [True|False]', value= 'abilita/disabilita le culificazioni di messaggi di altri bot', inline=False)#ok
-    page1.add_field(name='!resp useDefault [True|False]', value= 'Indica se il bot può usare le parole globali', inline=False)#ok
-    page1.add_field(name='!words', value='Usalo per vedere le parole che il bot conosce', inline=False)
-    page1.add_field(name='!words [add <words>|del <id>|edit<id> <word>]', value='Usalo modificare le parole del server', inline=False)
-    page1.add_field(name='Struttura di word:', value='Per un esperienza migliore è consigliato usare gli articoli e specificare prima la forma singolare e poi quella plurale divise da una virgola e.g. `il culo, i culi`\n`il culo` `culo` `culo, culi` sono comunque forme accettabili', inline=False)
+    page1.add_field(name='!resp', value=strings["bot.help.resp.info"], inline=False)#ok
+    page1.add_field(name='!resp [x]%', value=strings["bot.help.resp.set"], inline=False)#ok
+    page1.add_field(name='!resp bot', value=strings["bot.help.resp.bots.info"], inline=False)#ok
+    page1.add_field(name='!resp bot [x]%', value=strings["bot.help.resp.bots.set"], inline=False)#ok
+    page1.add_field(name='!resp bot [True|False]', value=strings["bot.help.resp.bots.bool"], inline=False)#ok
+    page1.add_field(name='!resp useDefault [True|False]', value=strings["bot.help.resp.use_default_words"], inline=False)#ok
+
+    page1.add_field(name='!words', value=strings["bot.help.words.words"], inline=False)
+    page1.add_field(name='!words [add <words>|del <id>|edit<id> <word>]', value=strings["bot.help.words.edit"], inline=False)
+    page1.add_field(name=strings["bot.help.words.structure"][0], value=strings["bot.help.words.structure"][1], inline=False)
 
     #Page 2 music
-    page2.add_field(name='!playlist', value='Vedi le playlist salvate', inline=False)#ok
-    page2.add_field(name='!playlist [add|edit] <name> <link>', value='Salva una nuova playlist', inline=False)#ok
-    page2.add_field(name='!playlist [remove|del] <name>', value='Rimuovi una playlist', inline=False)#ok
-    page2.add_field(name='!play <song>', value="Fa partire una canzone, per usarlo devi essere in un canale vocale\n<song> può essere [link spotify | link youtube | nome di una playlist salvata | titolo di una canzone]", inline=False)#ok
-    page2.add_field(name='!p <song>', value="Lo stesso di !play", inline=False)#ok
-    page2.add_field(name='Comandi del player', value="Sono i comandi che puoi usare quando il bot riproduce una canzone (N.B. non tutti i comandi usano '!')", inline=False)#ok
-    page2.add_field(name='skip', value="Passa alla prossima traccia", inline=False)#ok
-    page2.add_field(name='skip [x]', value="salta [x] tracce (default = 1)", inline=False)#ok
-    #page2.add_field(name='lyrics', value="Mostra il testo di una traccia", inline=False)#ok
-    page2.add_field(name='shuffle', value="Scambia in modo casuale la queue", inline=False)#ok
-    page2.add_field(name='pause', value="Mette in pausa la traccia corrente", inline=False)#ok
-    page2.add_field(name='resume', value="Fa ripartire la traccia", inline=False)#ok
-    page2.add_field(name='stop', value="Cancella la queue ed esce dal canale vocale", inline=False)#ok
-    page2.add_field(name='clear', value="Cancella la queue", inline=False)#ok
-    page2.add_field(name='loop [song | queue]', value="default=song; [song] mette in loop la traccia; [queue] rimette le tracce in queue quando finisce di riprodurle", inline=False)#ok
-    page2.add_field(name='restart', value="ripete la traccia corrente", inline=False)#ok
-    page2.add_field(name='queue', value="rimanda il messaggio con la queue", inline=False)#ok
-    page2.add_field(name='remove <x>', value="rimuove la traccia in posizone x", inline=False)#ok
-    page2.add_field(name='mv <x> <y>', value="sposta la traccia dalla posizone x alla posizione y (x,y > 0)", inline=False)#ok
-    page2.add_field(name='!play <song>', value="Aggiunge una traccia in coda", inline=False)#ok
-    page2.add_field(name='!p <song>', value="Lo stesso di !play", inline=False)#ok
-    page2.add_field(name='!playnext <song>', value="Aggiunge una traccia in testa", inline=False)#ok
-    page2.add_field(name='!pnext <song>', value="Lo stesso di !playnext", inline=False)#ok
+    page2.add_field(name='!playlist', value=strings["bot.help.playlist.info"], inline=False)#ok
+    page2.add_field(name='!playlist [add|edit] <name> <link>', value=strings["bot.help.playlist.edit"], inline=False)#ok
+    page2.add_field(name='!playlist [remove|del] <name>', value=strings["bot.help.playlist.remove"], inline=False)#ok
+    page2.add_field(name='!play <song>', value=strings["bot.help.playlist.play"], inline=False)#ok
+    page2.add_field(name='!p <song>', value=strings["bot.help.playlist.p"], inline=False)#ok
+    page2.add_field(name=strings["bot.help.player.info"][0], value=strings["bot.help.player.info"][1], inline=False)#ok
+    page2.add_field(name='skip [x]', value=strings["bot.help.player.skip"], inline=False)#ok
+    #page2.add_field(name='lyrics', value=strings["bot.help.player.lyrics"], inline=False)#ok
+    page2.add_field(name='shuffle', value=strings["bot.help.player.shuffle"], inline=False)#ok
+    page2.add_field(name='pause', value=strings["bot.help.player.pause"], inline=False)#ok
+    page2.add_field(name='resume', value=strings["bot.help.player.resume"], inline=False)#ok
+    page2.add_field(name='stop', value=strings["bot.help.player.stop"], inline=False)#ok
+    page2.add_field(name='clear', value=strings["bot.help.player.clear"], inline=False)#ok
+    page2.add_field(name='loop [song | queue]', value=strings["bot.help.player.loop"], inline=False)#ok
+    page2.add_field(name='restart', value=strings["bot.help.player.restart"], inline=False)#ok
+    page2.add_field(name='queue', value=strings["bot.help.player.queue"], inline=False)#ok
+    page2.add_field(name='remove <x>', value=strings["bot.help.player.remove"], inline=False)#ok
+    page2.add_field(name='mv <x> <y>', value=strings["bot.help.player.mv"], inline=False)#ok
+    page2.add_field(name='!play <song>', value=strings["bot.help.player.play"], inline=False)#ok
+    page2.add_field(name='!p <song>', value=strings["bot.help.player.p"], inline=False)#ok
+    page2.add_field(name='!playnext <song>', value=strings["bot.help.player.playnext"], inline=False)#ok
+    page2.add_field(name='!pnext <song>', value=strings["bot.help.player.pnext"], inline=False)#ok
     
-
+    #TODO continue adding translations
 
     #Page 3 chess
     page3.add_field(name='!chess [@user | @role] [fen="<FEN>"] [board=<boardname>] [design=<deisgn>]', 

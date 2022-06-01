@@ -23,19 +23,14 @@ def parseUrl(url) -> list:
         except Exception:
             mPrint('ERROR', f"Spotify parser error:\nurl = {url}\n{traceback.format_exc()}")
             return None
-
-    elif 'youtube.com' in url:
+    else:
         try:
             tracks = youtubeParser.getSongs(url)
         except Exception:
             mPrint('ERROR', f"Youtube parser error:\nurl = {url}\n{traceback.format_exc()}")
             return None
 
-    try:
-        return tracks
-    except UnboundLocalError:
-        mPrint('WARN', f'function "parseUrl(url)" was called with an invalid url\n{traceback.format_exc()}')
-        return None
+    return tracks
 
 async def play(url : str, ctx : commands.Context, bot : discord.Client):
     """"""
@@ -173,12 +168,12 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
                 await userMessage.add_reaction('🔀')
             await messageHandler.updateEmbed()
 
-        elif userInput == 'pause':# and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
+        elif userInput == 'pause':
             if player.isPaused == False:
                 player.pause()
                 await messageHandler.updateEmbed()
 
-        elif userInput == 'resume': # and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
+        elif userInput == 'resume':
             if player.isPaused:
                 player.resume()
                 await messageHandler.updateEmbed()
@@ -193,7 +188,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
             player.clear()
             await messageHandler.updateEmbed()
 
-        elif userInput.split()[0] == 'loop': # and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
+        elif userInput.split()[0] == 'loop':
             request = userInput.split()
             if len(request) == 1:
                 player.loop = True if player.loop == False else False
@@ -215,14 +210,19 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
 
             await messageHandler.updateEmbed()
 
-        elif userInput == 'restart': # and userMessage.author.id and userMessage.author.id in [348199387543109654, 974754149646344232]
+        elif userInput == 'restart':
             player.restart()
             if textInput:
                 await userMessage.add_reaction('⏪')    
             await messageHandler.updateEmbed()
 
         elif userInput == 'queue':
+            #TODO this will halt the requests until the emojis show up, not really a big deal but could be improved I think
+            await messageHandler.embedMSG.clear_reactions()
+            await messageHandler.embedMSG.edit(embed=messageHandler.getEmbed(move=True))
             messageHandler.embedMSG = await ctx.send(embed=messageHandler.getEmbed())
+            for e in emojis: 
+                await messageHandler.embedMSG.add_reaction(emojis[e])
         
         elif userInput.split()[0] == 'precision' and userMessage.author.id in [348199387543109654, 974754149646344232]:
             if len(userInput.split()) == 2:

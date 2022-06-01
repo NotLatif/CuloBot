@@ -275,7 +275,7 @@ class MessageHandler():
                     mPrint("DEBUG","EOPlaylist, stopping embedloop")
                     return
 
-    def getEmbed(self, stop = False):
+    def getEmbed(self, stop = False, move = False) -> discord.Embed:
         last5 = f'__**0-** {self.player.currentSong["trackName"]} [{self.player.currentSong["artist"]}]__\n'
         for i, x in enumerate(self.player.queue[:5]):
             last5 += f'**{i+1}-** {x["trackName"]} [by: {x["artist"]}]\n'
@@ -292,10 +292,20 @@ class MessageHandler():
         embed.add_field(name='Author:', value=f'{artist}')
         latency = "N/A" if self.player.voiceClient.latency == float('inf') else ("%.3fms" % self.player.voiceClient.latency)
         embed.add_field(name='Latency:', value=f'{latency}')
-        embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
+        if not move:
+            embed.add_field(name='Last 5 in queue', value=last5, inline=False)
+        else:
+            last5 = ''
+            for i in range(6):
+                last5 += f"**{i}**- `                                      `\n"
+            embed.add_field(name="This message was moved, you may find the new one below", value=last5, inline=False)
+            embed.color = 0x1e1e1e
+
+
         if stop:
             embed.add_field(name='Queue finita', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
             embed.color = 0x1e1e1e
+
         embed.set_footer(text='🍑 Comandi del player: https://notlatif.github.io/CuloBot/#MusicBot')
 
         #mPrint('TEST', f'EMBED VALUES:\nAuthor: {self.player.currentSong["artist"]}\nLoop: {str(self.player.loop)}\nLast5: {last5}')    

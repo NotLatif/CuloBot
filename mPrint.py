@@ -4,7 +4,7 @@ from colorama import Fore, Style, init
 init()
 
 useColors = True
-logLevel = 0 #log level should be >= print level
+logLevel = 2 #log level should be >= print level
 printLevel = 0
 #levels: (0 will show every tag; 3 will only show ERROR and FATAL)
 # 0 - INFO, MUSIC, USER, GAME
