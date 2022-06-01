@@ -236,7 +236,7 @@ def getJoinImageData(membername) -> tuple[Image.Image, ImageFont.truetype, tuple
             "font_size": 50
         }
 
-    font = ImageFont.truetype("botFiles/PTSerif-Bold.ttf", data["font_size"])
+    font = ImageFont.truetype("botFiles/georgia.ttf", data["font_size"], encoding='utf-8')
     if '%name%' in data["text"]:
         data["text"] = data["text"].replace('%name%', membername, -1)
 

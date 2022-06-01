@@ -10,7 +10,6 @@ sys.path.insert(0, 'music/')
 import spotifyParser
 import youtubeParser
 import musicPlayer
-import json
 
 from mPrint import mPrint as mp
 def mPrint(tag, text):

@@ -54,7 +54,8 @@ def conversion(sec):
     sec_value %= 3600
     min = sec_value // 60
     sec_value %= 60
-    return f'{int(hour_value):02}:{int(min):02}:{int(sec_value):02}'
+    h = f'{int(hour_value):02}:' if int(hour_value) != 0 else ''
+    return f'{h}{int(min):02}:{int(sec_value):02}'
 
 class Player():
     def __init__(self, vc : discord.VoiceClient, queue : dict[int:dict]) -> None:
@@ -226,6 +227,9 @@ class MessageHandler():
             if not self.player.songStarted:
                 mPrint("TEST", "Song has not started yet, waiting...")
                 await asyncio.sleep(0.3)
+                if not self.player.voiceClient.is_connected():
+                    mPrint("WARN", "Bot was disconnected from vc, stopping embedloop")
+                    return
                 continue #don't do anything if player did not change song
 
             self.player.songStarted = False
@@ -297,6 +301,10 @@ class MessageHandler():
                     mPrint("DEBUG","EOPlaylist, stopping embedloop")
                     return
 
+                if not self.player.voiceClient.is_connected():
+                    mPrint("WARN", "Bot was disconnected from vc, stopping embedloop")
+                    return
+
     def getEmbed(self, stop = False, move = False) -> discord.Embed:
         last5 = f'__**0-** {self.player.currentSong["trackName"]} [{self.player.currentSong["artist"]}]__\n'
 
@@ -311,7 +319,7 @@ class MessageHandler():
 
         embed = discord.Embed(
             title = f'Queue: {len(self.player.queueOrder)} songs. {"⏸" * self.player.isPaused} {"🔂" * self.player.loop} {"🔁" * self.player.loopQueue} {"🔀" * self.player.isShuffled}',
-            description= f'Now Playing: **{self.player.currentSong["trackName"]}**\n{"".join(self.timeBar)} ({conversion(self.stepProgress)} - {conversion(self.duration)})\n',
+            description= f'Now Playing: **{self.player.currentSong["trackName"]}**\n{"".join(self.timeBar)} {conversion(self.stepProgress)} / {conversion(self.duration)}\n',
             color=0xff866f
         )
         artist = "N/A" if self.player.currentSong["artist"] == "" else self.player.currentSong["artist"]

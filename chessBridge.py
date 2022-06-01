@@ -74,7 +74,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 		renderer = chessMain.gameRenderer.GameRenderer(chessGame, designName, gs)
 		
 		roundFEN = gs.getFEN()
-		gs.mPrint('GAME', f'FEN {roundFEN}')
+		mPrint('GAME', f'FEN {roundFEN}')
 
 		didIllegalMove = [False, ''] #[bool, str]
 		boardMessages = ['placeholder'] #needed to delete the last edited board and avoid chat clutter

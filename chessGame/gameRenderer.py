@@ -35,7 +35,7 @@ def renderBoard(colors, id) -> str:
 	
 	if not (os.path.exists(tempFolder)): #temp folder stores render of custom boards
 		os.mkdir(tempFolder)
-	os.mkdir(f'{tempFolder}/{id}')
+	os.mkdir(f'{tempFolder}{id}')
 
 	new.save(f'{path}.png')
 
@@ -43,12 +43,12 @@ def renderBoard(colors, id) -> str:
 	with open(f'{path}.json', 'w') as f:
 		json.dump(bezels, f, indent=2)
 	
-	return f'{tempFolder}/{id}/'
+	return f'{tempFolder}{id}/'
 	
 
 class GameRenderer():
 	def __init__(self, cg, designName, boardGS : Engine.GameState) -> None:
-		self.boardFolder = f'{spritesFolder}{designName}'
+		self.boardFolder = f'{spritesFolder}{designName}/'
 
 		self.boardGS = boardGS # list[][] containing board data
 		self.bezels = self.getBoardBezels()
@@ -60,7 +60,7 @@ class GameRenderer():
 		"""
 			Inizializza la dict sprites con le immagini delle pedine
 		"""
-		boardImg = Image.open(f"{self.boardFolder}/chessboard.png").convert("RGBA")
+		boardImg = Image.open(f"{self.boardFolder}chessboard.png").convert("RGBA")
 		squareSizePx = (boardImg.size[0] - self.bezels['left'] - self.bezels['right']) // 8
 
 		pieces = ["BR", "BB", "BN", "BQ", "BK", "BP", "WR", "WB", "WN", "WQ", "WK", "WP"]
@@ -77,7 +77,7 @@ class GameRenderer():
 		mPrint('INFO', 'Drawing board')
 		
 		# Opening the image file and converting it to RGBA format.
-		boardImg = Image.open(f"{self.boardFolder}/chessboard.png").convert("RGBA")
+		boardImg = Image.open(f"{self.boardFolder}chessboard.png").convert("RGBA")
 		squareSizePx = (boardImg.size[0] - self.bezels['left'] - self.bezels['right']) // 8
 
 		for row in self.boardGS.board:
@@ -88,16 +88,16 @@ class GameRenderer():
 		
 		if self.boardGS.lastMoveStart != (): #Esiste una mossa
 			mPrint('DEBUG', f'self.boardGS.lastMoveStart: {self.boardGS.lastMoveStart}')	
-			if os.path.isfile(f"{self.boardFolder}/last_move_start.png"):
-				lastMoveStart = Image.open(f"{self.boardFolder}/last_move_start.png").convert("RGBA")
+			if os.path.isfile(f"{self.boardFolder}last_move_start.png"):
+				lastMoveStart = Image.open(f"{self.boardFolder}last_move_start.png").convert("RGBA")
 				pasteCoords = (self.bezels['left'] + self.boardGS.lastMoveStart[1] * squareSizePx, self.bezels['top'] + invert(self.boardGS.lastMoveStart[0]) * squareSizePx)
 				mPrint('DEBUG', f'pasteCoords: {pasteCoords}')				
 				boardImg.paste(lastMoveStart, pasteCoords)
 			
 		if self.boardGS.lastMoveEnd != (): #Esiste una mossa
 			mPrint('DEBUG', f'self.boardGS.lastMoveEnd: {self.boardGS.lastMoveEnd}')		
-			if os.path.isfile(f"{self.boardFolder}/last_move_end.png"):
-				lastMoveEnd = Image.open(f"{self.boardFolder}/last_move_end.png").convert("RGBA")
+			if os.path.isfile(f"{self.boardFolder}last_move_end.png"):
+				lastMoveEnd = Image.open(f"{self.boardFolder}last_move_end.png").convert("RGBA")
 				pasteCoords = (self.bezels['left'] + self.boardGS.lastMoveEnd[1] * squareSizePx, self.bezels['top'] + invert(self.boardGS.lastMoveEnd[0]) * squareSizePx)
 				mPrint('DEBUG', f'pasteCoords: {pasteCoords}')
 				boardImg.paste(lastMoveEnd, pasteCoords)
@@ -105,8 +105,8 @@ class GameRenderer():
 			
 		if(self.boardGS.inCheck == True): #check / checkmate
 			checkPos = self.boardGS.whiteKpos if self.boardGS.whiteMoves else self.boardGS.blackKpos
-			if os.path.isfile(f"{self.boardFolder}/king_check.png"):
-				checkSquare = Image.open(f"{self.boardFolder}/king_check.png").convert("RGBA")
+			if os.path.isfile(f"{self.boardFolder}king_check.png"):
+				checkSquare = Image.open(f"{self.boardFolder}king_check.png").convert("RGBA")
 				pasteCoords = (self.bezels['left'] + checkPos[1] * squareSizePx, self.bezels['top'] + invert(checkPos[0]) * squareSizePx)
 				boardImg.paste(checkSquare, (pasteCoords))
 			#else: #idk maybe if file is not there, that board does not want to show checks
