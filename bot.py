@@ -665,12 +665,9 @@ async def ping(ctx : commands.Context):
     await ctx.send(f'Pong! {pingms}ms')
     mPrint('INFO', f'ping detected: {pingms} ms')
 
-@bot.command(name='user')
-async def user(ctx : commands.Context):
-    await ctx.send(f'User: {bot.user}')
-
 @bot.command(name='chess', pass_context=True) #CHESS GAME (very long def)
 async def chessGame(ctx : commands.Context):
+    await ctx.channel.typing()
 #1. Prepare the variables
     #info about the player challenging another player or a role to a match
     challenge = { #need dict otherwise script dumps some of the variables idk
@@ -1185,37 +1182,68 @@ async def chessGame(ctx : commands.Context):
         if design.find('\\') != -1 or design.find('/') != -1:
             shutil.rmtree(designFolder)
 
-@bot.command(name='playlist', pass_context=True) #Player
+@bot.command(name='playlist', pass_context=True, aliases=['playlists']) #
 async def playSong(ctx : commands.Context):
     request = ctx.message.content.split()
-    if len(request) == 1:
+    await ctx.channel.typing()
+    if len(request) == 1: #send the playlist list list to user
         embed = discord.Embed(
             title=f"Saved playlists for {ctx.guild.name}",
             description="**Commands:** \n!playlist [add|edit] <name> <link>\n!playlist remove <name>",
             color=0x1ed760
         )
         for plist in settings[str(ctx.guild.id)]["saved_playlists"]:
-            embed.add_field(name=plist, value=settings[str(ctx.guild.id)]["saved_playlists"][plist], inline=False)
+            urls=''
+            for i, t in enumerate(settings[str(ctx.guild.id)]["saved_playlists"][plist]):
+                urls += f'**{i}**: {t}\n' 
+            embed.add_field(name=plist, value=urls, inline=False)
         await ctx.send(embed=embed)
         return    
 
-    else:       
-        if request[1] in ["add", "edit"]:
-            if len(request) == 4:
-                tracks = musicBridge.parseUrl(request[3])
-                if tracks == None:
-                    await ctx.send(f"Error, Could not find playlist {request[3]}")
+    else:
+        if request[1] == "add":
+            #!playlist add <name> <url1[,url2, ..., urln]> TODO help
+            if len(request) >= 4: #create playlist with songs/playlistsT
+                tracks = []
+                errors = ''
+                for x in request[3:]: #foreach song/splaylist
+                    #search for the song/playlist to make sure it won't fail when playing it and add it to the list
+                    isUrlValid = musicBridge.evalUrl(x)
+                    if isUrlValid == False:
+                        errors += f"Error: Could not find song/playlist {x}\n"
+                    else:
+                        if "open.spotify.com" not in x and "youtube.com" not in x:
+                            x = musicBridge.musicPlayer.searchYTurl(x)
+                        tracks.append(x)
+                
+                if errors != '':
+                    embed = discord.Embed(
+                        title="ERRORS:",
+                        description=errors,
+                        color=0xff0000
+                    )
+                    await ctx.send(embed=embed)
+
+                if tracks == []:
+                    await ctx.send('Error: every song/playlist failed')
                     return
-                elif len(tracks) == 1:
-                    await ctx.send(f"Error, link is a song, not a playlist")
-                    return
-                settings[str(ctx.guild.id)]["saved_playlists"][request[2]] = request[3]
-                await ctx.send(f"Playlist -> {request[2]}: {request[3]}")
+
+                trackList = ''
+                for i, t in enumerate(tracks):
+                    trackList += f"\n**{i}**. {t}"
+
+                #Save the song/playlist URL in a list of one element and inform the user
+                settings[str(ctx.guild.id)]["saved_playlists"][request[2]] = tracks
+                
+                embed = discord.Embed(title = f"Playlist {request[2]}: ", description=trackList)
+                await ctx.send(f"Playlist {request[2]} -> {trackList}")
                 dumpSettings()
                 await ctx.message.add_reaction("👌")
                 return
-        
-        if request[1] in ["remove", "del"]:
+            else:
+                await ctx.send('Usage: !playlist add <name> <url1> [url2] [url3] ... [urln]')
+
+        elif request[1] in ["remove", "del"]:
             if len(request) == 3:
                 try:
                     del settings[str(ctx.guild.id)]["saved_playlists"][request[2]]
@@ -1224,13 +1252,114 @@ async def playSong(ctx : commands.Context):
                 except KeyError:
                     await ctx.send("La playlist non esisteva.")
                 return
+
+        # operations on existing playlist !playlist <name> [add|remove]
+        elif request[1] in settings[str(ctx.guild.id)]["saved_playlists"]:
+            if len(request) > 2:
+                #!playlist <name> add <url1[, url2, ..., urln]> TODO help
+                if request[2] == 'add': #append a song to the playlist request[2]
+                    if len(request) >= 3:
+                        tracks = []
+                        errors = ''
+                        for x in request[3:]: #!playlist <name> add <url1[, url2, ..., urln]> TODO help
+                            print(x)
+                            isUrlValid = musicBridge.evalUrl(x)
+                            if isUrlValid == False: #404
+                                errors += f"Error: Could not find song/playlist {x}\n"
+                                return
+                            elif x in settings[str(ctx.guild.id)]["saved_playlists"][request[1]]:
+                                errors += f"Error: Song {x} is already present in {request[1]}\n"
+                            else:
+                                if "open.spotify.com" not in x and "youtube.com" not in x:
+                                    x = musicBridge.musicPlayer.searchYTurl(x)
+                                tracks.append(x)
+                            
+                        if errors != '':
+                            embed = discord.Embed(
+                                title="ERRORS:",
+                                description=errors,
+                                color=0xff0000
+                            )
+                            await ctx.send(embed=embed)
+
+                        if tracks == []:
+                            await ctx.send('FATAL, every song/playlist failed, playlist was not modified.')
+                            return
+                        trackList = ''
+
+                        #append the song/playlist URL in a list of one element and inform the user
+                        #add the new urls to the settings
+                        for t in tracks:
+                            settings[str(ctx.guild.id)]["saved_playlists"][request[1]].append(t)
+                        #prepare message and send the playlist to the server
+                        for i, t in enumerate(settings[str(ctx.guild.id)]["saved_playlists"][request[1]]):
+                            trackList += f"\n**{i}**. {t}"
+                        embed = discord.Embed(title = f"Playlist {request[1]}: ", description=trackList)
+                        await ctx.send(embed=embed)
+                        dumpSettings()
+                        await ctx.message.add_reaction("👌")
+                        return
+                    else:
+                        await ctx.send("Usage: !playlist <name> add <url1[, url2, ..., urln]>")
+                
+                elif request[2] == 'remove': #!playlist <name> remove TODO help
+                    if len(request) == 3:
+                        tracks = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+                        del settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+                        trackList = ''
+                        for i, t in enumerate(tracks):
+                            trackList += f"\n**{i}**. {t}"
+                        embed = discord.Embed(
+                            title=f"❌Deleted playlist {request[1]}❌",
+                            description=trackList
+                        )
+                        await ctx.send(embed=embed)
+                        dumpSettings()
+                        return
+
+                    elif len(request) == 4: #!playlist <name> remove [urlindex] TODO help
+                        if request[3].isnumeric() and int(request[3]) < len(settings[str(ctx.guild.id)]["saved_playlists"][request[1]]):
+                            trackList = ''
+                            for i, t in enumerate(settings[str(ctx.guild.id)]["saved_playlists"][request[1]]):
+                                if i == int(request[3]): 
+                                    trackList += f"\n❌ **{i}**. {t}"
+                                else:
+                                    trackList += f"\n**{i}**. {t}"
+                            
+                            settings[str(ctx.guild.id)]["saved_playlists"][request[1]].pop(int(request[3]))
+                            
+                            if len(settings[str(ctx.guild.id)]["saved_playlists"][request[1]]) == 0:
+                                del settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+
+                            embed = discord.Embed(
+                                title=f"Removed from playlist {request[1]}:",
+                                description=trackList
+                            )
+                            await ctx.send(embed=embed)
+                            dumpSettings()
+                            return
+                        else:
+                            await ctx.send(f'!playlist <name> remove [id]<id must be a number, you can see the track ids with !playlist {request[1]}')
+                    else:
+                        await ctx.send('Usage: !playlist <name> remove [id], se id non è presente elimina tutta la playlist')
+                    
+            else: #!playlist <name> TODO help
+                tracks = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+                trackList = ''
+                for i, t in enumerate(tracks):
+                    trackList += f"\n**{i}**. {t}"
+                embed = discord.Embed(
+                    title=f"Playlist {request[1]}",
+                    description=trackList
+                )
+                await ctx.send(embed=embed)
+        
+        else:
+            await ctx.send("Playlist does not exist.")
     
-    await ctx.send("Usage: !playlist [add|edit] <name> <link>\n!playlist remove <name>")
-
-
-
 @bot.command(name='play', pass_context=True, aliases=['p']) #Player
 async def playSong(ctx : commands.Context):
+    await ctx.channel.typing()
     voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
     if voice_client and voice_client.is_connected():
         return
@@ -1249,9 +1378,9 @@ async def playSong(ctx : commands.Context):
 
         #user wants a saved playlist
         elif request[1] in settings[str(ctx.guild.id)]["saved_playlists"]:
-            trackURL :str = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
-            mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL}')
-            await musicBridge.play(trackURL, ctx, bot)
+            trackURL_list : list = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+            mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL_list}')
+            await musicBridge.play(trackURL_list, ctx, bot)
         
         #user wants to search for a song
         else:

@@ -10,6 +10,7 @@ sys.path.insert(0, 'music/')
 import spotifyParser
 import youtubeParser
 import musicPlayer
+import json
 
 from mPrint import mPrint as mp
 def mPrint(tag, text):
@@ -32,16 +33,39 @@ def parseUrl(url) -> list:
 
     return tracks
 
+def evalUrl(url) -> bool:
+    """Returns ture if the url is valid, else false"""
+    resp = parseUrl(url)
+    if resp == None: 
+        return False
+    return True
+
 async def play(url : str, ctx : commands.Context, bot : discord.Client):
     """"""
     #genius = lg.Genius('Client_Access_Token_Goes_Here', skip_non_songs=True, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
 
     #Search tracks from url
-    tracks = parseUrl(url)
+    tracks : list[dict] = []
+
+    if type(url) == list: #saved playlists are a list of links
+        for t in url:
+            songs = parseUrl(t)
+            for s in songs:
+                tracks.append(s)
+
+    else: #user asked for a specific song/link
+        tracks = parseUrl(url)
+    
+    #check if tracks
     if tracks == None:
         await ctx.send(f"An error occurred while looking for song(s).")
+        mPrint("WARN", f"play function did not find the track requested {url}")
         return
-    shuffle(tracks)
+    
+    queue : dict[int:dict] = {} #{"0": track}
+    for i, t in enumerate(tracks):
+        queue[int(i)] = t
+
 
     last5 = ''
     for i in range(6):
@@ -49,14 +73,12 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
      
     embed = discord.Embed(
         title=f'Loading...',
-        description=f'Now Playing: **{tracks[0]["trackName"]}**\n▂▂▂▂▂▂▂▂▂▂ (00:00 - 00:00)\n',
+        description=f'Now Playing: `                                      `\n▂▂▂▂▂▂▂▂▂▂ (00:00 - 00:00)\n',
         color=0xff866f
     )
 
-    if( tracks[0]["artist"] != ''):
-        embed.add_field(name='Author:', value=f'{tracks[0]["artist"]}', inline=True)
-    if ( last5 != "" ):
-        embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
+    embed.add_field(name='Author:', value=f'`               `', inline=True)
+    embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
     embed.set_footer(text='🍑 the best bot 🎶 https://notlatif.github.io/CuloBot/#MusicBot')
      
     try: #try connecting to vc
@@ -84,7 +106,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
         "loop queue": "🔁",
     }
 
-    player = musicPlayer.Player(voice, tracks)
+    player = musicPlayer.Player(voice, queue)
     messageHandler = musicPlayer.MessageHandler(player, embedMSG)
     
     try:
@@ -115,14 +137,10 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
 
         if userInput.split()[0] == 'previous':
             mPrint('USER', 'previous song')
-            pTask.cancel()
-            if pTask.cancelled() == False: 
-                mPrint("WARN", "task was not closed.")
-                pTask.cancel()
-
-            if(player.currentSong != player.previousSong):
-                player.queue.insert(0, player.currentSong)
-            player.queue.insert(0, player.previousSong)
+            mPrint('TEST', f'previous song {player.previousSongId}')
+            
+            player.queueOrder.insert(0, player.previousSongId)
+            mPrint('TEST', player.queueOrder[:5]) 
 
             pTask = asyncio.create_task(player.skip())
             await messageHandler.updateEmbed()
@@ -137,7 +155,13 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
 
             if len(skip) == 2 and skip[1].isnumeric():
                 for x in range(int(skip[1])-1):
-                    player.queue.pop(0)
+                    if player.loop:
+                        print("TEST", f'multipleskipping: appending {player.queueOrder[0]} to end')
+                        player.queueOrder.append(player.queueOrder[0])
+                        del player.queueOrder[0]
+                    else:
+                        print("TEST", f'multipleskipping: removing {player.queueOrder[0]}')
+                        del player.queueOrder[0]
                 pTask = asyncio.create_task(player.skip())
                 return
 
@@ -179,6 +203,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
                 await messageHandler.updateEmbed()
 
         elif userInput == 'stop':
+            await messageHandler.updateEmbed(True)
             await player.stop()
             pTask.cancel()
             messageTask.cancel()
@@ -234,7 +259,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
             if len(request) == 1:
                 await ctx.send("Usage: remove [x]")
                 return
-            player.queue.pop(request[1]+1)
+            player.queueOrder.pop(request[1]+1)
             await messageHandler.updateEmbed()
         
         elif userInput.split()[0] == 'mv':
@@ -243,14 +268,14 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
             if not request[1].isnumeric() or not request[2].isnumeric():
                 await ctx.send("Usage: mv start end; eg. mv 3 1")
             try:
-                temp = player.queue[int(request[2])-1]
-                player.queue[int(request[1])-1] = player.queue[int(request[2])-1]
-                player.queue[int(request[2])-1] = temp
+                temp = player.queueOrder[int(request[2])-1]
+                player.queueOrder[int(request[1])-1] = player.queueOrder[int(request[2])-1]
+                player.queueOrder[int(request[2])-1] = temp
             except IndexError:
                 await ctx.send("Errore, la queue non ha così tante canzoni.")
             await messageHandler.updateEmbed()
 
-        elif userInput.split()[0] in ['!play', '!p', 'play', 'p']:
+        elif userInput.split()[0] in ['!play', '!p', 'play', 'p']: #TODO
             request = userInput.split()
             if len(request) == 1:
                 userMessage.reply("Devi darmi un link bro")
@@ -261,12 +286,15 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
                 if tracks == None:
                     await userMessage.reply("An error occurred while looking for the songs")
                     return
-                for t in tracks:
-                    player.queue.append(t)
+                startindex = len(player.queueOrder)
+                for i, t in enumerate(tracks):
+                    player.queue[i+startindex] = t
+                    player.queueOrder.append(i+startindex)
+
                 await userMessage.add_reaction('🍑')
                 await messageHandler.updateEmbed()
         
-        elif userInput.split()[0] in ['!playnext', '!pnext', 'playnext', 'pnext']:
+        elif userInput.split()[0] in ['!playnext', '!pnext', 'playnext', 'pnext']: #TODO
             request = userInput.split()
             if len(request) == 1:
                 userMessage.reply("Devi darmi un link bro")
@@ -277,7 +305,13 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
                 if tracks == None:
                     await userMessage.reply("An error occurred while looking for the songs")
                     return
-                player.queue = tracks + player.queue
+
+                startindex = len(player.queueOrder)
+                for i, t in enumerate(tracks):
+                    player.queue[i+startindex] = t
+                    player.queueOrder.insert(0, i+startindex)
+                    mPrint('TEST', f'inserting {i+startindex} @ 0 : {player.queueOrder[:3]}')
+                    
                 await userMessage.add_reaction('🍑')
                 await messageHandler.updateEmbed()
 

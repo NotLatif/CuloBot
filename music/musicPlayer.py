@@ -43,7 +43,7 @@ FFMPEG_OPTIONS = {
 def mPrint(tag, text):
     mp(tag, 'musicPlayer', text)
 
-def searchYTurl(query): #gets the url of the first song in queue (the one to play)
+def searchYTurl(query) -> str: #gets the url of the first song in queue (the one to play)
     mPrint('MUSIC', f'Searching for user requested song: ({query})')
     return VideosSearch(query, limit = 1).result()['result'][0]['link']
 
@@ -57,15 +57,20 @@ def conversion(sec):
     return f'{int(hour_value):02}:{int(min):02}:{int(sec_value):02}'
 
 class Player():
-    def __init__(self, vc : discord.VoiceClient, queue) -> None:
-        self.queue : list = queue
+    def __init__(self, vc : discord.VoiceClient, queue : dict[int:dict]) -> None:
+        self.queue : dict[int:dict] = queue
+        self.queueOrder = [x for x in range(len(queue))] #TEST 1 song in playlist
+
+        self.isShuffled = True
+        if self.isShuffled: shuffle(self.queueOrder)
+
         self.voiceClient = vc
         self.isConnected = True
 
         self.loop = False
         self.loopQueue = False
         self.currentSong = None
-        self.previousSong = None
+        self.previousSongId = None
         self.duration = 0
         self.stepProgress = 0 #keep track of seconds passed in 10 chuncks
 
@@ -93,27 +98,38 @@ class Player():
     def playNext(self, error):
         mPrint('INFO', "---------------- PLAYNEXT ----------------")
         if error != None: mPrint('ERROR', f"{error}")
+        
+        if len(self.queueOrder) != 0:
+            if self.currentSong == None: # first song
+                self.currentSong = self.queue[self.queueOrder[0]]
+                self.previousSongId = self.queueOrder[0]
 
-        if len(self.queue) != 0 and self.loop == False:
-            if self.currentSong == None:
-                mPrint('DEBUG', 'Playing song')
-                self.currentSong = self.queue.pop(0)
-                self.previousSong = self.currentSong
-            else:
-                self.previousSong = self.currentSong
-                self.currentSong = self.queue.pop(0)
+                if self.loopQueue:
+                    mPrint('INFO', "looping queue, append song to end")
+                    self.queueOrder.append(self.queueOrder[0])
 
-            mPrint('MUSIC', f'POP: {self.currentSong}')
-            if self.loopQueue:
-                mPrint('INFO', "looping queue, append song to end")
-                self.queue.append(self.currentSong)
-            
+                #mPrint('TEST', f'deleting {self.queueOrder[0]}, prev: {self.previousSongId}')
+                # del self.queueOrder[0]
+
+            else: #not first song
+                #get last song
+                self.previousSongId = self.queueOrder[0]
+
+                #remove from order (or append to end if looping)
+                if self.loopQueue:
+                    mPrint('INFO', "looping queue, append song to end")
+                    self.queueOrder.append(self.queueOrder[0])
+                
+                self.currentSong = self.queue[self.queueOrder[0]]
+            del self.queueOrder[0]
+                #mPrint('TEST', f'deleting {self.queueOrder[0]}, prev: {self.previousSongId}')  
+        
         else:
             if self.loop == False: 
                 self.endOfPlaylist = True
                 mPrint('MUSIC', 'End of playlist.')
                 return
-
+        # mPrint('TEST', self.queueOrder)
         self.playSong()
         
 
@@ -141,9 +157,9 @@ class Player():
             return
     
     async def skip(self):
-        if len(self.queue) > 0:
+        if len(self.queueOrder) > 0:
             mPrint('MUSIC', f'skipped track ({self.currentSong["trackName"]})')
-            mPrint('MUSIC', f'next is {self.currentSong["trackName"] if self.loop else self.queue[0]["trackName"]}')
+            mPrint('MUSIC', f'next is {self.currentSong["trackName"] if self.loop else self.queue[self.queueOrder[0]]["trackName"]}')
             self.voiceClient.stop()
             self.skipped = True
             # no need to call playNext since lambda will do it for us
@@ -151,12 +167,17 @@ class Player():
             await self.stop()
 
     def restart(self):
-        self.queue.insert(0, self.currentSong)
+        self.queueOrder.insert(0, self.previousSongId)
         mPrint('MUSIC', f'restarted track ({self.currentSong["trackName"]})')
         self.voiceClient.stop()
 
-    def shuffle(self):
-        shuffle(self.queue)
+    def shuffle(self): #TODO make this a toggle
+        if self.isShuffled:
+            self.isShuffled = False
+            self.queueOrder = [x for x in range(len(self.queue))]
+        else:
+            self.isShuffled = True
+            shuffle(self.queueOrder)
 
     def pause(self):
         self.voiceClient.pause()
@@ -169,7 +190,8 @@ class Player():
         self.pauseEnd = time.time()
 
     def clear(self):
-        self.queue = []
+        self.queueOrder = []
+        self.queue = {}
 
     async def stop(self):
         await self.voiceClient.disconnect()
@@ -277,13 +299,18 @@ class MessageHandler():
 
     def getEmbed(self, stop = False, move = False) -> discord.Embed:
         last5 = f'__**0-** {self.player.currentSong["trackName"]} [{self.player.currentSong["artist"]}]__\n'
-        for i, x in enumerate(self.player.queue[:5]):
+
+        queue = []
+        for x in self.player.queueOrder[0:5]:
+            queue.append(self.player.queue[x])
+
+        for i, x in enumerate(queue):
             last5 += f'**{i+1}-** {x["trackName"]} [by: {x["artist"]}]\n'
 
         last5 = last5[:-1]
 
         embed = discord.Embed(
-            title = f'Queue: {len(self.player.queue)} songs. {"⏸" * self.player.isPaused} {"🔂" * self.player.loop} {"🔁" * self.player.loopQueue}',
+            title = f'Queue: {len(self.player.queueOrder)} songs. {"⏸" * self.player.isPaused} {"🔂" * self.player.loop} {"🔁" * self.player.loopQueue} {"🔀" * self.player.isShuffled}',
             description= f'Now Playing: **{self.player.currentSong["trackName"]}**\n{"".join(self.timeBar)} ({conversion(self.stepProgress)} - {conversion(self.duration)})\n',
             color=0xff866f
         )
@@ -303,12 +330,11 @@ class MessageHandler():
 
 
         if stop:
-            embed.add_field(name='Queue finita', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
+            embed.add_field(name=f'{"Queue finita" if self.player.endOfPlaylist else "Queue annullata"}', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
             embed.color = 0x1e1e1e
 
         embed.set_footer(text='🍑 Comandi del player: https://notlatif.github.io/CuloBot/#MusicBot')
 
-        #mPrint('TEST', f'EMBED VALUES:\nAuthor: {self.player.currentSong["artist"]}\nLoop: {str(self.player.loop)}\nLast5: {last5}')    
         return embed
 
     async def updateEmbed(self, stop = False):
