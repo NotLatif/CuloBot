@@ -22,6 +22,7 @@ def parseUrl(url) -> list:
             tracks = spotifyParser.getSongs(url)
             if tracks == "SPOTIFY AUTH FAILED.":
                 mPrint('FATAL', "SPOTIFY AUTH FAILED, add your keys in the .env file if you want to enable spotify functionalities")
+                return None
         except Exception:
             mPrint('ERROR', f"Spotify parser error:\nurl = {url}\n{traceback.format_exc()}")
             return None
