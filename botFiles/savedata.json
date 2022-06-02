@@ -1,0 +1,29 @@
+{
+    "comment": "THIS IS A TEMPLATE FOR A FUTURE IMPLEMENTATION OF SAVING THE INFO SO THAT I CAN RELOAD THE BOT WITHOUT COMPLETELY DISRUPTING THE SERVICE",
+    "guild.id": {
+        "music": {
+            "queue": {},
+            "queue_order": [],
+            "player_state": {
+                "shuffle": true,
+                "loop_one": false,
+                "loop_queue": false,
+                "pause": false
+            },
+            "voice_chat_id": 0,
+            "queue_message_id": 0,
+            "queue_message_channel_id": 0
+        },
+        "chess": {
+            "channel_id": 0,
+            "message_id": 0,
+            "thread_id": 0,
+            "white_player_id": 0,
+            "black_player_id": 0,
+            "gamestate": {
+                "PEG": {},
+                "whatever is not included in peg": 0                
+            }
+        }
+    }
+}

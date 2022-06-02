@@ -1362,6 +1362,8 @@ async def playSong(ctx : commands.Context):
     await ctx.channel.typing()
     voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
     if voice_client and voice_client.is_connected():
+        await ctx.message.add_reaction('❌')
+        await ctx.reply('Sono già connesso in un canale vocale, per aggiungere una canzone manda un messaggio nel canale dove ho inviato la queue!')
         return
 
     request = ctx.message.content.split()

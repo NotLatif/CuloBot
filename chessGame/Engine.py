@@ -380,8 +380,8 @@ class GameState():
 		else: #not in check so all moves are ok
 			moves = self.getAllPossibleMoves()
 
-		mPrint('WARN', f'whiteK: {self.whiteKpos}')
-		mPrint('WARN', f'blackK: {self.blackKpos}')
+		mPrint('VARS', f'whiteK: {self.whiteKpos}')
+		mPrint('VARS', f'blackK: {self.blackKpos}')
 
 		self.getCastleMoves(kingRow, kingCol, moves)
 
@@ -664,8 +664,7 @@ class GameState():
 		if (self.whiteMoves and self.castleRights.Q) or (not self.whiteMoves and self.castleRights.q):
 			mPrint('DEBUG', 'getQueenSide')
 			self.getQueenSideCastleMove(r, c, moves)
-		mPrint('WARN', f'End of getCastleMoves: {r} {c}')
-		#FIXME change WARN tag (was used only to highlight while debugging)
+		mPrint('DEBUG', f'End of getCastleMoves: {r} {c}')
 
 	def getKingSideCastleMove(self, r, c, moves):
 		mPrint('DEBUG', f'kingside {r}, {c}')

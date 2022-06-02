@@ -105,14 +105,15 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
         "loop queue": "🔁",
     }
 
+
     player = musicPlayer.Player(voice, queue)
-    messageHandler = musicPlayer.MessageHandler(player, embedMSG)
+    messageHandler = musicPlayer.MessageHandler(player, embedMSG, vchannel)
     
     try:
         playerTask = asyncio.create_task(player.starter())
         messageTask = asyncio.create_task(messageHandler.start())
 
-    except Exception:
+    except:
         await voice.disconnect()
         voice.cleanup()
         mPrint('FATAL', f'Error while creating tasks for player and message\n{traceback.format_exc()}')
@@ -126,20 +127,20 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
 
     async def actions(pTask : asyncio.Task, userMessage : discord.Message, textInput = True):
         if textInput:
-            userInput = userMessage.content
+            userInput = userMessage.content.replace('!', '')
         else:
             userInput = userMessage
 
-        mPrint('TEST', f'{userInput}; {textInput}')
+        mPrint('DEBUG', f'User input: {userInput}; isText: {textInput} <if false, it was an impot from emoji')
 
         if len(userInput.split()) == 0: return
 
-        if userInput.split()[0] == 'previous':
+        if userInput.split()[0] in 'previous':
             mPrint('USER', 'previous song')
             mPrint('TEST', f'previous song {player.previousSongId}')
             
             player.queueOrder.insert(0, player.previousSongId)
-            mPrint('TEST', player.queueOrder[:5]) 
+            # mPrint('TEST', player.queueOrder[:5]) 
 
             pTask = asyncio.create_task(player.skip())
             await messageHandler.updateEmbed()
@@ -274,7 +275,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
                 await ctx.send("Errore, la queue non ha così tante canzoni.")
             await messageHandler.updateEmbed()
 
-        elif userInput.split()[0] in ['!play', '!p', 'play', 'p']: #TODO
+        elif userInput.split()[0] in ['play', 'p']: #TODO
             request = userInput.split()
             if len(request) == 1:
                 userMessage.reply("Devi darmi un link bro")
@@ -293,7 +294,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
                 await userMessage.add_reaction('🍑')
                 await messageHandler.updateEmbed()
         
-        elif userInput.split()[0] in ['!playnext', '!pnext', 'playnext', 'pnext']: #TODO
+        elif userInput.split()[0] in ['playnext', 'pnext']: #TODO
             request = userInput.split()
             if len(request) == 1:
                 userMessage.reply("Devi darmi un link bro")
@@ -312,7 +313,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
                     mPrint('TEST', f'inserting {i+startindex} @ 0 : {player.queueOrder[:3]}')
                     
                 await userMessage.add_reaction('🍑')
-                await messageHandler.updateEmbed()
+                await messageHandler.updateEmbed(pnext=True)
 
     async def userInput(pTask):
         while True:
@@ -352,6 +353,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
 
             
     await asyncio.sleep(0.1)
+
     asyncio.create_task(userInput(playerTask))
 
     for e in emojis:
@@ -359,6 +361,8 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
 
     asyncio.create_task(emojiInput(playerTask))
 
-cmds = ['skip', 'shuffle', 'pause', 'resume', 'stop',
-'clear', 'loop', 'restart', 'queue', 'remove', 'mv', 
+cmds = ['skip', '!skip', 'shuffle', '!shuffle', 'pause', '!pause',
+'resume', '!resume', 'stop', '!stop', 'clear', '!clear',
+'loop', '!loop', 'restart', '!restart', 'queue', '!queue',
+'remove', '!remove', 'mv', '!mv',
 '!playnext', '!pnext', 'playnext', 'pnext', 'play', 'p']

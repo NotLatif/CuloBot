@@ -24,6 +24,8 @@ from youtube_dl import YoutubeDL
 from youtubesearchpython import VideosSearch
 from random import shuffle
 from mPrint import mPrint as mp
+import config
+
 
 YDL_OPTIONS = {
     'format': 'bestaudio/best',
@@ -62,7 +64,7 @@ class Player():
         self.queue : dict[int:dict] = queue
         self.queueOrder = [x for x in range(len(queue))] #TEST 1 song in playlist
 
-        self.isShuffled = True
+        self.isShuffled = config.player_shuffle
         if self.isShuffled: shuffle(self.queueOrder)
 
         self.voiceClient = vc
@@ -74,6 +76,8 @@ class Player():
         self.previousSongId = None
         self.duration = 0
         self.stepProgress = 0 #keep track of seconds passed in 10 chuncks
+
+        self.stopped = False
 
         #flags needed to communicate with EmbedHandler
         self.skipped = False
@@ -97,6 +101,9 @@ class Player():
         
 
     def playNext(self, error):
+        if self.stopped:
+            mPrint('INFO', 'Player was stoppend. Returning.')
+            return
         mPrint('INFO', "---------------- PLAYNEXT ----------------")
         if error != None: mPrint('ERROR', f"{error}")
         
@@ -190,27 +197,37 @@ class Player():
         self.isPaused = False
         self.pauseEnd = time.time()
 
-    def clear(self):
+    def clear(self): #kind of does not make sense this just seems like stop() but spicy
         self.queueOrder = []
         self.queue = {}
 
     async def stop(self):
+        self.clear()
         await self.voiceClient.disconnect()
         self.voiceClient.cleanup()
 
 class MessageHandler():
     #Handles the embed of the player in parallel with the player
-    def __init__(self, player : Player, embedMSG = discord.Message) -> None:
+    def __init__(self, player : Player, embedMSG : discord.Message, vchannel : discord.VoiceChannel) -> None:
         self.player = player
         self.embedMSG = embedMSG
 
-        self.timelinePrecision = 14
+        precision = config.timeline_precision
+        precision = 16 if precision > 16 else 1 if precision < 1 else precision
+        self.timelinePrecision = precision
         self.timelineChars = ('▂', '▅')
         self.timeBar = []
+        self.timeStart = 0
+        self.timeDone = 0
 
         self.stepProgress = 0
         self.duration = 0
         self.pauseDiff = 0
+
+        self.vchannel = vchannel
+        self.isAloneInVC = False
+        self.aloneTimeStart = 0
+        self.maxAloneTime = config.max_alone_time if config.max_alone_time <= 300 else 300
 
     async def start(self):
         await self.embedLoop()
@@ -218,6 +235,7 @@ class MessageHandler():
 
     async def embedLoop(self):
         while True: #foreach song
+            self.timeDone = time.time()
             if self.player.endOfPlaylist:
                 mPrint("DEBUG","EOPlaylist, stopping embedloop")
                 await self.updateEmbed(True)
@@ -225,7 +243,7 @@ class MessageHandler():
                 return
 
             if not self.player.songStarted:
-                mPrint("TEST", "Song has not started yet, waiting...")
+                # mPrint("TEST", f"Song has not started yet, waiting... (duration: {self.player.currentSong['duration_sec']}, done after {self.timeDone - self.timeStart})")
                 await asyncio.sleep(0.3)
                 if not self.player.voiceClient.is_connected():
                     mPrint("WARN", "Bot was disconnected from vc, stopping embedloop")
@@ -252,6 +270,7 @@ class MessageHandler():
             currentStep = 1
             mPrint('DEBUG', f"Step sec: {stepSeconds}")
             timeDeltaError = 0
+            self.timeStart = time.time()
             while True:
                 await asyncio.sleep(0.5)
 
@@ -301,11 +320,28 @@ class MessageHandler():
                     mPrint("DEBUG","EOPlaylist, stopping embedloop")
                     return
 
-                if not self.player.voiceClient.is_connected():
+                elif not self.player.voiceClient.is_connected():
                     mPrint("WARN", "Bot was disconnected from vc, stopping embedloop")
                     return
+                
+                if len(self.vchannel.members) == 1:
+                    self.isAloneInVC == True
+                    if self.aloneTimeStart == 0:
+                        mPrint('WARN', 'I\'m alone in the vc...')
+                        self.aloneTimeStart = time.time()
+                    else:
+                        if time.time() - self.aloneTimeStart > self.maxAloneTime:
+                            mPrint('DEBUG', f'Waited for {time.time() - self.aloneTimeStart}s for people to join, now quitting')
+                            mPrint('WARN', 'Fuck this, I\'m going where people actually want me')
+                            await self.player.stop()
+                            await self.updateEmbed(leftAlone = True)
+                            return
+                else:
+                    self.isAloneInVC == False
+                    self.aloneTimeStart = 0
 
-    def getEmbed(self, stop = False, move = False) -> discord.Embed:
+
+    def getEmbed(self, stop = False, move = False, pnext = False, leftAlone = False) -> discord.Embed: #TODO, there are too many variables that do one thing, just fix this
         last5 = f'__**0-** {self.player.currentSong["trackName"]} [{self.player.currentSong["artist"]}]__\n'
 
         queue = []
@@ -313,6 +349,8 @@ class MessageHandler():
             queue.append(self.player.queue[x])
 
         for i, x in enumerate(queue):
+            if pnext and i == 0:
+                last5 += '➡ '
             last5 += f'**{i+1}-** {x["trackName"]} [by: {x["artist"]}]\n'
 
         last5 = last5[:-1]
@@ -340,19 +378,21 @@ class MessageHandler():
         if stop:
             embed.add_field(name=f'{"Queue finita" if self.player.endOfPlaylist else "Queue annullata"}', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
             embed.color = 0x1e1e1e
+        elif leftAlone:
+            embed.add_field(name="Queue annullata", value="Mi avete lasciato da solo nel canale vocale 😭")
 
         embed.set_footer(text='🍑 Comandi del player: https://notlatif.github.io/CuloBot/#MusicBot')
 
         return embed
 
-    async def updateEmbed(self, stop = False):
+    async def updateEmbed(self, stop = False, pnext = False, leftAlone = False):
         await asyncio.sleep(0.5)
         try:
-            if stop:
-                await self.embedMSG.edit(embed=self.getEmbed(True))
+            if stop or leftAlone:
+                await self.embedMSG.edit(embed=self.getEmbed(stop=stop, leftAlone=leftAlone))
                 await self.embedMSG.clear_reactions()
             else:
-                await self.embedMSG.edit(embed=self.getEmbed())
+                await self.embedMSG.edit(embed=self.getEmbed(pnext=pnext))
         except discord.errors.HTTPException:
             mPrint('ERROR', f"DISCORD ERROR (probably embed had blank value)\n{traceback.format_exc()}")
     
