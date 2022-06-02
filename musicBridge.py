@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import traceback
 import asyncio
+import json
 from random import shuffle
 #import lyricsgenius as lg
 
@@ -143,14 +144,30 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
             if not player.wasReported:
                 track = player.currentSong
                 player.wasReported = True
+                await ctx.send('**Se la canzone è ancora in riproduzione**, puoi sistemarla tu usando `!suggest <youtube url>`')
                 mPrint('SONGERROR', f'User reported song link discrepancy:\nSOURCE URL: {track["base_link"]}\nQUERY: {track["search"]}\nRESULT: {player.videoUrl}')
                 await messageHandler.updateEmbed()
+
+        elif userInput.split()[0] == 'suggest':
+            mPrint('INFO', userInput.split())
+            if len(userInput.split()) == 2:
+                suggestion = [player.currentSong['search'], userInput.split()[1]]
+                with open('botFiles/guildsData.json', 'r') as f:
+                    data = json.load(f)[str(ctx.guild.id)]['youtube_search_overwrite']
+                
+                data[suggestion[0]] = suggestion[1]
+                with open(f'botFiles/{str(ctx.guild.id)}.json', 'w') as f:
+                    json.dump(data, f, indent=2)
+
+            else:
+                await ctx.send('Usage: !suggest <youtube url>')
 
         elif userInput.split()[0] == 'previous':
             mPrint('USER', 'previous song')
             mPrint('TEST', f'previous song {player.previousSongId}')
             
             player.queueOrder.insert(0, player.previousSongId)
+            
             # mPrint('TEST', player.queueOrder[:5]) 
 
             pTask = asyncio.create_task(player.skip())

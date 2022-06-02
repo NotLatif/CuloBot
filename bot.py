@@ -1398,6 +1398,18 @@ async def playSong(ctx : commands.Context):
         
         await musicBridge.play(playContent, ctx, bot, settings[int(ctx.guild.id)]['youtube_search_overwrite'])
 
+@bot.command(name='suggest', pass_context=True) #Player
+async def playSong(ctx : commands.Context):
+    await ctx.channel.typing()
+    await asyncio.sleep(2) #ensure that file exists
+    if os.path.isfile(f'botFiles/{str(ctx.guild.id)}.json'):
+        with open(f'botFiles/{str(ctx.guild.id)}.json') as f:
+            newOverwrites = json.load(f)
+            settings[ctx.guild.id]['youtube_search_overwrite'] = newOverwrites
+            dumpSettings()
+            await ctx.send('Done')
+    else:
+        await ctx.send('C\'è stato un errore...')
 
 @bot.event   ## DETECT AND RESPOND TO MSG
 async def on_message(message : discord.Message):
