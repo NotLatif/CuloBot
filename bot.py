@@ -1405,9 +1405,12 @@ async def playSong(ctx : commands.Context):
     if os.path.isfile(f'botFiles/{str(ctx.guild.id)}.json'):
         with open(f'botFiles/{str(ctx.guild.id)}.json') as f:
             newOverwrites = json.load(f)
-            settings[ctx.guild.id]['youtube_search_overwrite'] = newOverwrites
-            dumpSettings()
-            await ctx.send('Done')
+            if settings[ctx.guild.id]['youtube_search_overwrite'] == newOverwrites:
+                await ctx.send('Nothing changed.')
+            else:
+                settings[ctx.guild.id]['youtube_search_overwrite'] = newOverwrites
+                dumpSettings()
+                await ctx.send('Done')
     else:
         await ctx.send('C\'è stato un errore...')
 
