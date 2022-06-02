@@ -12,27 +12,27 @@ CLIENT_SECRET = os.getenv('SPOTIFY_SECRET')[1:-1]
 client_credentials_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 
-def getSongs(URL:str) -> list[dict]:
-    URL, type = spotifyUrlParser(URL)
-
-    if type == "playlist":
-        tracks = getSongsFromPlaylist(URL)
-
-    elif type == "album":
-        tracks = getSongsFromAlbum(URL)
-    
-    elif type == "track":
-        tracks = getSongFromTrack(URL)
-
-    return tracks
-
 def spotifyUrlParser(URL:str) -> tuple[str, str]:
     """gets a spotify link and returns a tuple with (URL, type); type can be playlist, album, track"""
     id = URL.split("/")[-1].split("?")[0]
     type = URL.split("/")[-2]
     return (id, type)
 
-def getSongsFromAlbum(URL):
+def getSongs(URL:str) -> list[dict]:
+    id, type = spotifyUrlParser(URL)
+
+    if type == "playlist":
+        tracks = getSongsFromPlaylist(id, URL)
+
+    elif type == "album":
+        tracks = getSongsFromAlbum(id, URL)
+    
+    elif type == "track":
+        tracks = getSongFromTrack(id, URL)
+
+    return tracks
+
+def getSongsFromAlbum(URL, long_url):
     trackNumber = sp.album_tracks(URL)["total"]
     trackLimit = sp.album_tracks(URL)["limit"]
     tracks = []
@@ -44,10 +44,16 @@ def getSongsFromAlbum(URL):
             for a in t['artists']:
                 artists += f"{a['name']}, "
             artists = artists[:-2]
-            tracks.append({'trackName':t['name'], 'artist':artists, 'search':f"{t['name']}{t['artists'][0]['name']}", 'duration_sec': t['duration_ms']/1000})
+            tracks.append({
+                'trackName':t['name'],
+                'artist':artists,
+                'search':f"{t['name']}{t['artists'][0]['name']}",
+                'duration_sec': t['duration_ms']/1000,
+                'base_link': long_url,
+            })
     return tracks
 
-def getSongsFromPlaylist(URL):
+def getSongsFromPlaylist(URL, long_url):
     trackNumber = sp.playlist_tracks(URL)["total"]
     trackLimit = sp.playlist_tracks(URL)["limit"]
     tracks = []
@@ -60,17 +66,29 @@ def getSongsFromPlaylist(URL):
             for a in t['artists']:
                 artists += f"{a['name']}, "
             artists = artists[:-2]
-            tracks.append({'trackName':t['name'], 'artist':artists, 'search':f"{t['name']} {t['artists'][0]['name']}", 'duration_sec': t['duration_ms']/1000})
+            tracks.append({
+                'trackName':t['name'],
+                'artist':artists,
+                'search':f"{t['name']} {t['artists'][0]['name']}",
+                'duration_sec': t['duration_ms']/1000,
+                'base_link': long_url,
+            })
     return tracks
 
-def getSongFromTrack(URL):
+def getSongFromTrack(URL, long_url):
     t = sp.track(URL)
     #return single item list for omogeneità
     artists = ""
     for a in t['artists']:
         artists += f"{a['name']}, "
     artists = artists[:-2]
-    return [{'trackName':t['name'], 'artist':artists, 'search':f"{t['name']} {t['artists'][0]['name']}", 'duration_sec': t['duration_ms']/1000}]
+    return [{
+        'trackName':t['name'],
+        'artist':artists,
+        'search':f"{t['name']} {t['artists'][0]['name']}",
+        'duration_sec': t['duration_ms']/1000,
+        'base_link': long_url,
+    }]
 
 
 # TESTING PURPOSES TODO DELETE

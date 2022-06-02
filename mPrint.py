@@ -10,7 +10,7 @@ printLevel = 0
 # 0 - INFO, MUSIC, USER, GAME
 # 1 - DEBUG, VARS, TEST, FUNC
 # 2 - WARN, GAMEErr
-# 3 - ERROR, FATAL,
+# 3 - ERROR, FATAL, SONGERROR
 
 def mPrint(tag, source, text):
     """
@@ -19,9 +19,10 @@ def mPrint(tag, source, text):
 
     willPrint = False
     willLog = False
+    songError = False
 
     if printLevel <= 3:
-        if tag in ['ERROR', 'FATAL']: willPrint = True
+        if tag in ['ERROR', 'FATAL', 'SONGERROR']: willPrint = True
     if printLevel <= 2:
         if tag in ['WARN', 'GAMEErr']: willPrint = True
     if printLevel <= 1:
@@ -30,7 +31,7 @@ def mPrint(tag, source, text):
         if tag in ['INFO', 'MUSIC', 'USER', 'GAME']: willPrint = True
 
     if logLevel <= 3:
-        if tag in ['ERROR', 'FATAL']: willLog = True
+        if tag in ['ERROR', 'FATAL', 'SONGERROR']: willLog, songError = True, True
     if logLevel <= 2:
         if tag in ['WARN', 'GAMEErr']: willLog = True
     if logLevel <= 1:
@@ -53,7 +54,7 @@ def mPrint(tag, source, text):
     elif tag == 'WARN':
         tag = f"{Fore.YELLOW}[{tag}]"
 
-    elif tag in ['ERROR', 'FATAL']:
+    elif tag in ['ERROR', 'FATAL', 'SONGERROR']:
         tag = f"{Fore.RED}[{tag}]"
         style = Style.BRIGHT
 
@@ -94,4 +95,8 @@ def mPrint(tag, source, text):
     #log string
     if willLog:
         with codecs.open('bot.log', 'a', 'utf-8') as f:
+            f.write(logstr)
+
+    if songError:
+        with codecs.open('song_wrong_url.log', 'a', 'utf-8') as f:
             f.write(logstr)

@@ -14,15 +14,15 @@
       ]
 """
 
-import sys
 import traceback
 import discord
 import asyncio
 import time
-from discord.ext import commands
 from youtube_dl import YoutubeDL
 from youtubesearchpython import VideosSearch
 from random import shuffle
+
+import youtubeParser #needed to link bot with youtubeParser
 from mPrint import mPrint as mp
 import config
 
@@ -44,10 +44,6 @@ FFMPEG_OPTIONS = {
 
 def mPrint(tag, text):
     mp(tag, 'musicPlayer', text)
-
-def searchYTurl(query) -> str: #gets the url of the first song in queue (the one to play)
-    mPrint('MUSIC', f'Searching for user requested song: ({query})')
-    return VideosSearch(query, limit = 1).result()['result'][0]['link']
 
 def conversion(sec):
     sec = int(sec)
@@ -79,6 +75,11 @@ class Player():
 
         self.stopped = False
 
+        self.videoUrl = ''
+        self.thumbnail = ''
+        self.lastthumbnail = ''
+        self.wasReported = False
+
         #flags needed to communicate with EmbedHandler
         self.skipped = False
         self.isPaused = False
@@ -91,8 +92,13 @@ class Player():
     def getVideoURL(self): #gets the url of the first song in queue (the one to play)
         mPrint('DEBUG', f'searching for url (QUERY: {self.currentSong["search"]})')
         track = self.currentSong['search']
-        url = VideosSearch(track, limit = 1).result()['result'][0]['link']
+        res = VideosSearch(track, limit = 1).result()['result'][0]
+        url = res['link']
+        self.videoUrl = url
+        self.thumbnail = res['thumbnails'][0]['url']
+    
         mPrint('DEBUG', f'FOUND URL: {url}')
+        mPrint('DEBUG', f'thumbnail = {self.thumbnail}')
         return url
     
     #wrapper that handles embed and song
@@ -105,6 +111,7 @@ class Player():
             mPrint('INFO', 'Player was stoppend. Returning.')
             return
         mPrint('INFO', "---------------- PLAYNEXT ----------------")
+        self.wasReported = False
         if error != None: mPrint('ERROR', f"{error}")
         
         if len(self.queueOrder) != 0:
@@ -360,6 +367,7 @@ class MessageHandler():
             description= f'Now Playing: **{self.player.currentSong["trackName"]}**\n{"".join(self.timeBar)} {conversion(self.stepProgress)} / {conversion(self.duration)}\n',
             color=0xff866f
         )
+
         artist = "N/A" if self.player.currentSong["artist"] == "" else self.player.currentSong["artist"]
         
         embed.add_field(name='Author:', value=f'{artist}')
@@ -374,14 +382,25 @@ class MessageHandler():
             embed.add_field(name="This message was moved, you may find the new one below", value=last5, inline=False)
             embed.color = 0x1e1e1e
 
-
+        embed.set_footer(text='🍑 Comandi del player: https://notlatif.github.io/CuloBot/#MusicBot')
+        
         if stop:
             embed.add_field(name=f'{"Queue finita" if self.player.endOfPlaylist else "Queue annullata"}', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
             embed.color = 0x1e1e1e
         elif leftAlone:
-            embed.add_field(name="Queue annullata", value="Mi avete lasciato da solo nel canale vocale 😭")
+            embed.add_field(name="Queue annullata", value="Mi avete lasciato da solo nel canale vocale 😭", inline=False)
 
-        embed.set_footer(text='🍑 Comandi del player: https://notlatif.github.io/CuloBot/#MusicBot')
+        if self.player.wasReported:
+            embed.add_field(name="Source", value=f"{self.player.videoUrl}\nQuesto link è stato segnalato, Grazie! 🧡")
+        elif not stop:
+            embed.add_field(name="Source", value=f"{self.player.videoUrl}\nÈ la canzone sbagliata? fammelo sapere con il tasto ⁉")
+        else:
+            embed.add_field(name="Source", value=f"{self.player.videoUrl}")
+
+        if self.player.thumbnail != '':
+            self.player.lastthumbnail = self.player.thumbnail
+            embed.set_image(url=self.player.thumbnail)
+        
 
         return embed
 

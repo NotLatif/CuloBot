@@ -103,6 +103,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
         "shuffle": "🔀",
         "loop": "🔂",
         "loop queue": "🔁",
+        "report": "⁉",
     }
 
 
@@ -135,7 +136,14 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
 
         if len(userInput.split()) == 0: return
 
-        if userInput.split()[0] in 'previous':
+        if userInput.split()[0] in 'report':
+            if not player.wasReported:
+                track = player.currentSong
+                player.wasReported = True
+                mPrint('SONGERROR', f'User reported song link discrepancy:\nSOURCE URL: {track["base_link"]}\nQUERY: {track["search"]}\nRESULT: {player.videoUrl}')
+                await messageHandler.updateEmbed()
+
+        elif userInput.split()[0] in 'previous':
             mPrint('USER', 'previous song')
             mPrint('TEST', f'previous song {player.previousSongId}')
             
@@ -145,7 +153,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
             pTask = asyncio.create_task(player.skip())
             await messageHandler.updateEmbed()
 
-        if userInput.split()[0] == 'skip':
+        elif userInput.split()[0] == 'skip':
             mPrint('USER', 'skipped song')
             skip = userInput.split()
             pTask.cancel()

@@ -1,5 +1,8 @@
-import json
+# import json #used for testing
 from youtubesearchpython import VideosSearch, Playlist, Video
+
+def searchYTurl(query, limit=1) -> str: #gets the url of the first song in queue (the one to play)
+    return VideosSearch(query, limit = limit).result()['result'][0]['link']
 
 def stampToSec(str : str):
     seconds = 0
@@ -12,7 +15,9 @@ def stampToSec(str : str):
         seconds += int(str[2]) * 60
     return seconds
 
-def getSongs(url : str):
+def getSongs(url : str, onlyThumbnail = False) -> list[dict]:
+    if onlyThumbnail:
+        print(f'Finding {url}')
     tracks = None
     if "www.youtube.com" not in url:
         #query youtube for the url of the first result
@@ -42,11 +47,17 @@ def getSongs(url : str):
         else:
             t['duration'] = stampToSec(t['duration'])
 
+    if onlyThumbnail:
+        t = tracks[0]
+        print(f"returning {t['thumbnails'][0]['url']}")
+        return t['thumbnails'][0]['url']
+    
     return [{
             'trackName': t["title"],
             'artist': t["channel"]["name"],
             'search': f"{t['title']} {t['channel']['name']}",
-            'duration_sec': t['duration']
+            'duration_sec': t['duration'],
+            'base_link': url,
         } for t in tracks ]
 
 

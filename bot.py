@@ -340,12 +340,12 @@ async def test(ctx : commands.Context):
     member = await ctx.guild.fetch_member(int(user))
     await joinImageSend(member, ctx.guild, ctx.channel)
 
-@bot.command(name='restart')
+@bot.command(name='bot_restart')
 async def test(ctx : commands.Context):
     #ONLY FOR TESTING PURPOSES. DO NOT ABUSE THIS COMMAND
     if ctx.message.author.id == 348199387543109654 or ctx.guild.id == 694106741436186665:
         mPrint("WARN", "RESTARTING BOT")
-        await ctx.send("please wait...")
+        await ctx.send("WARNING, THIS COMMAND IS DISTRUPRIVE OF SERVICE BUT...\nok papi please wait...")
         os.system(f"bot.py RESTART {ctx.guild.id} {ctx.channel.id} {ctx.message.id}")
         sys.exit()
 
@@ -1213,7 +1213,8 @@ async def playSong(ctx : commands.Context):
                         errors += f"Error: Could not find song/playlist {x}\n"
                     else:
                         if "open.spotify.com" not in x and "youtube.com" not in x:
-                            x = musicBridge.musicPlayer.searchYTurl(x)
+                            mPrint('MUSIC', f'Searching for user requested song: ({x})')
+                            x = musicBridge.musicPlayer.youtubeParser.searchYTurl(x)
                         tracks.append(x)
                 
                 if errors != '':
@@ -1271,7 +1272,8 @@ async def playSong(ctx : commands.Context):
                                 errors += f"Error: Song {x} is already present in {request[1]}\n"
                             else:
                                 if "open.spotify.com" not in x and "youtube.com" not in x:
-                                    x = musicBridge.musicPlayer.searchYTurl(x)
+                                    mPrint('MUSIC', f'Searching for user requested song: ({x})')
+                                    x = musicBridge.musicPlayer.youtubeParser.searchYTurl(x)
                                 tracks.append(x)
                             
                         if errors != '':
@@ -1373,9 +1375,6 @@ async def playSong(ctx : commands.Context):
         #user searched a link
         if "open.spotify.com" in request[1] or "youtube.com" in request[1] or "youtu.be" in request[1]:
             mPrint('INFO', f'FOUND SUPPORTED URL: {request[1]}')
-            if ctx.message.author.id != 348199387543109654:
-                await ctx.send('youtube currently not supported')
-                return
             await musicBridge.play(ctx.message.content.split()[1], ctx, bot)
 
         #user wants a saved playlist
@@ -1386,7 +1385,8 @@ async def playSong(ctx : commands.Context):
         
         #user wants to search for a song
         else:
-            trackURL = musicBridge.musicPlayer.searchYTurl(' '.join(request[1:]))
+            mPrint('MUSIC', f'Searching for user requested song: ({" ".join(request[1:])})')
+            trackURL = musicBridge.musicPlayer.youtubeParser.searchYTurl(' '.join(request[1:]))
             mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
             await musicBridge.play(trackURL, ctx, bot)
 
