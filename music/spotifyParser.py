@@ -8,17 +8,27 @@ load_dotenv()#Sensitive data is stored in a ".env" file
 CLIENT_ID = os.getenv('SPOTIFY_ID')[1:-1]
 CLIENT_SECRET = os.getenv('SPOTIFY_SECRET')[1:-1]
 
+authenticated = False
+
 #Authentication
-client_credentials_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
-sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
+try:
+    client_credentials_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
+    sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
+    authenticated = True
+except spotipy.oauth2.SpotifyOauthError:
+    print('WARNING: Spotify keys are wrong or not present. The bot won\'t be able to play music from spotify')
+
 
 def spotifyUrlParser(URL:str) -> tuple[str, str]:
     """gets a spotify link and returns a tuple with (URL, type); type can be playlist, album, track"""
+
     id = URL.split("/")[-1].split("?")[0]
     type = URL.split("/")[-2]
     return (id, type)
 
 def getSongs(URL:str) -> list[dict]:
+    if not authenticated:
+        return "SPOTIFY AUTH FAILED."
     id, type = spotifyUrlParser(URL)
 
     if type == "playlist":

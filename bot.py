@@ -1,5 +1,6 @@
 import asyncio
 import os
+import shutil
 import json
 import random
 import copy
@@ -11,22 +12,24 @@ from discord.utils import get
 from discord.ext import commands
 from typing import Union
 from PIL import Image, ImageOps, ImageDraw, ImageFont
+
+#generate .env file if first startup:
+if not os.path.isfile(".env"):
+    print('.env file not found, add your tokens there.')
+    with open('.env', 'w') as f:
+        f.write("DISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nGENIOUS_SECRET={}\n")
+    sys.exit()
+
+#custom modules
 import chessBridge
 import musicBridge
-import shutil
 from mPrint import mPrint as mp
-
-#This is specific to my own server, you can delete this lines as they do nothing for you
 myServer = True
-try:
+
+try: #This is specific to my own server, you can delete those lines as they do nothing for you
     import myStuff
 except ModuleNotFoundError:
     myServer = False
-
-#generate file if first startup:
-if not os.path.isfile(".env"):
-    with open('.env', 'w') as f:
-        f.write("DISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nGENIOUS_SECRET={}\n")
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
