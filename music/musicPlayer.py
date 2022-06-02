@@ -95,11 +95,15 @@ class Player():
 
         track = self.currentSong['search']
         if track in self.overwritten:
-            self.videoUrl = self.overwritten[track]
-            self.thumbnail = Video.get(self.videoUrl)['thumbnails'][1]['url']
-            url = self.videoUrl
+            url = self.overwritten[track]
+            mPrint('TEST', f'Found overwritten track {url}')
+
+            self.thumbnail = Video.get(url)['thumbnails'][1]['url']
+            self.videoUrl = url
+
         else:
-            res = VideosSearch(track, limit = 1).result()['result'][1]
+            mPrint('TEST', 'Searching track on youtube')
+            res = VideosSearch(track, limit = 1).result()['result'][0]
             url = res['link']
 
             self.videoUrl = url
@@ -399,11 +403,11 @@ class MessageHandler():
             embed.add_field(name="Queue annullata", value="Mi avete lasciato da solo nel canale vocale 😭", inline=False)
 
         if self.player.wasReported:
-            embed.add_field(name="Source", value=f"{self.player.videoUrl}\nQuesto link è stato segnalato, Grazie! 🧡")
+            embed.add_field(name="Source", value=f">{self.player.videoUrl}\nQuesto link è stato segnalato, Grazie! 🧡")
         elif not stop:
-            embed.add_field(name="Source", value=f"{self.player.videoUrl}\nÈ la canzone sbagliata? fammelo sapere con il tasto ⁉")
+            embed.add_field(name="Source", value=f">{self.player.videoUrl}\nÈ la canzone sbagliata? fammelo sapere con il tasto ⁉")
         else:
-            embed.add_field(name="Source", value=f"{self.player.videoUrl}")
+            embed.add_field(name="Source", value=f">{self.player.videoUrl}")
 
         if self.player.thumbnail != '':
             self.player.lastthumbnail = self.player.thumbnail
@@ -422,5 +426,3 @@ class MessageHandler():
                 await self.embedMSG.edit(embed=self.getEmbed(pnext=pnext))
         except discord.errors.HTTPException:
             mPrint('ERROR', f"DISCORD ERROR (probably embed had blank value)\n{traceback.format_exc()}")
-    
-        
