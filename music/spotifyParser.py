@@ -4,7 +4,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from math import ceil
 
-import mPrint as mp
+from mPrint import mPrint as mp
 def mPrint(tag, value):mp(tag, 'bot', value)
 
 load_dotenv()#Sensitive data is stored in a ".env" file
