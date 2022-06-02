@@ -1413,9 +1413,9 @@ async def on_message(message : discord.Message):
 #--------------------------------- This is specific to my server
     if myServer:
         value = await myStuff.parseData(message, settings, respSettings, bot)
-    if value != None:
-        settings = value
-        dumpSettings()
+        if value != None:
+            settings = value
+            dumpSettings()
 #--------------------------------- you can safely delete this
 
     #don't respond to self, commands, messages with less than 2 words
