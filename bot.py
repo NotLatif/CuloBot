@@ -44,7 +44,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 #TODO what if user has not the keys, same for spotify in spotifyParser.py
 GENIOUS = os.getenv('GENIOUS_SECRET')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","join_image":True,"leave_message":"Salutiamo felicemente il coglione di %name%","response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","join_image":True,"leave_message":"Salutiamo felicemente il coglione di %name%","response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{},"youtube_search_overwrite":{}}}
 
 intents = discord.Intents.all()
 intents.members = True
@@ -68,7 +68,6 @@ with open(settingsFile, 'a'): pass #make setting file if it does not exist
 
 with codecs.open('botFiles/lang.json', 'r', 'utf-8') as f:
     strings : dict[str:str] = json.load(f)['IT']#TODO add setting to change the language
-
 
 
 
@@ -106,8 +105,9 @@ def splitString(str, separator = ' ', delimiter = '\"') -> list:
 
 def dumpSettings():
     """Saves the settings to file"""
+    dump = {str(k): settings[k] for k in settings}
     with open(settingsFile, 'w') as f:
-        json.dump(settings, f, indent=2)
+        json.dump(dump, f, indent=2)
 
 def loadSettings():
     template = {}
@@ -115,36 +115,26 @@ def loadSettings():
     try:
         with open(settingsFile, 'r') as f:
             settings = json.load(f)
-    except json.JSONDecodeError: #file is empty
+    except json.JSONDecodeError: #file is empty FIXME testing, what if file is not empty and it's a decode error?
         with open(settingsFile, 'w') as fp:
             json.dump(template, fp , indent=2)
         return 0
 
-def updateSettings(id : int, setting :str = None, value :str = None, reset : bool = False, category : str = "responseSettings"):
-    id = str(id)
-    if setting != None:
-        settingFound = False
-        for s in settings[id][category]:
-            if s == setting:
-                settings[id][category][s] = value
-                settingFound = True
-        if settingFound == False : return -1
+    settings = {int(k): settings[k] for k in settings}
 
-        mPrint('INFO', 'settings updated for ' + str(id))
-        with open(settingsFile, 'w') as f:
-            json.dump(settings, f, indent=2)
-        return
-    
-    elif reset: #if only id is given, we want to append a new server
-        with open(settingsFile, 'r') as f:
-            temp = json.load(f)
-        temp[id] = SETTINGS_TEMPLATE["id"]
-        with open(settingsFile, 'w') as fp:
-            json.dump(temp, fp , indent=2)
-            settings[id] = temp[id]
+
+
+#TODO deprecate this and just use dumpSettings()
+def createSettings(id : int):
+    id = int(id)
+    with open(settingsFile, 'r') as f:
+        temp = json.load(f)
+    temp[id] = SETTINGS_TEMPLATE["id"]
+
+    loadSettings()
   
-def checkSettingsIntegrity(id : str):
-    id = str(id)
+def checkSettingsIntegrity(id : int):
+    id = int(id)
     mPrint('DEBUG', f'Checking guildData integrity of ({id})')
 
     settingsToCheck = copy.deepcopy(settings[id])
@@ -156,7 +146,7 @@ def checkSettingsIntegrity(id : str):
             mPrint('DEBUG', f'Deleting: {key}')
 
         if(type(settingsToCheck[key]) == dict):
-            if(key ==  "saved_playlists"): continue
+            if(key in ["saved_playlists", "youtube_search_overwrite"]): continue #whitelist
             for subkey in settingsToCheck[key]:
                 if(subkey not in SETTINGS_TEMPLATE["id"][key]): #check if there is a subkey that should not be there (avoid useless data)
                     del settings[id][key][subkey]
@@ -311,27 +301,27 @@ async def on_ready():
 
         members = '\n - '.join([member.name for member in guild.members])
         mPrint('DEBUG', f'Guild Members:\n - {members}')
-        if (str(guild.id) not in settings):
+        if (int(guild.id) not in settings):
             mPrint('DEBUG', '^ Generating settings for guild')
-            updateSettings(str(guild.id), reset=True)
+            createSettings(int(guild.id))
 
-        checkSettingsIntegrity(str(guild.id))
+        checkSettingsIntegrity(int(guild.id))
 
 @bot.event
 async def on_member_join(member : discord.Member):
     mPrint("INFO", "join detected")
-    joinString = settings[str(member.guild.id)]['responseSettings']['join_message']
+    joinString = settings[int(member.guild.id)]['responseSettings']['join_message']
     
     if(joinString != ''):
         joinString= joinString.replace('%name%', member.name)
         await member.guild.system_channel.send(joinString)
 
-    if settings[str(member.guild.id)]['responseSettings']['join_image']:
+    if settings[int(member.guild.id)]['responseSettings']['join_image']:
         await joinImageSend(member, member.guild)
 
 @bot.event
 async def on_member_remove(member : discord.Member):
-    leaveString = settings[str(member.guild.id)]['responseSettings']['leave_message']
+    leaveString = settings[int(member.guild.id)]['responseSettings']['leave_message']
     if(leaveString == ''): return
     leaveString= leaveString.replace('%name%', member.name)
     
@@ -357,15 +347,15 @@ async def test(ctx : commands.Context):
 
 @bot.command(name='rawdump')
 async def rawDump(ctx : commands.Context):
-    await ctx.send(f'```JSON dump for {ctx.guild.name}:\n{json.dumps(settings[str(ctx.guild.id)], indent=3)}```')
+    await ctx.send(f'```JSON dump for {ctx.guild.name}:\n{json.dumps(settings[int(ctx.guild.id)], indent=3)}```')
 
 @bot.command(name='joinmsg')
 async def joinmsg(ctx : commands.Context):
     args = ctx.message.content.split()
     if len(args) == 1:
         #if join message is not empty
-        if(settings[str(ctx.guild.id)]['responseSettings']['join_message'] != ''):
-            await ctx.send(settings[str(ctx.guild.id)]['responseSettings']['join_message'])
+        if(settings[int(ctx.guild.id)]['responseSettings']['join_message'] != ''):
+            await ctx.send(settings[int(ctx.guild.id)]['responseSettings']['join_message'])
         else:
             await ctx.send(strings['bot.joinmsg.none'])
     else:
@@ -373,20 +363,20 @@ async def joinmsg(ctx : commands.Context):
             await ctx.send(strings["bot.joinmsg.info"])
             return
         elif args[1].lower() == 'false':
-            settings[str(ctx.guild.id)]['responseSettings']['join_message'] = ''
+            settings[int(ctx.guild.id)]['responseSettings']['join_message'] = ''
             await ctx.send(strings["bot.joinmsg.deactivated"])
             return
-        settings[str(ctx.guild.id)]['responseSettings']['join_message'] = ' '.join(args[1:])
+        settings[int(ctx.guild.id)]['responseSettings']['join_message'] = ' '.join(args[1:])
         dumpSettings()
-        await ctx.send(strings["bot.joinmsg.new_message"].replace("$str0", settings[str(ctx.guild.id)]['responseSettings']['join_message']))
+        await ctx.send(strings["bot.joinmsg.new_message"].replace("$str0", settings[int(ctx.guild.id)]['responseSettings']['join_message']))
 
 @bot.command(name='leavemsg')
 async def leavemsg(ctx : commands.Context):
     args = ctx.message.content.split()
     if len(args) == 1:
         #if join message is not empty
-        if(settings[str(ctx.guild.id)]['responseSettings']['leave_message'] != ''):
-            await ctx.send(settings[str(ctx.guild.id)]['responseSettings']['leave_message'])
+        if(settings[int(ctx.guild.id)]['responseSettings']['leave_message'] != ''):
+            await ctx.send(settings[int(ctx.guild.id)]['responseSettings']['leave_message'])
         else:
             await ctx.send(strings["bot.leavemsg.none"])
     else:
@@ -394,29 +384,29 @@ async def leavemsg(ctx : commands.Context):
             await ctx.send(strings["bot.leavemsg.info"])
             return
         elif args[1].lower() == 'false':
-            settings[str(ctx.guild.id)]['responseSettings']['leave_message'] = ''
+            settings[int(ctx.guild.id)]['responseSettings']['leave_message'] = ''
             await ctx.send(strings["bot.joinmsg.deactivated"])
             return
-        settings[str(ctx.guild.id)]['responseSettings']['leave_message'] = ' '.join(args[1:])
+        settings[int(ctx.guild.id)]['responseSettings']['leave_message'] = ' '.join(args[1:])
         dumpSettings()
-        await ctx.send(strings["bot.leavemsg.new_message"].replace("$str0", settings[str(ctx.guild.id)]['responseSettings']['leave_message']))
+        await ctx.send(strings["bot.leavemsg.new_message"].replace("$str0", settings[int(ctx.guild.id)]['responseSettings']['leave_message']))
 
 @bot.command(name='joinimage')
 async def joinmsg(ctx : commands.Context):
     args = ctx.message.content.split()
     if len(args) != 1:
         if args[2].lower == 'true':
-            settings[str(ctx.guild.id)]['responseSettings']['join_image'] = True
+            settings[int(ctx.guild.id)]['responseSettings']['join_image'] = True
         else:
-            settings[str(ctx.guild.id)]['responseSettings']['join_image'] = False
+            settings[int(ctx.guild.id)]['responseSettings']['join_image'] = False
         dumpSettings()
 
-    await ctx.send(f"joinimage: {settings[str(ctx.guild.id)]['responseSettings']['join_image']}")
+    await ctx.send(f"joinimage: {settings[int(ctx.guild.id)]['responseSettings']['join_image']}")
 
 @bot.command(name='resp') 
 async def perc(ctx : commands.Context):  ## RESP command
     arg = ctx.message.content.replace('!resp', '')
-    respSettings = settings[str(ctx.guild.id)]["responseSettings"]
+    respSettings = settings[int(ctx.guild.id)]["responseSettings"]
 
     if(arg == ''):
         await ctx.send(strings["bot.resp.info"].replace("$perc", str(respSettings["response_perc"])))
@@ -435,20 +425,27 @@ async def perc(ctx : commands.Context):  ## RESP command
 
         if(arg[1].isnumeric()):
             await ctx.send(strings["bot.resp.resp_to_bots.edit"].replace('$s1', f'{arg[1]}'))
-            updateSettings(str(ctx.guild.id), 'response_to_bots_perc', int(arg[1]))
+            settings[ctx.guild.id]['responseSettings']['response_to_bots_perc'] = int(arg[1])
+            dumpSettings()
+            #updateSettings(int(ctx.guild.id), 'response_to_bots_perc', int(arg[1]))
             return
         
         if arg[1] in affirmative:
             response = strings['bot.resp.resp_to_bots.affirmative']
             validResponse = True
+            r = True
         elif arg[1] in negative:
             response = strings['bot.resp.resp_to_bots.negative']
             validResponse = True
+            r = False
         else:
             response = strings['bot.resp.resp_to_bots.invalid']
+            r = -1
         await ctx.send(response)
-        if validResponse:
-            updateSettings(ctx.guild.id, 'will_respond_to_bots', arg[1])
+        if validResponse and r != -1:
+            settings[ctx.guild.id]['responseSettings']['will_respond_to_bots'] = r
+            dumpSettings()
+            # updateSettings(ctx.guild.id, 'will_respond_to_bots', arg[1])
             return
 
     newPerc = int(arg[0].strip("%"))
@@ -457,12 +454,16 @@ async def perc(ctx : commands.Context):  ## RESP command
         await ctx.send(strings['nothing_changed'])
         return
 
-    respSettings["response_perc"] = newPerc
     await ctx.send(strings['bot.resp.newperc'].replace("$s2", str(newPerc)))
 
     mPrint('INFO', f'{ctx.author} set response to {arg}%')
-    updateSettings(str(ctx.guild.id) , 'response', newPerc)
-    updateSettings(str(ctx.guild.id) , 'other_response', newPerc//2)
+
+    settings[ctx.guild.id]['responseSettings']['will_respond_to_bots'] = r
+    dumpSettings()
+
+    settings[int(ctx.guild.id)]['resp_settings']['response_perc'] = newPerc #TODO add a command for other_perc
+    dumpSettings()
+
 
 @bot.command(name='words', aliases=['parole'])
 async def words(ctx : commands.Context): #send an embed with the words that the bot knows
@@ -471,8 +472,8 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
         newWord = ' '.join(args[1:])
         if args[1].lower() == 'del':
             delWord = int(args[2])
-            if len(settings[str(ctx.guild.id)]['responseSettings']['custom_words']) > delWord:
-                del settings[str(ctx.guild.id)]['responseSettings']['custom_words'][delWord]
+            if len(settings[int(ctx.guild.id)]['responseSettings']['custom_words']) > delWord:
+                del settings[int(ctx.guild.id)]['responseSettings']['custom_words'][delWord]
                 await ctx.send(strings['done'])
             else:
                 await ctx.send(strings['bot.words.id_not_found'])
@@ -480,8 +481,8 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
         
         if args[1].lower() == 'edit':
             editWord = int(args[2])
-            if len(settings[str(ctx.guild.id)]['responseSettings']['custom_words']) > editWord:
-                settings[str(ctx.guild.id)]['responseSettings']['custom_words'][editWord] = ' '.join(args[3:])
+            if len(settings[int(ctx.guild.id)]['responseSettings']['custom_words']) > editWord:
+                settings[int(ctx.guild.id)]['responseSettings']['custom_words'][editWord] = ' '.join(args[3:])
                 await ctx.send(strings['done'])
             else:
                 await ctx.send(strings['bot.words.id_not_found'])
@@ -492,23 +493,23 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
         
         if args[1].lower() == 'usedefault':
             if len(args) == 3:
-                settings[str(ctx.guild.id)]["responseSettings"]["use_global_words"] = args[2]
+                settings[int(ctx.guild.id)]["responseSettings"]["use_global_words"] = args[2]
                 await ctx.send(f'useDefault: {args[2]}')
                 dumpSettings()
                 return
             else:
                 await ctx.send(f'usage: `!words useDefault [true|false]`')
         
-        settings[str(ctx.guild.id)]['responseSettings']['custom_words'].append(newWord)
+        settings[int(ctx.guild.id)]['responseSettings']['custom_words'].append(newWord)
         await ctx.send(strings['bot.words.learned'])
         dumpSettings()
         return
 
     #1. Send a description
-    custom_words = settings[str(ctx.guild.id)]['responseSettings']['custom_words']
+    custom_words = settings[int(ctx.guild.id)]['responseSettings']['custom_words']
     description = strings['bot.words.info'].replace('$s1', ctx.guild.name)
 
-    if not settings[str(ctx.guild.id)]['responseSettings']['use_global_words']:
+    if not settings[int(ctx.guild.id)]['responseSettings']['use_global_words']:
        description += strings['bot.words.use_global_words'].replace('$s1', ctx.guild.name)
         
     embed = discord.Embed(
@@ -522,7 +523,7 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
     botWords = getWord(True)
 
     #2b. if the guild uses the global words, append them to value
-    if settings[str(ctx.guild.id)]['responseSettings']['use_global_words']:
+    if settings[int(ctx.guild.id)]['responseSettings']['use_global_words']:
         #is server uses default words
         value = '\n'.join(botWords)
         embed.add_field(name = strings['bot.words.bot_words'], value=value)
@@ -690,7 +691,7 @@ async def chessGame(ctx : commands.Context):
     #useful for FENs: eg   (!chess) game fen="bla bla bla" < str.strip will return ["game", "fen=bla", "bla", "bla"]
     args = splitString(args)                    #wheras splitString will return ["game", "fen=", "bla", "bla", "bla"]
     gameFEN = ''
-    gameBoard = settings[str(ctx.guild.id)]["chessGame"]["default_board"]
+    gameBoard = settings[int(ctx.guild.id)]["chessGame"]["default_board"]
     design = 'default'
     
 # 2. Parse args
@@ -727,10 +728,10 @@ async def chessGame(ctx : commands.Context):
             embed.add_field(name = 'Scacchiere del bot:', value=value, inline=False)
 
             #iii. if guild data has boards, append them to the embed
-            if settings[str(ctx.guild.id)]['chessGame']['boards'] != {}:
+            if settings[int(ctx.guild.id)]['chessGame']['boards'] != {}:
                 guildBoards = ''
-                for b in settings[str(ctx.guild.id)]['chessGame']['boards']:
-                    guildBoards += f"**{b}**: {settings[str(ctx.guild.id)]['chessGame']['boards'][b]}\n"
+                for b in settings[int(ctx.guild.id)]['chessGame']['boards']:
+                    guildBoards += f"**{b}**: {settings[int(ctx.guild.id)]['chessGame']['boards'][b]}\n"
                 embed.add_field(name = f'Scacchiere di {ctx.guild.name}:', value=guildBoards, inline=False)
             
             #iv. send the embed
@@ -754,10 +755,10 @@ async def chessGame(ctx : commands.Context):
                 embed.add_field(name = 'Design disponibili:', value=value, inline=False)
 
                 #iii. if guild data has designs, append them to the embed
-                if settings[str(ctx.guild.id)]['chessGame']['designs'] != {}:
+                if settings[int(ctx.guild.id)]['chessGame']['designs'] != {}:
                     guildDesigns = ''
-                    for b in settings[str(ctx.guild.id)]['chessGame']['designs']:
-                        guildDesigns += f"**{b}**: {settings[str(ctx.guild.id)]['chessGame']['designs'][b]}\n"
+                    for b in settings[int(ctx.guild.id)]['chessGame']['designs']:
+                        guildDesigns += f"**{b}**: {settings[int(ctx.guild.id)]['chessGame']['designs'][b]}\n"
                     embed.add_field(name = f'Design di {ctx.guild.name}:', value=guildDesigns, inline=False)
                 
                 
@@ -774,8 +775,8 @@ async def chessGame(ctx : commands.Context):
             if args[1] == 'see': #user wants the image of a design
                 if(len(args) == 3):
                     #design exists in guildData
-                    if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
-                        colors = settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]]
+                    if args[2] in settings[int(ctx.guild.id)]['chessGame']['designs']:
+                        colors = settings[int(ctx.guild.id)]['chessGame']['designs'][args[2]]
                         designPath = chessBridge.chessMain.gameRenderer.renderBoard(colors, ctx.message.id)
                         with open(designPath+'chessboard.png', "rb") as fh:
                             f = discord.File(fh, filename=(designPath + 'chessboard.png'))
@@ -799,8 +800,8 @@ async def chessGame(ctx : commands.Context):
                 if(len(args) >= 3):
                     selectedDesign = args[2:]
                     for d in selectedDesign: 
-                        if d in settings[str(ctx.guild.id)]['chessGame']['designs']:
-                            design = settings[str(ctx.guild.id)]['chessGame']['designs'].pop(d)
+                        if d in settings[int(ctx.guild.id)]['chessGame']['designs']:
+                            design = settings[int(ctx.guild.id)]['chessGame']['designs'].pop(d)
                             await ctx.send(f'Ho eliminato {d}: {design}')
                             dumpSettings()
                         else:
@@ -831,12 +832,12 @@ async def chessGame(ctx : commands.Context):
             if args[1] == 'edit':
                 #design edit name #0340430 #0359340
                 if len(args) == 5:
-                    if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
+                    if args[2] in settings[int(ctx.guild.id)]['chessGame']['designs']:
                         colors = parseHEX(args[3], args[4])
                         if colors == '0':
                             await ctx.send(f"Invalid hex {args[3]} {args[4]}")
                             return -2
-                        settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]] = colors
+                        settings[int(ctx.guild.id)]['chessGame']['designs'][args[2]] = colors
                         await ctx.send(f"Design modificato: **{args[2]}**: {colors}")
                         dumpSettings()
                     else:
@@ -848,14 +849,14 @@ async def chessGame(ctx : commands.Context):
 
             if args[1] == 'add':
                 if len(args) == 5:
-                    if args[2] in settings[str(ctx.guild.id)]['chessGame']['designs']:
+                    if args[2] in settings[int(ctx.guild.id)]['chessGame']['designs']:
                         await ctx.send(f'Il design esiste già. Usa `!chess design edit {args[2]} {args[3]} {args[4]} se vuoi modificarlo`')
                         return -2
                     colors = parseHEX(args[3], args[4])
                     if colors == '0':
                         await ctx.send(f"Invalid hex {args[3]} {args[4]}")
                         return -2
-                    settings[str(ctx.guild.id)]['chessGame']['designs'][args[2]] = colors
+                    settings[int(ctx.guild.id)]['chessGame']['designs'][args[2]] = colors
                     await ctx.send(f"Design aggiunto: **{args[2]}**: {colors}")
                     dumpSettings()
                 else:
@@ -894,9 +895,9 @@ async def chessGame(ctx : commands.Context):
             #i. avoid indexError because of the dumb user
             if len(args) == 3:
                 #ii. check if the board does not exist
-                if args[1] not in settings[str(ctx.guild.id)]['chessGame']['boards']:
+                if args[1] not in settings[int(ctx.guild.id)]['chessGame']['boards']:
                     #iii. append the board and dump the json data
-                    settings[str(ctx.guild.id)]['chessGame']['boards'][args[1]] = args[2]
+                    settings[int(ctx.guild.id)]['chessGame']['boards'][args[1]] = args[2]
                     dumpSettings()
                     await ctx.send('Fatto!')
                 else:
@@ -909,13 +910,13 @@ async def chessGame(ctx : commands.Context):
             #i. avoid indexError because of the dumb user
             if len(args) == 3:
                 #ii. copy the FEN
-                value = settings[str(ctx.guild.id)]['chessGame']['boards'][args[1]]
+                value = settings[int(ctx.guild.id)]['chessGame']['boards'][args[1]]
                 
                 #iii. delete the board
-                del settings[str(ctx.guild.id)]['chessGame']['boards'][args[1]]#it does not exist yet
+                del settings[int(ctx.guild.id)]['chessGame']['boards'][args[1]]#it does not exist yet
                 
                 #iv. create a new board with the same FEN, but a new name and dump the json data
-                settings[str(ctx.guild.id)]['chessGame']['boards'][args[2]] = value
+                settings[int(ctx.guild.id)]['chessGame']['boards'][args[2]] = value
                 dumpSettings()
                 await ctx.send('Fatto!')
             else:
@@ -926,12 +927,12 @@ async def chessGame(ctx : commands.Context):
            #i. avoid indexError because of the dumb user
             if len(args) == 3:
                 #ii. Check if board exists, if not notify the user
-                if args[1] not in  settings[str(ctx.guild.id)]['chessGame']['boards']:
+                if args[1] not in  settings[int(ctx.guild.id)]['chessGame']['boards']:
                     await ctx.send(f"Non posso modificare qualcosa che non esiste ({args[1]})")
                     return -2
 
                 #iii. edit the FEN, and dump the data
-                settings[str(ctx.guild.id)]['chessGame']['boards'][args[1]] = args[2]
+                settings[int(ctx.guild.id)]['chessGame']['boards'][args[1]] = args[2]
                 dumpSettings()
                 await ctx.send('Fatto!')
             else:
@@ -942,10 +943,10 @@ async def chessGame(ctx : commands.Context):
             #i. avoid indexError because of the dumb user
             if len(args) == 2:
                 #ii. Check if board exists, if not notify the user
-                if args[1] in settings[str(ctx.guild.id)]['chessGame']['boards']:
+                if args[1] in settings[int(ctx.guild.id)]['chessGame']['boards']:
 
                     #delete the board, dump the settings and send the FEN in chat
-                    fen = settings[str(ctx.guild.id)]['chessGame']['boards'].pop(args[1])
+                    fen = settings[int(ctx.guild.id)]['chessGame']['boards'].pop(args[1])
                     dumpSettings()
                     await ctx.send(f'Fatto! FEN: {fen}')
                 else:
@@ -984,8 +985,8 @@ async def chessGame(ctx : commands.Context):
 
     else: #else, use board name
         #i. check if the board name is saved in guild data
-        if gameBoard in settings[str(ctx.guild.id)]['chessGame']['boards']: #board in guild data
-            board = ('FEN', settings[str(ctx.guild.id)]['chessGame']['boards'][gameBoard])
+        if gameBoard in settings[int(ctx.guild.id)]['chessGame']['boards']: #board in guild data
+            board = ('FEN', settings[int(ctx.guild.id)]['chessGame']['boards'][gameBoard])
         #ii. if not, check if it's present in the global data
         elif chessBridge.doesBoardExist(gameBoard): #board in global data
             board = ('BOARD', gameBoard)
@@ -998,9 +999,9 @@ async def chessGame(ctx : commands.Context):
     designName = design
     if designName != 'default': #if user asked for a design, check if it exists
         #give priority to guild designs
-        if design in settings[str(ctx.guild.id)]['chessGame']['designs']:
+        if design in settings[int(ctx.guild.id)]['chessGame']['designs']:
             designName = design
-            design = settings[str(ctx.guild.id)]['chessGame']['designs'][design]
+            design = settings[int(ctx.guild.id)]['chessGame']['designs'][design]
             design = chessBridge.chessMain.gameRenderer.renderBoard(design, ctx.message.id)
         elif not chessBridge.chessMain.gameRenderer.doesDesignExist(design):
             designName = 'default'
@@ -1198,9 +1199,9 @@ async def playSong(ctx : commands.Context):
             description="**Commands:** \n!playlist [add|edit] <name> <link>\n!playlist remove <name>",
             color=0x1ed760
         )
-        for plist in settings[str(ctx.guild.id)]["saved_playlists"]:
+        for plist in settings[int(ctx.guild.id)]["saved_playlists"]:
             urls=''
-            for i, t in enumerate(settings[str(ctx.guild.id)]["saved_playlists"][plist]):
+            for i, t in enumerate(settings[int(ctx.guild.id)]["saved_playlists"][plist]):
                 urls += f'**{i}**: {t}\n' 
             embed.add_field(name=plist, value=urls, inline=False)
         await ctx.send(embed=embed)
@@ -1240,7 +1241,7 @@ async def playSong(ctx : commands.Context):
                     trackList += f"\n**{i}**. {t}"
 
                 #Save the song/playlist URL in a list of one element and inform the user
-                settings[str(ctx.guild.id)]["saved_playlists"][request[2]] = tracks
+                settings[int(ctx.guild.id)]["saved_playlists"][request[2]] = tracks
                 
                 embed = discord.Embed(title = f"Playlist {request[2]}: ", description=trackList)
                 await ctx.send(f"Playlist {request[2]} -> {trackList}")
@@ -1253,7 +1254,7 @@ async def playSong(ctx : commands.Context):
         elif request[1] in ["remove", "del"]:
             if len(request) == 3:
                 try:
-                    del settings[str(ctx.guild.id)]["saved_playlists"][request[2]]
+                    del settings[int(ctx.guild.id)]["saved_playlists"][request[2]]
                     await ctx.send(f"Deleted {request[2]}.")
                     dumpSettings()
                 except KeyError:
@@ -1261,7 +1262,7 @@ async def playSong(ctx : commands.Context):
                 return
 
         # operations on existing playlist !playlist <name> [add|remove]
-        elif request[1] in settings[str(ctx.guild.id)]["saved_playlists"]:
+        elif request[1] in settings[int(ctx.guild.id)]["saved_playlists"]:
             if len(request) > 2:
                 #!playlist <name> add <url1[, url2, ..., urln]> TODO help
                 if request[2] == 'add': #append a song to the playlist request[2]
@@ -1274,7 +1275,7 @@ async def playSong(ctx : commands.Context):
                             if isUrlValid == False: #404
                                 errors += f"Error: Could not find song/playlist {x}\n"
                                 return
-                            elif x in settings[str(ctx.guild.id)]["saved_playlists"][request[1]]:
+                            elif x in settings[int(ctx.guild.id)]["saved_playlists"][request[1]]:
                                 errors += f"Error: Song {x} is already present in {request[1]}\n"
                             else:
                                 if "open.spotify.com" not in x and "youtube.com" not in x:
@@ -1298,9 +1299,9 @@ async def playSong(ctx : commands.Context):
                         #append the song/playlist URL in a list of one element and inform the user
                         #add the new urls to the settings
                         for t in tracks:
-                            settings[str(ctx.guild.id)]["saved_playlists"][request[1]].append(t)
+                            settings[int(ctx.guild.id)]["saved_playlists"][request[1]].append(t)
                         #prepare message and send the playlist to the server
-                        for i, t in enumerate(settings[str(ctx.guild.id)]["saved_playlists"][request[1]]):
+                        for i, t in enumerate(settings[int(ctx.guild.id)]["saved_playlists"][request[1]]):
                             trackList += f"\n**{i}**. {t}"
                         embed = discord.Embed(title = f"Playlist {request[1]}: ", description=trackList)
                         await ctx.send(embed=embed)
@@ -1312,8 +1313,8 @@ async def playSong(ctx : commands.Context):
                 
                 elif request[2] == 'remove': #!playlist <name> remove TODO help
                     if len(request) == 3:
-                        tracks = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
-                        del settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+                        tracks = settings[int(ctx.guild.id)]["saved_playlists"][request[1]]
+                        del settings[int(ctx.guild.id)]["saved_playlists"][request[1]]
                         trackList = ''
                         for i, t in enumerate(tracks):
                             trackList += f"\n**{i}**. {t}"
@@ -1326,18 +1327,18 @@ async def playSong(ctx : commands.Context):
                         return
 
                     elif len(request) == 4: #!playlist <name> remove [urlindex] TODO help
-                        if request[3].isnumeric() and int(request[3]) < len(settings[str(ctx.guild.id)]["saved_playlists"][request[1]]):
+                        if request[3].isnumeric() and int(request[3]) < len(settings[int(ctx.guild.id)]["saved_playlists"][request[1]]):
                             trackList = ''
-                            for i, t in enumerate(settings[str(ctx.guild.id)]["saved_playlists"][request[1]]):
+                            for i, t in enumerate(settings[int(ctx.guild.id)]["saved_playlists"][request[1]]):
                                 if i == int(request[3]): 
                                     trackList += f"\n❌ **{i}**. {t}"
                                 else:
                                     trackList += f"\n**{i}**. {t}"
                             
-                            settings[str(ctx.guild.id)]["saved_playlists"][request[1]].pop(int(request[3]))
+                            settings[int(ctx.guild.id)]["saved_playlists"][request[1]].pop(int(request[3]))
                             
-                            if len(settings[str(ctx.guild.id)]["saved_playlists"][request[1]]) == 0:
-                                del settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+                            if len(settings[int(ctx.guild.id)]["saved_playlists"][request[1]]) == 0:
+                                del settings[int(ctx.guild.id)]["saved_playlists"][request[1]]
 
                             embed = discord.Embed(
                                 title=f"Removed from playlist {request[1]}:",
@@ -1352,7 +1353,7 @@ async def playSong(ctx : commands.Context):
                         await ctx.send('Usage: !playlist <name> remove [id], se id non è presente elimina tutta la playlist')
                     
             else: #!playlist <name> TODO help
-                tracks = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+                tracks = settings[int(ctx.guild.id)]["saved_playlists"][request[1]]
                 trackList = ''
                 for i, t in enumerate(tracks):
                     trackList += f"\n**{i}**. {t}"
@@ -1377,22 +1378,25 @@ async def playSong(ctx : commands.Context):
         await ctx.send("Usage: !play <song>\nsong can be: [spotify URL | youtube URL | name of a saved playlist | name of the song]")
     else:
         #user searched a link
+        playContent = ''
         if "open.spotify.com" in request[1] or "youtube.com" in request[1] or "youtu.be" in request[1]:
             mPrint('INFO', f'FOUND SUPPORTED URL: {request[1]}')
-            await musicBridge.play(ctx.message.content.split()[1], ctx, bot)
+            playContent = ctx.message.content.split()[1]
 
         #user wants a saved playlist
-        elif request[1] in settings[str(ctx.guild.id)]["saved_playlists"]:
-            trackURL_list : list = settings[str(ctx.guild.id)]["saved_playlists"][request[1]]
+        elif request[1] in settings[int(ctx.guild.id)]["saved_playlists"]:
+            trackURL_list : list = settings[int(ctx.guild.id)]["saved_playlists"][request[1]]
             mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL_list}')
-            await musicBridge.play(trackURL_list, ctx, bot)
+            playContent = trackURL_list
         
         #user wants to search for a song
         else:
             mPrint('MUSIC', f'Searching for user requested song: ({" ".join(request[1:])})')
             trackURL = musicBridge.musicPlayer.youtubeParser.searchYTurl(' '.join(request[1:]))
             mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
-            await musicBridge.play(trackURL, ctx, bot)
+            playContent = trackURL
+        
+        await musicBridge.play(playContent, ctx, bot, settings[int(ctx.guild.id)]['youtube_search_overwrite'])
 
 
 @bot.event   ## DETECT AND RESPOND TO MSG
@@ -1406,7 +1410,7 @@ async def on_message(message : discord.Message):
     
     await bot.process_commands(message)
 
-    respSettings = settings[str(message.guild.id)]["responseSettings"]
+    respSettings = settings[int(message.guild.id)]["responseSettings"]
 
 #--------------------------------- This is specific to my server
     if myServer:
@@ -1466,3 +1470,5 @@ try:
     bot.run(TOKEN)
 except:
     mPrint('FATAL', f'Discord key absent or wrong. Unauthorized\n{traceback.format_exc()}')
+
+#Birthday: 07/May/2022

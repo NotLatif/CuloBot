@@ -42,7 +42,7 @@ def evalUrl(url) -> bool:
         return False
     return True
 
-async def play(url : str, ctx : commands.Context, bot : discord.Client):
+async def play(url : str, ctx : commands.Context, bot : discord.Client, overwritten = tuple[str:str]):
     """"""
     #genius = lg.Genius('Client_Access_Token_Goes_Here', skip_non_songs=True, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
 
@@ -110,7 +110,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
     }
 
 
-    player = musicPlayer.Player(voice, queue)
+    player = musicPlayer.Player(voice, queue, overwritten)
     messageHandler = musicPlayer.MessageHandler(player, embedMSG, vchannel)
     
     try:

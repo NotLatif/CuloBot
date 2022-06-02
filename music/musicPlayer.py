@@ -19,7 +19,7 @@ import discord
 import asyncio
 import time
 from youtube_dl import YoutubeDL
-from youtubesearchpython import VideosSearch
+from youtubesearchpython import VideosSearch, Video
 from random import shuffle
 
 import youtubeParser #needed to link bot with youtubeParser
@@ -56,9 +56,10 @@ def conversion(sec):
     return f'{h}{int(min):02}:{int(sec_value):02}'
 
 class Player():
-    def __init__(self, vc : discord.VoiceClient, queue : dict[int:dict]) -> None:
+    def __init__(self, vc : discord.VoiceClient, queue : dict[int:dict], overwritten : dict[str:str]) -> None:
         self.queue : dict[int:dict] = queue
         self.queueOrder = [x for x in range(len(queue))] #TEST 1 song in playlist
+        self.overwritten = overwritten #the songs that get user reported as bad results from queries are specified here
 
         self.isShuffled = config.player_shuffle
         if self.isShuffled: shuffle(self.queueOrder)
@@ -91,11 +92,18 @@ class Player():
 
     def getVideoURL(self): #gets the url of the first song in queue (the one to play)
         mPrint('DEBUG', f'searching for url (QUERY: {self.currentSong["search"]})')
+
         track = self.currentSong['search']
-        res = VideosSearch(track, limit = 1).result()['result'][0]
-        url = res['link']
-        self.videoUrl = url
-        self.thumbnail = res['thumbnails'][0]['url']
+        if track in self.overwritten:
+            self.videoUrl = self.overwritten[track]
+            self.thumbnail = Video.get(self.videoUrl)['thumbnails'][1]['url']
+            url = self.videoUrl
+        else:
+            res = VideosSearch(track, limit = 1).result()['result'][1]
+            url = res['link']
+
+            self.videoUrl = url
+            self.thumbnail = res['thumbnails'][0]['url']
     
         mPrint('DEBUG', f'FOUND URL: {url}')
         mPrint('DEBUG', f'thumbnail = {self.thumbnail}')

@@ -18,8 +18,8 @@ def mPrint(tag, source, text):
     """
 
     willPrint = False
-    willLog = False
-    songError = False
+    willLog = False 
+    songError = True if tag == 'SONGERROR' else False
 
     if printLevel <= 3:
         if tag in ['ERROR', 'FATAL', 'SONGERROR']: willPrint = True
@@ -31,7 +31,7 @@ def mPrint(tag, source, text):
         if tag in ['INFO', 'MUSIC', 'USER', 'GAME']: willPrint = True
 
     if logLevel <= 3:
-        if tag in ['ERROR', 'FATAL', 'SONGERROR']: willLog, songError = True, True
+        if tag in ['ERROR', 'FATAL', 'SONGERROR']: willLog = True
     if logLevel <= 2:
         if tag in ['WARN', 'GAMEErr']: willLog = True
     if logLevel <= 1:
