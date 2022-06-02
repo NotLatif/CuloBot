@@ -20,6 +20,9 @@ def parseUrl(url) -> list:
     if 'spotify.com' in url:
         try:
             tracks = spotifyParser.getSongs(url)
+            if tracks == "SPOTIFY AUTH FAILED.":
+                mPrint('FATAL', "SPOTIFY AUTH FAILED, add your keys in the .env file if you want to enable spotify functionalities")
+                return None
         except Exception:
             mPrint('ERROR', f"Spotify parser error:\nurl = {url}\n{traceback.format_exc()}")
             return None
@@ -136,14 +139,14 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
 
         if len(userInput.split()) == 0: return
 
-        if userInput.split()[0] in 'report':
+        if userInput.split()[0] == 'report':
             if not player.wasReported:
                 track = player.currentSong
                 player.wasReported = True
                 mPrint('SONGERROR', f'User reported song link discrepancy:\nSOURCE URL: {track["base_link"]}\nQUERY: {track["search"]}\nRESULT: {player.videoUrl}')
                 await messageHandler.updateEmbed()
 
-        elif userInput.split()[0] in 'previous':
+        elif userInput.split()[0] == 'previous':
             mPrint('USER', 'previous song')
             mPrint('TEST', f'previous song {player.previousSongId}')
             
@@ -284,6 +287,10 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client):
             await messageHandler.updateEmbed()
 
         elif userInput.split()[0] in ['play', 'p']: #TODO
+            if userMessage.channel.id != ctx.channel.id:
+                await ctx.message.add_reaction('❌')
+                await ctx.reply('Sono già connesso in un canale vocale, per aggiungere una canzone manda un messaggio nel canale dove ho inviato la queue!')
+                return
             request = userInput.split()
             if len(request) == 1:
                 userMessage.reply("Devi darmi un link bro")

@@ -1,5 +1,6 @@
 import asyncio
 import os
+import shutil
 import json
 import random
 import copy
@@ -11,22 +12,28 @@ from discord.utils import get
 from discord.ext import commands
 from typing import Union
 from PIL import Image, ImageOps, ImageDraw, ImageFont
+
+from mPrint import mPrint as mp
+def mPrint(tag, value):mp(tag, 'bot', value)
+
+#generate .env file if first startup:
+if not os.path.isfile(".env"):
+    mPrint('WARN', '.env file not found, add your tokens there.')
+    with open('.env', 'w') as f:
+        f.write("DISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nGENIOUS_SECRET={}\n")
+    sys.exit()
+
+#custom modules
 import chessBridge
 import musicBridge
-import shutil
-from mPrint import mPrint as mp
 
-#This is specific to my own server, you can delete this lines as they do nothing for you
+
 myServer = True
-try:
+
+try: #This is specific to my own server, you can delete those lines as they do nothing for you
     import myStuff
 except ModuleNotFoundError:
     myServer = False
-
-#generate file if first startup:
-if not os.path.isfile(".env"):
-    with open('.env', 'w') as f:
-        f.write("DISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nGENIOUS_SECRET={}\n")
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
@@ -63,8 +70,7 @@ with codecs.open('botFiles/lang.json', 'r', 'utf-8') as f:
     strings : dict[str:str] = json.load(f)['IT']#TODO add setting to change the language
 
 
-def mPrint(tag, value):
-    mp(tag, 'bot', value)
+
 
 #Useful funtions
 def splitString(str, separator = ' ', delimiter = '\"') -> list:
@@ -1364,8 +1370,6 @@ async def playSong(ctx : commands.Context):
     await ctx.channel.typing()
     voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
     if voice_client and voice_client.is_connected():
-        await ctx.message.add_reaction('❌')
-        await ctx.reply('Sono già connesso in un canale vocale, per aggiungere una canzone manda un messaggio nel canale dove ho inviato la queue!')
         return
 
     request = ctx.message.content.split()
@@ -1407,9 +1411,9 @@ async def on_message(message : discord.Message):
 #--------------------------------- This is specific to my server
     if myServer:
         value = await myStuff.parseData(message, settings, respSettings, bot)
-    if value != None:
-        settings = value
-        dumpSettings()
+        if value != None:
+            settings = value
+            dumpSettings()
 #--------------------------------- you can safely delete this
 
     #don't respond to self, commands, messages with less than 2 words
@@ -1458,4 +1462,7 @@ async def on_message(message : discord.Message):
 
 
 loadSettings()
-bot.run(TOKEN)
+try:
+    bot.run(TOKEN)
+except:
+    mPrint('FATAL', f'Discord key absent or wrong. Unauthorized\n{traceback.format_exc()}')
