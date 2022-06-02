@@ -13,9 +13,12 @@ from discord.ext import commands
 from typing import Union
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 
+from mPrint import mPrint as mp
+def mPrint(tag, value):mp(tag, 'bot', value)
+
 #generate .env file if first startup:
 if not os.path.isfile(".env"):
-    print('.env file not found, add your tokens there.')
+    mPrint('WARN', '.env file not found, add your tokens there.')
     with open('.env', 'w') as f:
         f.write("DISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nGENIOUS_SECRET={}\n")
     sys.exit()
@@ -23,7 +26,8 @@ if not os.path.isfile(".env"):
 #custom modules
 import chessBridge
 import musicBridge
-from mPrint import mPrint as mp
+
+
 myServer = True
 
 try: #This is specific to my own server, you can delete those lines as they do nothing for you
@@ -66,8 +70,7 @@ with codecs.open('botFiles/lang.json', 'r', 'utf-8') as f:
     strings : dict[str:str] = json.load(f)['IT']#TODO add setting to change the language
 
 
-def mPrint(tag, value):
-    mp(tag, 'bot', value)
+
 
 #Useful funtions
 def splitString(str, separator = ' ', delimiter = '\"') -> list:
@@ -1461,4 +1464,7 @@ async def on_message(message : discord.Message):
 
 
 loadSettings()
-bot.run(TOKEN)
+try:
+    bot.run(TOKEN)
+except:
+    mPrint('FATAL', f'Discord key absent or wrong. Unauthorized\n{traceback.format_exc()}')

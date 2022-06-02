@@ -4,6 +4,9 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from math import ceil
 
+import mPrint as mp
+def mPrint(tag, value):mp(tag, 'bot', value)
+
 load_dotenv()#Sensitive data is stored in a ".env" file
 CLIENT_ID = os.getenv('SPOTIFY_ID')[1:-1]
 CLIENT_SECRET = os.getenv('SPOTIFY_SECRET')[1:-1]
@@ -16,7 +19,7 @@ try:
     sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
     authenticated = True
 except spotipy.oauth2.SpotifyOauthError:
-    print('WARNING: Spotify keys are wrong or not present. The bot won\'t be able to play music from spotify')
+    mPrint('ERROR', 'WARNING: Spotify keys are wrong or not present. The bot won\'t be able to play music from spotify')
 
 
 def spotifyUrlParser(URL:str) -> tuple[str, str]:
