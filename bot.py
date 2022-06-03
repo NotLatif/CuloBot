@@ -1402,11 +1402,11 @@ async def playSong(ctx : commands.Context):
 async def playSong(ctx : commands.Context):
     await ctx.channel.typing()
     await asyncio.sleep(2) #ensure that file exists
-    if os.path.isfile(f'botFiles/{str(ctx.guild.id)}.json'):
+    if os.path.isfile(f'botFiles/suggestions/{str(ctx.guild.id)}.json'):
         with open(f'botFiles/{str(ctx.guild.id)}.json') as f:
             newOverwrites = json.load(f)
             if settings[ctx.guild.id]['youtube_search_overwrite'] == newOverwrites:
-                await ctx.send('Nothing changed.')
+                await ctx.send('Non è cambiato niente...')
             else:
                 settings[ctx.guild.id]['youtube_search_overwrite'] = newOverwrites
                 dumpSettings()

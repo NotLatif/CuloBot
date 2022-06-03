@@ -149,6 +149,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
                 await messageHandler.updateEmbed()
 
         elif userInput.split()[0] == 'suggest':
+            await ctx.channel.typing()
             mPrint('INFO', userInput.split())
             if len(userInput.split()) == 2:
                 suggestion = [player.currentSong['search'], userInput.split()[1]]
@@ -156,7 +157,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
                     data = json.load(f)[str(ctx.guild.id)]['youtube_search_overwrite']
                 
                 data[suggestion[0]] = suggestion[1]
-                with open(f'botFiles/{str(ctx.guild.id)}.json', 'w') as f:
+                with open(f'botFiles/suggestions/{str(ctx.guild.id)}.json', 'w') as f:
                     json.dump(data, f, indent=2)
 
             else:
