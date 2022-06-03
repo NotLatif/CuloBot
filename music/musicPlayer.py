@@ -404,7 +404,7 @@ class MessageHandler():
 
         if self.player.wasReported:
             embed.add_field(name="Source", value=f">{self.player.videoUrl}\nQuesto link è stato segnalato, Grazie! 🧡")
-        elif not stop:
+        elif not stop and not leftAlone:
             embed.add_field(name="Source", value=f">{self.player.videoUrl}\nÈ la canzone sbagliata? fammelo sapere con il tasto ⁉")
         else:
             embed.add_field(name="Source", value=f">{self.player.videoUrl}")
