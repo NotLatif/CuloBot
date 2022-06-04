@@ -103,7 +103,7 @@ def splitString(str, separator = ' ', delimiter = '\"') -> list:
          
     return lstStr
 
-def dumpSettings():
+def dumpSettings(): #only use this function to save data to guildData.json (I think this should avoid weird stuff with concurrent scripts idk)
     """Saves the settings to file"""
     dump = {str(k): settings[k] for k in settings}
     with open(settingsFile, 'w') as f:
@@ -341,7 +341,7 @@ async def test(ctx : commands.Context):
     #ONLY FOR TESTING PURPOSES. DO NOT ABUSE THIS COMMAND
     if ctx.message.author.id == 348199387543109654 or ctx.guild.id == 694106741436186665:
         mPrint("WARN", "RESTARTING BOT")
-        await ctx.send("WARNING, THIS COMMAND IS DISTRUPRIVE OF SERVICE BUT...\nok papi please wait...")
+        await ctx.send("WARNING, DO NOT ABUSE THIS COMMAND...\nplease wait...")
         os.system(f"bot.py RESTART {ctx.guild.id} {ctx.channel.id} {ctx.message.id}")
         sys.exit()
 

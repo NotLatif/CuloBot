@@ -201,7 +201,7 @@ class Player():
     def shuffle(self): #TODO make this a toggle
         if self.isShuffled:
             self.isShuffled = False
-            self.queueOrder = [x for x in range(len(self.queue))]
+            self.queueOrder = sorted(self.queueOrder)
         else:
             self.isShuffled = True
             shuffle(self.queueOrder)
