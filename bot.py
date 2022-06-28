@@ -26,6 +26,7 @@ if not os.path.isfile(".env"):
 #custom modules
 import chessBridge
 import musicBridge
+import poll
 
 
 myServer = True
@@ -215,9 +216,14 @@ def getJoinImageData(membername) -> tuple[Image.Image, ImageFont.truetype, tuple
     images = os.listdir(image_path)
     image_path = f'{image_path}{random.choice(images)}'
 
-    if image_path[-5:] == '.json': 
+    print(image_path)
+    if image_path[-5:] == '.json':
         image_path = image_path[:-5] + '.png'
-    image = Image.open(image_path)
+        image_path2 = image_path[:-5] + '.jpg'
+    try:
+        image = Image.open(image_path)
+    except:
+        image = Image.open(image_path2)
 
     if os.path.isfile(f'{image_path[:-4]}.json'):
         with open(f'{image_path[:-4]}.json', 'r') as f:
@@ -334,6 +340,7 @@ async def test(ctx : commands.Context):
         return
     user = ctx.message.content.split()[1][2:-1]
     member = await ctx.guild.fetch_member(int(user))
+    await ctx.channel.typing()
     await joinImageSend(member, ctx.guild, ctx.channel)
 
 @bot.command(name='bot_restart')
@@ -454,12 +461,9 @@ async def perc(ctx : commands.Context):  ## RESP command
         await ctx.send(strings['nothing_changed'])
         return
 
-    await ctx.send(strings['bot.resp.newperc'].replace("$s2", str(newPerc)))
+    await ctx.send(strings['bot.resp.newperc'].replace("$s1", str(newPerc)))
 
     mPrint('INFO', f'{ctx.author} set response to {arg}%')
-
-    settings[ctx.guild.id]['responseSettings']['will_respond_to_bots'] = r
-    dumpSettings()
 
     settings[int(ctx.guild.id)]['resp_settings']['response_perc'] = newPerc #TODO add a command for other_perc
     dumpSettings()
@@ -666,11 +670,22 @@ async def embedpages(ctx : commands.Context):
 
     await msg.clear_reactions()
 
+@bot.command(name='rename')
+async def rename(ctx : commands.Context):
+    print('RENAME')
+    id = 773248894858821632
+    channel = await ctx.guild.fetch_channel(id)
+    await channel.edit(name="hentai del sabato sera")
+
 @bot.command(name='ping')
 async def ping(ctx : commands.Context):
     pingms = round(bot.latency*1000)
     await ctx.send(f'Pong! {pingms}ms')
     mPrint('INFO', f'ping detected: {pingms} ms')
+
+@bot.command(name='poll', pass_context=True) #CHESS GAME (very long def)
+async def culopoll(ctx : commands.Context):
+    await poll.poll(ctx, splitString(ctx.message.content)[1:])
 
 @bot.command(name='chess', pass_context=True) #CHESS GAME (very long def)
 async def chessGame(ctx : commands.Context):
@@ -1433,6 +1448,7 @@ async def on_message(message : discord.Message):
         if value != None:
             settings = value
             dumpSettings()
+            return
 #--------------------------------- you can safely delete this
 
     #don't respond to self, commands, messages with less than 2 words

@@ -402,7 +402,7 @@ class MessageHandler():
         elif leftAlone:
             embed.add_field(name="Queue annullata", value="Mi avete lasciato da solo nel canale vocale 😭", inline=False)
 
-        if self.player.wasReported:
+        if self.player.wasReported and not stop:
             embed.add_field(name="Source", value=f">{self.player.videoUrl}\nQuesto link è stato segnalato, Grazie! 🧡")
         elif not stop and not leftAlone:
             embed.add_field(name="Source", value=f">{self.player.videoUrl}\nÈ la canzone sbagliata? fammelo sapere con il tasto ⁉")
