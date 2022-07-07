@@ -1384,8 +1384,10 @@ async def playSong(ctx : commands.Context):
 @bot.command(name='play', pass_context=True, aliases=['p']) #Player
 async def playSong(ctx : commands.Context):
     await ctx.channel.typing()
-    voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
-    if voice_client and voice_client.is_connected():
+    voice_client : discord.VoiceClient = get(ctx.bot.voice_clients, guild=ctx.guild)
+    if voice_client != None:
+        if voice_client.is_connected() and voice_client.channel != ctx.voice_client.channel:
+            await ctx.send('Sono già connesso in un canale vocale')
         return
 
     request = ctx.message.content.split()

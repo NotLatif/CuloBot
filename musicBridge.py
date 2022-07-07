@@ -97,8 +97,6 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
         voice : discord.VoiceClient = await vchannel.connect()
         await ctx.message.add_reaction('🍑')
 
-    embedMSG = await ctx.send(embed=embed)
-
     emojis = {
         "stop": "⏹",
         "previous": "⏮",
@@ -110,6 +108,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
         "report": "⁉",
     }
 
+    embedMSG = await ctx.send(embed=embed)
 
     player = musicPlayer.Player(voice, queue, overwritten)
     messageHandler = musicPlayer.MessageHandler(player, embedMSG, vchannel)
@@ -128,7 +127,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
         return m.author != bot.user and m.channel.id == ctx.channel.id
 
     def checkEmoji(reaction : discord.Reaction, user): #check if reaction was added to the right message
-        return user != bot.user and reaction.message.id == embedMSG.id
+        return user != bot.user and reaction.message.id == messageHandler.embedMSG.id
 
     async def actions(pTask : asyncio.Task, userMessage : discord.Message, textInput = True):
         if textInput:
@@ -377,7 +376,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
                         else:
                             await actions(pTask, "pause", False)
                         break
-                await embedMSG.remove_reaction(str(emoji), user)	
+                await messageHandler.embedMSG.remove_reaction(str(emoji), user)	
 
             except Exception:
                 await voice.disconnect()
@@ -390,7 +389,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
     asyncio.create_task(userInput(playerTask))
 
     for e in emojis:
-        await embedMSG.add_reaction(emojis[e])
+        await messageHandler.embedMSG.add_reaction(emojis[e])
 
     asyncio.create_task(emojiInput(playerTask))
 

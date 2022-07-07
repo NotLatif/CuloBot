@@ -55,6 +55,16 @@ def conversion(sec):
     h = f'{int(hour_value):02}:' if int(hour_value) != 0 else ''
     return f'{h}{int(min):02}:{int(sec_value):02}'
 
+def textToSeconds(text):
+    text = text.split(':')
+    seconds = 0
+    if len(text) >= 3: seconds += (3600 * int(text[-3]))
+    if len(text) >= 2: seconds += (60 * int(text[-2]))
+    seconds += int(text[-1])
+    
+    return seconds
+    
+
 class Player():
     def __init__(self, vc : discord.VoiceClient, queue : dict[int:dict], overwritten : dict[str:str]) -> None:
         self.queue : dict[int:dict] = queue
@@ -99,6 +109,7 @@ class Player():
             mPrint('TEST', f'Found overwritten track {url}')
 
             self.thumbnail = Video.get(url)['thumbnails'][1]['url']
+            self.queue[self.queueOrder[0]]["duration_sec"] = int(res['duration']['secondsText']) #TODO actually check if it needs to be an int
             self.videoUrl = url
 
         else:
@@ -108,6 +119,9 @@ class Player():
 
             self.videoUrl = url
             self.thumbnail = res['thumbnails'][0]['url']
+            self.queue[self.queueOrder[0]]["duration_sec"] = textToSeconds(res['duration'])
+        
+        # 'duration': '4:37'
     
         mPrint('DEBUG', f'FOUND URL: {url}')
         mPrint('DEBUG', f'thumbnail = {self.thumbnail}')

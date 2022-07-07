@@ -49,7 +49,7 @@ def getSongsFromAlbum(URL, long_url):
     trackNumber = sp.album_tracks(URL)["total"]
     trackLimit = sp.album_tracks(URL)["limit"]
     tracks = []
-    #make sure to not be limited by API limit
+
     for i in range( ceil(trackNumber / trackLimit) ):
         rawTracks = sp.album_tracks(URL)["items"]
         for t in rawTracks:
@@ -70,7 +70,7 @@ def getSongsFromPlaylist(URL, long_url):
     trackNumber = sp.playlist_tracks(URL)["total"]
     trackLimit = sp.playlist_tracks(URL)["limit"]
     tracks = []
-    #make sure to not be limited by API limit
+
     for i in range( ceil(trackNumber / trackLimit) ):
         rawTracks = sp.playlist_tracks(URL, offset=i*trackLimit)["items"]
         for t in rawTracks:
