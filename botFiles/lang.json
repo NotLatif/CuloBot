@@ -1,5 +1,8 @@
 {
     "IT": {
+        "source_code": "https://github.com/NotLatif/CuloBot",
+        "issues": "https://github.com/NotLatif/CuloBot/issues",
+
         "nothing_changed": "Non è cambiato niente.",
         "done": "Fatto",
         "bot.joinmsg.none": "Il server non ha un messaggio di benvenuto, `!joinmsg help` per informazioni",
@@ -59,6 +62,23 @@
         "bot.help.player.play": "Aggiunge una traccia in coda",
         "bot.help.player.p": "Lo stesso di !play",
         "bot.help.player.playnext": "Aggiunge una traccia in testa",
-        "bot.help.player.pnext": "Lo stesso di !playnext"
+        "bot.help.player.pnext": "Lo stesso di !playnext",
+
+        "bot.help.chess.boards": "vedi i FEN disponibili",
+        "bot.help.chess.design": "vedi i design delle scacchiere disponibili `!chess design` per più informazioni",
+        "bot.help.chess.see": "genera e invia un immagine del FEN",
+        "bot.help.chess.add": "aggiungi una scacchiera (FEN)",
+        "bot.help.chess.remove": "rimuove una scacchiera (FEN)",
+        "bot.help.chess.rename": "rinomina una scacchiera (FEN)",
+        "bot.help.chess.edit": "modifica una scacchiera (FEN)",
+
+        "bot.help.misc.rawdump": "manda un messaggio con tutti i dati salvati di questo server",
+        "bot.help.misc.joinmsg": "Mostra il messaggio di benvenuto del bot, usa `!joinmsg help` per più informazioni\n",
+        "bot.help.misc.leavemsg": "Mostra il messaggio di addio del bot, usa `!joinmsg help` per più informazioni\n",
+        "bot.help.misc.joinimage": "Specifica se il bot può inviare o meno un immagine casuale quando entra qualcuno nel server\n",
+        
+        "bot.help.issues": "Problemi? lascia un feedback qui",
+        
+        "no way i'm doing the rest of this, sorry": ""
     }
 }

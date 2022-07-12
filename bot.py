@@ -609,27 +609,27 @@ async def embedpages(ctx : commands.Context):
      [design=<design>: usa uno dei design disponibili', inline=False)#ok
     page3.add_field(name='e.g.:', value='```!chess board=board2\n!chess\n!chess @Admin\n!chess fen="k7/8/8/8/8/8/8/7K"```')
 
-    page3.add_field(name='!chess boards', value='vedi i FEN disponibili', inline=False)#ok
-    page3.add_field(name='!chess design [see|add|del|edit]', value='vedi le scacchiere disponibili `!chess design` per più informazioni', inline=False)#ok
-    page3.add_field(name='!chess see <name | FEN>', value='genera l\'immagine della scacchiera', inline=False)#ok
-    page3.add_field(name='!chess add <name> <FEN>', value='aggiungi una scacchiera', inline=False)#ok
-    page3.add_field(name='!chess remove <name>', value='rimuovi una scacchiera', inline=False)#ok
-    page3.add_field(name='!chess rename <name> <newName>', value='rinomina una scacchiera', inline=False)#ok
-    page3.add_field(name='!chess edit <name> <FEN>', value='modifica una scacchiera', inline=False)#ok
+    page3.add_field(name='!chess boards', value=strings["bot.help.chess.boards"], inline=False)#ok
+    page3.add_field(name='!chess design [see|add|del|edit]', value=strings["bot.help.chess.design"], inline=False)#ok
+    page3.add_field(name='!chess see <name | FEN>', value=strings["bot.help.chess.see"], inline=False)#ok
+    page3.add_field(name='!chess add <name> <FEN>', value=strings["bot.help.chess.add"], inline=False)#ok
+    page3.add_field(name='!chess remove <name>', value=strings["bot.help.chess.remove"], inline=False)#ok
+    page3.add_field(name='!chess rename <name> <newName>', value=strings["bot.help.chess.rename"], inline=False)#ok
+    page3.add_field(name='!chess edit <name> <FEN>', value=strings["bot.help.chess.edit"], inline=False)#ok
 
     #Page 4 misc
     page4.add_field(name='!ping', value='Pong!', inline=False)#ok
-    page4.add_field(name='!rawdump', value='manda un messaggio con tutti i dati salvati di questo server', inline=False)#ok
-    page4.add_field(name='joinmsg [msg]', value="Mostra il messaggio di benvenuto del bot, usa `!joinmsg help` per più informazioni\n", inline=False)
-    page4.add_field(name='leavemsg [msg]', value="Mostra il messaggio di addio del bot, usa `!joinmsg help` per più informazioni\n", inline=False)
-    page4.add_field(name='joinimage [True|False]', value="Specifica se il bot può inviare o meno un immagine casuale quando entra qualcuno nel server\n", inline=False)
+    page4.add_field(name='!rawdump', value=strings["bot.help.misc.rawdump"], inline=False)#ok
+    page4.add_field(name='joinmsg [msg]', value=strings["bot.help.misc.joinmsg"], inline=False)
+    page4.add_field(name='leavemsg [msg]', value=strings["bot.help.misc.leavemsg"], inline=False)
+    page4.add_field(name='joinimage [True|False]', value=strings["bot.help.misc.joinimage"], inline=False)
 
     #fotter for page 1
-    page0.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
-    page0.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
+    page0.add_field(name='Source code', value=strings['bot.source_code'], inline=False)
+    page0.add_field(name=strings['bot.help.issues'], value=strings['bot.issues'], inline=False)
     
-    page1.add_field(name='Source code', value="https://github.com/NotLatif/CuloBot", inline=False)
-    page1.add_field(name='Problemi? lascia un feedback qui', value="https://github.com/NotLatif/CuloBot/issues", inline=False)
+    page1.add_field(name='Source code', value=strings['bot.source_code'], inline=False)
+    page1.add_field(name=strings['bot.help.issues'], value=strings['bot.issues'], inline=False)
     
     pages = [page0, page1, page2, page3, page4]
 
@@ -670,20 +670,13 @@ async def embedpages(ctx : commands.Context):
 
     await msg.clear_reactions()
 
-@bot.command(name='rename')
-async def rename(ctx : commands.Context):
-    print('RENAME')
-    id = 773248894858821632
-    channel = await ctx.guild.fetch_channel(id)
-    await channel.edit(name="hentai del sabato sera")
-
 @bot.command(name='ping')
 async def ping(ctx : commands.Context):
     pingms = round(bot.latency*1000)
     await ctx.send(f'Pong! {pingms}ms')
     mPrint('INFO', f'ping detected: {pingms} ms')
 
-@bot.command(name='poll', pass_context=True) #CHESS GAME (very long def)
+@bot.command(name='poll', pass_context=True) #WIP
 async def culopoll(ctx : commands.Context):
     await poll.poll(ctx, splitString(ctx.message.content)[1:])
 
