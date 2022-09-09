@@ -4,3 +4,4 @@ python-dotenv==0.20.0
 spotipy==2.19.0
 youtube_dl==2021.12.17
 youtube_search_python==1.6.5
+PyNaCl==1.5.0

@@ -1,4 +1,14 @@
-Culobot bugs
+# Culobot features
+
+❌ Palindromi (italian)
+
+❌ update system/checker, changelog embed viewer
+
+# Culobot bugs
+
+❌ music does not work anymore :(
+
+❌ CHECK IF joining to a second guilds bugs the guildData (also try joining both guilds at the same time)
 
 🟧[musicPlayer.py -> getVideoURL()] Song duration is pulled from spotify not youtube!!!!
 
@@ -12,7 +22,9 @@ Culobot bugs
 
 🟥 Aggiungi delay di 1 min dopo che finisce una canzone per uscire
 
+
+-----legenda-----
 ✅ Done
 🟧 Test needed
 ❌ Not done
-🟥 wontfix
+🟥 wontdo

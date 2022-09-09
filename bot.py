@@ -104,13 +104,13 @@ def splitString(str, separator = ' ', delimiter = '\"') -> list:
          
     return lstStr
 
-def dumpSettings(): #only use this function to save data to guildData.json (I think this should avoid weird stuff with concurrent scripts idk)
+def dumpSettings(): #only use this function to save data to guildData.json (This should avoid conflicts with coroutines idk)
     """Saves the settings to file"""
     dump = {str(k): settings[k] for k in settings}
     with open(settingsFile, 'w') as f:
         json.dump(dump, f, indent=2)
 
-def loadSettings():
+def loadSettings(data = None):
     template = {}
     global settings
     try:
@@ -123,14 +123,14 @@ def loadSettings():
 
     settings = {int(k): settings[k] for k in settings}
 
-
-
-#TODO deprecate this and just use dumpSettings()
-def createSettings(id : int):
+def createSettings(id : int): #creates settings for new guilds
     id = int(id)
     with open(settingsFile, 'r') as f:
         temp = json.load(f)
     temp[id] = SETTINGS_TEMPLATE["id"]
+
+    with open(settingsFile, 'w') as f:
+        json.dump(temp, f, indent=2)
 
     loadSettings()
   
@@ -138,8 +138,12 @@ def checkSettingsIntegrity(id : int):
     id = int(id)
     mPrint('DEBUG', f'Checking guildData integrity of ({id})')
 
-    settingsToCheck = copy.deepcopy(settings[id])
-    
+    try:
+        settingsToCheck = copy.deepcopy(settings[id])
+    except KeyError:
+        mPrint('FATAL', f'Settings for guild were not initialized correctly\n{traceback.format_exc()}')
+        sys.exit(-1)
+
     #check if there is more data than there should
     for key in settingsToCheck:
         if(key not in SETTINGS_TEMPLATE["id"]): #check if there is a key that should not be there (avoid useless data)
@@ -308,8 +312,10 @@ async def on_ready():
         members = '\n - '.join([member.name for member in guild.members])
         mPrint('DEBUG', f'Guild Members:\n - {members}')
         if (int(guild.id) not in settings):
-            mPrint('DEBUG', '^ Generating settings for guild')
+            mPrint('DEBUG', f'^ Generating settings for guild {int(guild.id)}')
             createSettings(int(guild.id))
+        else:
+            mPrint('DEBUG', f'settings for {int(guild.id)} are present in {settings}')
 
         checkSettingsIntegrity(int(guild.id))
 
