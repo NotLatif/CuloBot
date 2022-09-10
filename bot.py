@@ -294,8 +294,23 @@ async def on_error(event, *args, **kwargs):
     for x in args:
         mPrint('ERROR', {x})
 
+@bot.event
+async def on_guild_join(guild:discord.Guild):
+    mPrint("INFO", f"Joined guild {guild.name} (id: {guild.id})")
+
+    members = '\n - '.join([member.name for member in guild.members])
+    mPrint('DEBUG', f'Guild Members:\n - {members}')
+    if (int(guild.id) not in settings):
+        mPrint('DEBUG', f'^ Generating settings for guild {int(guild.id)}')
+        createSettings(int(guild.id))
+    else:
+        mPrint('DEBUG', f'settings for {int(guild.id)} are present in {settings}')
+
+    checkSettingsIntegrity(int(guild.id))
+
 @bot.event   ## BOT ONLINE
 async def on_ready():
+    mPrint("DEBUG", "Called on_ready")
     if len(sys.argv) == 5 and sys.argv[1] == "RESTART":
         mPrint("INFO", "BOT WAS RESTARTED")
         guild = await bot.fetch_guild(sys.argv[2])
@@ -303,11 +318,9 @@ async def on_ready():
         message = await channel.fetch_message(sys.argv[4])
         await message.reply("Bot restarted")
         
+    mPrint("INFO", f'Connected to the following guild(s):\n')
     for guild in bot.guilds:
-        mPrint("INFO",
-            f'\nConnected to the following guild:\n'
-            f'{guild.name} (id: {guild.id})'
-        )
+        mPrint("INFO", f'{guild.name} (id: {guild.id})')
 
         members = '\n - '.join([member.name for member in guild.members])
         mPrint('DEBUG', f'Guild Members:\n - {members}')

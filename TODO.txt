@@ -6,9 +6,7 @@
 
 # Culobot bugs
 
-❌ music does not work anymore :(
-
-❌ CHECK IF joining to a second guilds bugs the guildData (also try joining both guilds at the same time)
+✅(seems ok) CHECK IF joining to a second guilds bugs the guildData (also try joining both guilds at the same time)
 
 🟧[musicPlayer.py -> getVideoURL()] Song duration is pulled from spotify not youtube!!!!
 
