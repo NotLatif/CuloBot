@@ -18,6 +18,7 @@ othre requirements are in the `requirements.txt` file
 #### Prerequisites:
 - The discord token of your bot [create a bot here](https://discord.com/developers/applications)
 - [optional] The spotify key and user id [You can get them here](https://developer.spotify.com/dashboard/applications)
+- A copy of FFmpeg installed to path (needed only for musicbot)
 
 #### steps:
 1. clone repository in a folder `git clone https://github.com/NotLatif/CuloBot .`

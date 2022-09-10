@@ -233,7 +233,7 @@ def getJoinImageData(membername) -> tuple[Image.Image, ImageFont.truetype, tuple
         with open(f'{image_path[:-4]}.json', 'r') as f:
             data = json.load(f)
     else:
-        mPrint('WARN', f'{image_path[:-4]} HAS NO JSON EQUIVALENT, CREATE ONE TO ENSURE THE IMAGE IS GOOD')
+        mPrint('WARN', f'{image_path[:-4]} HAS NO JSON DATA, CREATE ONE TO ENSURE THE IMAGE IS GOOD')
         data = {
             "avatar_position": [10, 10],
             "avatar_size": 300,
@@ -356,7 +356,7 @@ async def test(ctx : commands.Context):
         mPrint("WARN", "RESTARTING BOT")
         await ctx.send("WARNING, DO NOT ABUSE THIS COMMAND...\nplease wait...")
         os.system(f"bot.py RESTART {ctx.guild.id} {ctx.channel.id} {ctx.message.id}")
-        sys.exit()
+        #sys.exit()
 
 @bot.command(name='rawdump')
 async def rawDump(ctx : commands.Context):

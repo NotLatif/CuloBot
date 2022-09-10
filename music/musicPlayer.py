@@ -192,7 +192,7 @@ class Player():
                
         except discord.ClientException:
             #bot got disconnected
-            mPrint('FATAL', 'Bot is not connected to vc')
+            mPrint('FATAL', f'Bot is not connected to vc {traceback.format_exc()}')
             self.voiceClient.cleanup()
             self.isConnected = False
             return
