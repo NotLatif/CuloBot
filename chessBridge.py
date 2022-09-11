@@ -11,6 +11,9 @@ def mPrint(tag, text):
 sys.path.insert(0, 'chessGame/') #needed since Main is in another folder
 import chessMain
 
+if not os.path.isdir(f'{chessMain.gameRenderer.gamesFolder}'):
+	os.mkdir(f'{chessMain.gameRenderer.gamesFolder}')
+
 def num2emoji(num : int):
 	words = []
 	for digit in str(num):

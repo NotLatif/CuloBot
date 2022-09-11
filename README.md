@@ -1,4 +1,4 @@
-# CuloBot (CURRENTLY WIP)
+# CuloBot (CURRENTLY WIP, please submit issues)
 A discord bot that can play music, let's you play chess and do other things
 
 <img align="right" src="docs/logo.png" width="150px">
@@ -10,9 +10,9 @@ N.B. there will come translations some time in the future, but for now it's a mi
 
 ### built with:
 - Python 3.9.2
-- py-cord dev version (discord.py v2.0.0-alpha)
+- discord.py v2.0.1
 
-othre requirements are in the `requirements.txt` file
+other requirements are in the `requirements.txt` file
 
 ### how to self-host the bot
 #### Prerequisites:
