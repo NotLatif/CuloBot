@@ -1,8 +1,10 @@
 # Culobot features
 
-❌ Palindromi (italian)
+🟦 Palindromi (italian)
 
-❌ update system/checker, changelog embed viewer
+🟦 update system/checker, changelog embed viewer
+
+🟦 merge contents of config.py into guildsData.json
 
 # Culobot bugs
 
@@ -14,17 +16,19 @@
 
 🟧[bot.py -> playSong()] Se la queue è in un altra chat si sminchia
 
-❌ Aggiungere una canzone alla volta fa cose strane allo shuffle
+🟦 Aggiungere una canzone alla volta fa cose strane allo shuffle
 
-❌ Raramente può capitare che queue e canzoni in riproduzione si desincronizzano???? (Bug copia.txt)
+🟦 Raramente può capitare che queue e canzoni in riproduzione si desincronizzano???? (Bug copia.txt)
 
-❌ Bugtest musicPlayer.Player.queue & musicPlayer.Player.queueOrder
+🟦 Bugtest musicPlayer.Player.queue & musicPlayer.Player.queueOrder
 
 🟥 Aggiungi delay di 1 min dopo che finisce una canzone per uscire
 
+# musicPlayer
+more info on musicPlayer.py
 
 -----legenda-----
 ✅ Done
 🟧 Test needed
-❌ Not done
+🟦 TO DO
 🟥 wontdo

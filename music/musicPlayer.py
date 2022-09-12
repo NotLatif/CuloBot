@@ -149,9 +149,6 @@ class Player():
                     mPrint('INFO', "looping queue, append song to end")
                     self.queueOrder.append(self.queueOrder[0])
 
-                #mPrint('TEST', f'deleting {self.queueOrder[0]}, prev: {self.previousSongId}')
-                # del self.queueOrder[0]
-
             else: #not first song
                 #get last song
                 self.previousSongId = self.queueOrder[0]
@@ -162,14 +159,13 @@ class Player():
                     self.queueOrder.append(self.queueOrder[0])
                 
                 self.currentSong = self.queue[self.queueOrder[0]]
-            #del self.queueOrder[0]
         
         else:
             if self.loop == False: 
                 self.endOfPlaylist = True
                 mPrint('MUSIC', 'End of playlist.')
                 return
-        # mPrint('TEST', self.queueOrder)
+
         self.playSong()
         
 

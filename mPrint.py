@@ -48,7 +48,7 @@ def mPrint(tag, source, text):
     style = Style.RESET_ALL
 
     #tags
-    if tag == 'INFO':
+    if tag in ['INFO', 'MUSIC']:
         tag = f"{Fore.LIGHTCYAN_EX}[{tag}]"
 
     elif tag == 'WARN':
@@ -65,7 +65,7 @@ def mPrint(tag, source, text):
         tag = f"{Fore.LIGHTBLACK_EX}[{tag}]"
 
     elif tag == 'TEST':
-        tag = f"{Fore.LIGHTBLUE_EX}[{tag}]"
+        tag = f"{Fore.YELLOW}[{tag}]"
         style = Style.BRIGHT
         
     elif tag == 'USER':
@@ -81,10 +81,6 @@ def mPrint(tag, source, text):
     elif tag == 'VARS':
         tag = f"{Fore.YELLOW}[{tag}]"
         style = Style.DIM
-    
-    #musicbot TODO
-    elif tag == 'MUSIC':
-        tag = f"{Fore.WHITE}[{tag}]"
 
     else:
         tag = f"[{tag}]"

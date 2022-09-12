@@ -31,7 +31,7 @@ def spotifyUrlParser(URL:str) -> tuple[str, str]:
 
 def getSongs(URL:str) -> list[dict]:
     if not authenticated:
-        return "SPOTIFY AUTH FAILED."
+        return -1
     id, type = spotifyUrlParser(URL)
 
     if type == "playlist":
@@ -46,12 +46,16 @@ def getSongs(URL:str) -> list[dict]:
     return tracks
 
 def getSongsFromAlbum(URL, long_url):
+    #acquire playlist size and spotify GET limit
     trackNumber = sp.album_tracks(URL)["total"]
     trackLimit = sp.album_tracks(URL)["limit"]
     tracks = []
 
+    # when size > limit (eg. 350 songs, 100max)
+    # this will GET 100 songs at a time (last GET req. will only have 50 songs)
+
     for i in range( ceil(trackNumber / trackLimit) ):
-        rawTracks = sp.album_tracks(URL)["items"]
+        rawTracks = sp.album_tracks(URL, offset=i*trackLimit)["items"]
         for t in rawTracks:
             artists = ""
             for a in t['artists']:
@@ -67,11 +71,14 @@ def getSongsFromAlbum(URL, long_url):
     return tracks
 
 def getSongsFromPlaylist(URL, long_url):
+    #acquire playlist size and spotify GET limit
     trackNumber = sp.playlist_tracks(URL)["total"]
     trackLimit = sp.playlist_tracks(URL)["limit"]
     tracks = []
 
-    for i in range( ceil(trackNumber / trackLimit) ):
+    # when size > limit (eg. 350 songs, 100max)
+    # this will GET 100 songs at a time (last GET req. will only have 50 songs)
+    for i in range( ceil(trackNumber / trackLimit) ): #huh?
         rawTracks = sp.playlist_tracks(URL, offset=i*trackLimit)["items"]
         for t in rawTracks:
             t = t['track']
@@ -102,13 +109,3 @@ def getSongFromTrack(URL, long_url):
         'duration_sec': t['duration_ms']/1000,
         'base_link': long_url,
     }]
-
-
-# TESTING PURPOSES TODO DELETE
-# for i, x in enumerate(getSongs("https://open.spotify.com/track/6ZSvhLZRJredt15aJiBQqv?si=0cc36d8193254fac")):
-#      print(f'{i+1}. {x}')
-
-# URL = "https://open.spotify.com/track/6ZSvhLZRJredt15aJiBQqv?si=0cc36d8193254fac"
-# print(sp.track(URL))
-#suggestion: maybe sp.tracks() can join the 3 dumb functions, try later
-

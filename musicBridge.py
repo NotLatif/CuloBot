@@ -4,7 +4,6 @@ from discord.ext import commands
 import traceback
 import asyncio
 import json
-from random import shuffle
 #import lyricsgenius as lg
 
 sys.path.insert(0, 'music/')
@@ -21,7 +20,7 @@ def parseUrl(url) -> list:
     if 'spotify.com' in url:
         try:
             tracks = spotifyParser.getSongs(url)
-            if tracks == "SPOTIFY AUTH FAILED.":
+            if tracks == -1:
                 mPrint('FATAL', "SPOTIFY AUTH FAILED, add your keys in the .env file if you want to enable spotify functionalities")
                 return None
         except Exception:
@@ -184,11 +183,11 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
             if len(skip) == 2 and skip[1].isnumeric():
                 for x in range(int(skip[1])-1):
                     if player.loop:
-                        print("TEST", f'multipleskipping: appending {player.queueOrder[0]} to end')
+                        mPrint("TEST", f'multipleskipping: appending {player.queueOrder[0]} to end')
                         player.queueOrder.append(player.queueOrder[0])
                         del player.queueOrder[0]
                     else:
-                        print("TEST", f'multipleskipping: removing {player.queueOrder[0]}')
+                        mPrint("TEST", f'multipleskipping: removing {player.queueOrder[0]}')
                         del player.queueOrder[0]
                 pTask = asyncio.create_task(player.skip())
                 return
