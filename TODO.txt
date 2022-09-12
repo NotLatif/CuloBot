@@ -18,6 +18,8 @@
 
 ❌ Raramente può capitare che queue e canzoni in riproduzione si desincronizzano???? (Bug copia.txt)
 
+❌ Bugtest musicPlayer.Player.queue & musicPlayer.Player.queueOrder
+
 🟥 Aggiungi delay di 1 min dopo che finisce una canzone per uscire
 
 

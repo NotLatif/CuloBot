@@ -70,9 +70,9 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
         queue[int(i)] = t
 
 
-    last5 = ''
+    queuePlaceholder = ''
     for i in range(6):
-        last5 += f"**{i}**- `                                      `\n"
+        queuePlaceholder += f"**{i}**- `                                      `\n"
      
     embed = discord.Embed(
         title=f'Loading...',
@@ -81,7 +81,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
     )
 
     embed.add_field(name='Author:', value=f'`               `', inline=True)
-    embed.add_field(name='Last 5 in queue', value=f'{last5}', inline=False)
+    embed.add_field(name='Last 5 in queue', value=f'{queuePlaceholder}', inline=False)
     embed.set_footer(text='🍑 the best bot 🎶 https://notlatif.github.io/CuloBot/#MusicBot')
      
     try: #try connecting to vc

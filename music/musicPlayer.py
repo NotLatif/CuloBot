@@ -68,7 +68,7 @@ def textToSeconds(text):
 class Player():
     def __init__(self, vc : discord.VoiceClient, queue : dict[int:dict], overwritten : dict[str:str]) -> None:
         self.queue : dict[int:dict] = queue
-        self.queueOrder = [x for x in range(len(queue))] #TEST 1 song in playlist
+        self.queueOrder = [x for x in range(len(queue))] #TEST last song in playlist
         self.overwritten = overwritten #the songs that get user reported as bad results from queries are specified here
 
         self.isShuffled = config.player_shuffle
@@ -162,8 +162,7 @@ class Player():
                     self.queueOrder.append(self.queueOrder[0])
                 
                 self.currentSong = self.queue[self.queueOrder[0]]
-            del self.queueOrder[0]
-                #mPrint('TEST', f'deleting {self.queueOrder[0]}, prev: {self.previousSongId}')  
+            #del self.queueOrder[0]
         
         else:
             if self.loop == False: 
@@ -188,6 +187,7 @@ class Player():
                 self.songStartTime = time.time()
                 self.songStarted = True
                 source = discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS)
+                del self.queueOrder[0]
                 self.voiceClient.play(source, after= self.playNext)
                
         except discord.ClientException:
@@ -196,6 +196,9 @@ class Player():
             self.voiceClient.cleanup()
             self.isConnected = False
             return
+
+        except Exception:
+            mPrint('FATAL', traceback.format_exc())
     
     async def skip(self):
         if len(self.queueOrder) > 0:
