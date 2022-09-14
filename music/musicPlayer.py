@@ -1,11 +1,3 @@
-#speed pitch effects(filters nightcore, filters bassboost, filters list, filters reset)
-
-#TODO add lyrics #https://docs.genius.com #musixmatch
-#remove from queue < TEST
-#loop queue: quando una canzone finisce viene aggiunta in coda < TEST
-#restart: ripete la traccia < TEST
-#mv x y: sposta la canzone x -> y < TEST
-#autoplay
 """
 "custom_playlist":{
       "Pippo": [
@@ -26,6 +18,7 @@ import youtubeParser #needed to link bot with youtubeParser
 from mPrint import mPrint as mp
 import config
 
+max_precision = config.timeline_max
 
 YDL_OPTIONS = {
     'format': 'bestaudio/best',
@@ -66,12 +59,12 @@ def textToSeconds(text):
     
 
 class Player():
-    def __init__(self, vc : discord.VoiceClient, queue : dict[int:dict], overwritten : dict[str:str]) -> None:
+    def __init__(self, vc : discord.VoiceClient, queue : dict[int:dict], overwritten : dict[str:str], is_shuffle) -> None:
         self.queue : dict[int:dict] = queue
         self.queueOrder = [x for x in range(len(queue))] #TEST last song in playlist
         self.overwritten = overwritten #the songs that get user reported as bad results from queries are specified here
 
-        self.isShuffled = config.player_shuffle
+        self.isShuffled = is_shuffle
         if self.isShuffled: shuffle(self.queueOrder)
 
         self.voiceClient = vc
@@ -106,10 +99,11 @@ class Player():
         track = self.currentSong['search']
         if track in self.overwritten:
             url = self.overwritten[track]
+            res = Video.get(url)
             mPrint('TEST', f'Found overwritten track {url}')
 
-            self.thumbnail = Video.get(url)['thumbnails'][1]['url']
-            self.queue[self.queueOrder[0]]["duration_sec"] = int(res['duration']['secondsText']) #TODO actually check if it needs to be an int
+            self.thumbnail = res['thumbnails'][1]['url']
+            self.queue[self.queueOrder[0]]["duration_sec"] = int(res['duration']['secondsText'])
             self.videoUrl = url
 
         else:
@@ -211,7 +205,7 @@ class Player():
         mPrint('MUSIC', f'restarted track ({self.currentSong["trackName"]})')
         self.voiceClient.stop()
 
-    def shuffle(self): #TODO make this a toggle
+    def shuffle(self):
         if self.isShuffled:
             self.isShuffled = False
             self.queueOrder = sorted(self.queueOrder)
@@ -240,13 +234,12 @@ class Player():
 
 class MessageHandler():
     #Handles the embed of the player in parallel with the player
-    def __init__(self, player : Player, embedMSG : discord.Message, vchannel : discord.VoiceChannel) -> None:
+    def __init__(self, player : Player, embedMSG : discord.Message, vchannel : discord.VoiceChannel, precision) -> None:
         self.player = player
         self.embedMSG = embedMSG
 
-        precision = config.timeline_precision
-        precision = 16 if precision > 16 else 1 if precision < 1 else precision
-        self.timelinePrecision = precision
+        self.printPrecision = True if precision != 0 else False
+        self.timelinePrecision = 1 if precision == 0 else precision
         self.timelineChars = ('▂', '▅')
         self.timeBar = []
         self.timeStart = 0
@@ -373,7 +366,7 @@ class MessageHandler():
                     self.aloneTimeStart = 0
 
 
-    def getEmbed(self, stop = False, move = False, pnext = False, leftAlone = False) -> discord.Embed: #TODO, there are too many variables that do one thing, just fix this
+    def getEmbed(self, stop = False, move = False, pnext = False, leftAlone = False) -> discord.Embed:
         last5 = f'__**0-** {self.player.currentSong["trackName"]} [{self.player.currentSong["artist"]}]__\n'
 
         queue = []
@@ -387,17 +380,25 @@ class MessageHandler():
 
         last5 = last5[:-1]
 
+        if self.printPrecision:
+            desc = f'Now Playing: **{self.player.currentSong["trackName"]}**\n{"".join(self.timeBar)} {conversion(self.stepProgress)} / {conversion(self.duration)}\n'
+        else:
+            desc = f'Now Playing: **{self.player.currentSong["trackName"]}**\n'
+        
         embed = discord.Embed(
             title = f'Queue: {len(self.player.queueOrder)} songs. {"⏸" * self.player.isPaused} {"🔂" * self.player.loop} {"🔁" * self.player.loopQueue} {"🔀" * self.player.isShuffled}',
-            description= f'Now Playing: **{self.player.currentSong["trackName"]}**\n{"".join(self.timeBar)} {conversion(self.stepProgress)} / {conversion(self.duration)}\n',
+            description= desc,
             color=0xff866f
         )
 
         artist = "N/A" if self.player.currentSong["artist"] == "" else self.player.currentSong["artist"]
         
         embed.add_field(name='Author:', value=f'{artist}')
-        latency = "N/A" if self.player.voiceClient.latency == float('inf') else ("%.3fms" % self.player.voiceClient.latency)
-        embed.add_field(name='Latency:', value=f'{latency}')
+
+        if self.printPrecision:
+            latency = "N/A" if self.player.voiceClient.latency == float('inf') else ("%.3fms" % self.player.voiceClient.latency)
+            embed.add_field(name='Latency:', value=f'{latency}')
+
         if not move:
             embed.add_field(name='Last 5 in queue', value=last5, inline=False)
         else:

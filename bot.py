@@ -1,4 +1,4 @@
-#version 0.1.0 release
+#version 0.1.1 release
 import asyncio
 import os
 import shutil
@@ -14,6 +14,11 @@ from discord.ext import commands
 from typing import Union
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 
+#custom modules
+import config
+import chessBridge
+import musicBridge
+import poll
 from mPrint import mPrint as mp
 def mPrint(tag, value):mp(tag, 'bot', value)
 
@@ -24,15 +29,9 @@ if not os.path.isfile(".env"):
         f.write("DISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nGENIOUS_SECRET={}\n")
     sys.exit()
 
-#custom modules
-import chessBridge
-import musicBridge
-import poll
-
 
 myServer = True
-
-try: #This is specific to my own server, you can delete those lines as they do nothing for you
+try: #This is specific to my own server, if you want to delete this also delete the other myServer lines in on_message()
     import myStuff
 except ModuleNotFoundError:
     myServer = False
@@ -43,10 +42,9 @@ except ModuleNotFoundError:
 #Sensitive data is stored in a ".env" file
 TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
 
-#TODO what if user has not the keys, same for spotify in spotifyParser.py
 GENIOUS = os.getenv('GENIOUS_SECRET')[1:-1]
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","join_image":True,"leave_message":"Salutiamo felicemente il coglione di %name%","response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{},"youtube_search_overwrite":{}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","join_image":True,"leave_message":"Salutiamo felicemente il coglione di %name%","response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board": "default","boards":{},"designs":{}},"saved_playlists":{},"youtube_search_overwrite":{},"musicbot":{"player_shuffle": True,"timeline_precision": 14}}}
 
 intents = discord.Intents.all()
 intents.members = True
@@ -69,9 +67,7 @@ settings = {}
 with open(settingsFile, 'a'): pass #make setting file if it does not exist
 
 with codecs.open('botFiles/lang.json', 'r', 'utf-8') as f:
-    strings : dict[str:str] = json.load(f)['IT']#TODO add setting to change the language
-
-
+    strings : dict[str:str] = json.load(f)['IT']
 
 #Useful funtions
 def splitString(str, separator = ' ', delimiter = '\"') -> list:
@@ -173,7 +169,7 @@ def checkSettingsIntegrity(id : int):
 
     dumpSettings()
 
-    mPrint('DEBUG', 'Done.')
+    mPrint('INFO', 'GuildSettings seem good.')
 
 def getWord(all=False) -> Union[str,list]:
     """
@@ -329,7 +325,7 @@ async def on_ready():
             mPrint('DEBUG', f'^ Generating settings for guild {int(guild.id)}')
             createSettings(int(guild.id))
         else:
-            mPrint('DEBUG', f'settings for {int(guild.id)} are present in {settings}')
+            mPrint('DEBUG', f'settings for {int(guild.id)} are present.')
 
         checkSettingsIntegrity(int(guild.id))
 
@@ -485,7 +481,7 @@ async def perc(ctx : commands.Context):  ## RESP command
 
     mPrint('INFO', f'{ctx.author} set response to {arg}%')
 
-    settings[int(ctx.guild.id)]['resp_settings']['response_perc'] = newPerc #TODO add a command for other_perc
+    settings[int(ctx.guild.id)]['resp_settings']['response_perc'] = newPerc
     dumpSettings()
 
 
@@ -572,11 +568,11 @@ async def embedpages(ctx : commands.Context):
     
     e.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
 
-    page0 = e.copy().set_author(name='Help 0/5, Info', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page1 = e.copy().set_author(name='Help 1/5, Culo!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page2 = e.copy().set_author(name='Help 2/5, Music!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page3 = e.copy().set_author(name='Help 3/5, CHECKMATE', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
-    page4 = e.copy().set_author(name='Help 4/5, Misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page0 = e.copy().set_author(name='Help 0/4, Info', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page1 = e.copy().set_author(name='Help 1/4, Culo!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page2 = e.copy().set_author(name='Help 2/4, Music!', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page3 = e.copy().set_author(name='Help 3/4, CHECKMATE', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
+    page4 = e.copy().set_author(name='Help 4/4, Misc', icon_url='https://cdn.discordapp.com/avatars/696013896254750792/ac773a080a7a0663d7ce7ee8cc2f0afb.webp?size=256')
     
     #Page 0 Info
     page0.add_field(name=strings["bot.help.advice"][0], value=strings["bot.help.advice"][1])
@@ -594,6 +590,7 @@ async def embedpages(ctx : commands.Context):
     page1.add_field(name=strings["bot.help.words.structure"][0], value=strings["bot.help.words.structure"][1], inline=False)
 
     #Page 2 music
+    page2.add_field(name='!music', value=strings["bot.help.music.info"], inline=False)#ok
     page2.add_field(name='!playlist', value=strings["bot.help.playlist.info"], inline=False)#ok
     page2.add_field(name='!playlist [add|edit] <name> <link>', value=strings["bot.help.playlist.edit"], inline=False)#ok
     page2.add_field(name='!playlist [remove|del] <name>', value=strings["bot.help.playlist.remove"], inline=False)#ok
@@ -668,11 +665,15 @@ async def embedpages(ctx : commands.Context):
         elif str(emoji) == '◀':
             if i > 0:
                 i -= 1
-                await msg.edit(embed = pages[i])
+            else:
+                i = len(pages)-1
+            await msg.edit(embed = pages[i])
         elif str(emoji) == '▶':
             if i < len(pages) - 1:
                 i += 1
-                await msg.edit(embed = pages[i])
+            else:
+                i = 0
+            await msg.edit(embed = pages[i])
         elif str(emoji) == '⏭':
             i = len(pages) -1
             await msg.edit(embed = pages[i])
@@ -1393,7 +1394,65 @@ async def playSong(ctx : commands.Context):
         
         else:
             await ctx.send("Playlist does not exist.")
+
+@bot.command(name='music', pass_context=True)
+async def music(ctx : commands.Context):
+    #settings for musicbot
+    request = ctx.message.content.split()
+    shuffle,precision = settings[int(ctx.guild.id)]['musicbot']["player_shuffle"],settings[int(ctx.guild.id)]['musicbot']["timeline_precision"]
+    mPrint('DEBUG', request)
+    await ctx.channel.typing()
+    if len(request) != 3: #send the current data and info to the user
+        embed = discord.Embed(
+            title="MusicBot Settings",
+            description="**Commands:** \n!music shuffle <true/false>\n!music precision <int>",
+            color=0x1ed760
+        )
+        embed.add_field(name="Shuffle: ", value=f"{shuffle}", inline=False)
+        embed.add_field(name="Precision: ", value=f"{precision} / {config.timeline_max}", inline=False)
+
+        await ctx.send(embed=embed)
     
+    elif len(request) == 3:
+        warnmsg = ""
+        if request[1].lower() == 'shuffle':
+
+            if request[2].lower() not in ['true', 'false']:
+                warnmsg = "invalid setting. <True, False>"
+            else:
+                newShuffle = True if request[2].lower()=='true' else False
+                settings[int(ctx.guild.id)]['musicbot']["player_shuffle"] = newShuffle
+                dumpSettings()
+        
+        elif request[1].lower() == 'precision':
+            if request[2].isnumeric:
+                newPrec = int(request[2])
+                if newPrec > config.timeline_max:
+                    newPrec = config.timeline_max
+                    warnmsg = f"Timeline max precision is {config.timeline_max}"
+
+                if newPrec < 0:
+                    newPrec = 0
+                    warnmsg = "Timeline min precision is 0"
+                
+                settings[int(ctx.guild.id)]['musicbot']["timeline_precision"] = newPrec
+                dumpSettings()
+            else:
+                await ctx.send("param is NaN, usage: '!musicbot precision <int>'")
+
+        embed = discord.Embed(
+            title="Settings updated",
+            description="**Commands:** \n!music shuffle <true/false>\n!music precision <int>",
+            color= 0x1ed760 if warnmsg=="" else 0xf7630c
+        )
+
+        embed.add_field(name="Shuffle: ", value=settings[int(ctx.guild.id)]['musicbot']["player_shuffle"], inline=True)
+        embed.add_field(name="Precision: ", value=f"{settings[int(ctx.guild.id)]['musicbot']['timeline_precision']} / {config.timeline_max}", inline=True)
+        if warnmsg != "":
+            embed.add_field(name="WARN", value=warnmsg, inline=False)
+        await ctx.send(embed=embed)
+    
+
 @bot.command(name='play', pass_context=True, aliases=['p']) #Player
 async def playSong(ctx : commands.Context):
     await ctx.channel.typing()
@@ -1426,7 +1485,9 @@ async def playSong(ctx : commands.Context):
             mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
             playContent = trackURL
         
-        await musicBridge.play(playContent, ctx, bot, settings[int(ctx.guild.id)]['youtube_search_overwrite'])
+        overwrite,shuffle,precision = settings[int(ctx.guild.id)]['youtube_search_overwrite'],settings[int(ctx.guild.id)]['musicbot']["player_shuffle"],settings[int(ctx.guild.id)]['musicbot']["timeline_precision"]
+
+        await musicBridge.play(playContent, ctx, bot, shuffle, precision, overwrite)
 
 @bot.command(name='suggest', pass_context=True) #Player
 async def suggest(ctx : commands.Context):

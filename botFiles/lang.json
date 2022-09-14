@@ -1,7 +1,7 @@
 {
     "IT": {
         "bot.source_code": "https://github.com/NotLatif/CuloBot",
-        "issues": "https://github.com/NotLatif/CuloBot/issues",
+        "bot.issues": "https://github.com/NotLatif/CuloBot/issues",
 
         "nothing_changed": "Non è cambiato niente.",
         "done": "Fatto",
@@ -46,6 +46,7 @@
         "bot.help.playlist.play": "Fa partire una canzone, per usarlo devi essere in un canale vocale\n<song> può essere [link spotify | link youtube | nome di una playlist salvata | titolo di una canzone]",
         "bot.help.playlist.p": "Lo stesso di !play",
 
+        "bot.help.music.info": "!music shuffle <true/false>\n!music precision <int>",
         "bot.help.player.info": ["Comandi del player", "Sono i comandi che puoi usare quando il bot riproduce una canzone (N.B. non tutti i comandi usano '!')"],
         "bot.help.player.skip": "salta [x] tracce (default = 1 traccia)",
         "bot.help.player.lyrics": "Mostra il testo di una traccia",

@@ -42,7 +42,7 @@ def evalUrl(url) -> bool:
         return False
     return True
 
-async def play(url : str, ctx : commands.Context, bot : discord.Client, overwritten = tuple[str:str]):
+async def play(url : str, ctx : commands.Context, bot : discord.Client, shuffle : bool, precision : int, overwritten : tuple[str:str]):
     """"""
     #genius = lg.Genius('Client_Access_Token_Goes_Here', skip_non_songs=True, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
 
@@ -73,9 +73,14 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
     for i in range(6):
         queuePlaceholder += f"**{i}**- `                                      `\n"
      
+    if precision != 0:
+        desc = f'Now Playing: `                                      `\n▂▂▂▂▂▂▂▂▂▂ (00:00 - 00:00)\n'
+    else:
+        desc = f'Now Playing: `                                      `\n'
+        
     embed = discord.Embed(
         title=f'Loading...',
-        description=f'Now Playing: `                                      `\n▂▂▂▂▂▂▂▂▂▂ (00:00 - 00:00)\n',
+        description=desc,
         color=0xff866f
     )
 
@@ -109,8 +114,8 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
 
     embedMSG = await ctx.send(embed=embed)
 
-    player = musicPlayer.Player(voice, queue, overwritten)
-    messageHandler = musicPlayer.MessageHandler(player, embedMSG, vchannel)
+    player = musicPlayer.Player(voice, queue, overwritten, shuffle)
+    messageHandler = musicPlayer.MessageHandler(player, embedMSG, vchannel, precision)
     
     try:
         playerTask = asyncio.create_task(player.starter())
@@ -269,7 +274,6 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
             await messageHandler.updateEmbed()
 
         elif userInput == 'queue':
-            #TODO this will halt the requests until the emojis show up, not really a big deal but could be improved I think
             await messageHandler.embedMSG.clear_reactions()
             await messageHandler.embedMSG.edit(embed=messageHandler.getEmbed(move=True))
             messageHandler.embedMSG = await ctx.send(embed=messageHandler.getEmbed())
@@ -302,7 +306,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
                 await ctx.send("Errore, la queue non ha così tante canzoni.")
             await messageHandler.updateEmbed()
 
-        elif userInput.split()[0] in ['play', 'p']: #TODO
+        elif userInput.split()[0] in ['play', 'p']:
             if userMessage.channel.id != ctx.channel.id:
                 await ctx.message.add_reaction('❌')
                 await ctx.reply('Sono già connesso in un canale vocale, per aggiungere una canzone manda un messaggio nel canale dove ho inviato la queue!')
@@ -325,7 +329,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, overwrit
                 await userMessage.add_reaction('🍑')
                 await messageHandler.updateEmbed()
         
-        elif userInput.split()[0] in ['playnext', 'pnext']: #TODO
+        elif userInput.split()[0] in ['playnext', 'pnext']:
             request = userInput.split()
             if len(request) == 1:
                 userMessage.reply("Devi darmi un link bro")

@@ -1,11 +1,12 @@
+import config
 import codecs
 from datetime import datetime
 from colorama import Fore, Style, init
 init()
 
-useColors = True
-logLevel = 2 #log level should be >= print level
-printLevel = 0
+useColors = config.useColors
+logLevel = config.logLevel
+printLevel = config.printLevel
 #levels: (0 will show every tag; 3 will only show ERROR and FATAL)
 # 0 - INFO, MUSIC, USER, GAME
 # 1 - DEBUG, VARS, TEST, FUNC
