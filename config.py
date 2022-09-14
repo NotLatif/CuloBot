@@ -20,3 +20,13 @@ timeline_max = 14
 
 max_alone_time = 60 * 5 
 #Default: 300 -> (max=300) The maximum time (in seconds) the bot can play music while no one is connected to the voice channel
+
+class Colors:
+    error = 0xff0000
+    red = 0xd32c41
+    orange = 0xf39641
+    blu = 0x0a7ace
+    aqua = 0x7cdcfe
+    green = 0x27E039
+    black = 0x030303
+    white = 0xf2f2f2

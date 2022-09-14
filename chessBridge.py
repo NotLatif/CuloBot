@@ -4,6 +4,7 @@ import discord
 import sys
 import os
 
+from config import Colors as col
 from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'chessBridge', text)
@@ -117,14 +118,14 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					scrivi "draw" per offrire un pareggio
 					scrivi "surrender" se vuoi arrenderti
 				''',
-				color = 0xf2f2f2 if (turn == 1) else 0x030303
+				color = col.white if (turn == 1) else col.black
 			)
 			
 			#2a. if previous move was illegal modify the embed with the info
 			if didIllegalMove[0]:
 				embed.title = 'Mossa non valida'
 				embed.description += f'\n{didIllegalMove[1]}'
-				embed.color = 0xdc143c
+				embed.color = col.red
 
 				didIllegalMove = [False, '']
 			
@@ -132,7 +133,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			elif gs.inCheck: #using elif, because last move cannot be illegal, so if it is, the player currently in check made an illegal move and should be notified
 				embed.title = 'Scacco!'
 				embed.description = 'Fai una mossa per difendere il tuo Re'
-				embed.color = 0xf88070
+				embed.color = col.orange
 
 			embed.set_footer(text=f'È il turno di {players[turn]} {emojis[turn]}')#I'm too good at this shit #godcomplex
 
@@ -152,7 +153,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					embed.title = f'{reason}\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
 					embed.description = f'Match winner: {str(winner)[:-5]} {emojis[lastTurn]}\nOverall winner: {f"{getOverallWinnerName(players, score)}"}'
 					embed.set_footer(text=f'ID: {threadChannel.id}, now voting for rematch...')
-					embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
+					embed.color = col.white if lastTurn == 1 else col.black 
 					await fetchThread[0].edit(embed=embed)
 				
 				else:
@@ -163,7 +164,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					embed = fetchThread[1]
 					embed.title = f'Pareggio!'
 					embed.set_footer(text=f'ID: {threadChannel.id}, now voting for rematch...')
-					embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
+					embed.color = col.white if lastTurn == 1 else col.black 
 					await fetchThread[0].edit(embed=embed)
 
 				#ask for another round
@@ -179,12 +180,12 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					newThreadName = f'GG, {str(players[0])[:-5]} {score[0]}-VS-{score[1]} {str(players[1])[:-5]}'
 					embed = discord.Embed(
 						title = 'Non Hanno votato abbastanza giocatori.',
-						color = 0xbe1931
+						color = col.red
 					)
 					await rematchMsg.edit(embed = embed)
 					
 					embed.title = f'-- GAME OVER --\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
-					embed.color = 0xf2f2f2 if players[lastTurn] else 0x030303
+					embed.color = col.white if players[lastTurn] else col.black
 					embed.set_footer(text=f'ID: {threadChannel.id} game concluded')
 					await fetchThread[0].edit(embed=embed)
 					await threadChannel.edit(name = f'{newThreadName}', reason=reason, locked=True, archived=True)
@@ -214,14 +215,14 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 						embed = discord.Embed(
 							title = 'Rivincita!',
 							description= newThreadName,
-							color = 0x77b255
+							color = col.green
 						)
 						embed.set_footer(text = "Generating rematch... please wait!")
 						await rematchMsg.edit(embed = embed)
 
 						embed = fetchThread[1]
 						embed.title = f'*Generating rematch...*\n{newEmbedTitle}'
-						embed.color = 0xf4900c
+						embed.color = col.orange
 						embed.set_footer(text=f'ID: {threadChannel.id}')
 						await fetchThread[0].edit(embed=embed)
 
@@ -238,7 +239,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 						#await threadChannel.edit(name=newThreadName) #BUG game halts after 3rd round?
 
 						embed.title = f'Round {score[0] + score[1] + 1}\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
-						embed.color = 0x27E039
+						embed.color = col.green
 						await fetchThread[0].edit(embed=embed)
 						return 1
 					else:
@@ -250,7 +251,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				score[lastTurn] += 1
 				embed.title = 'CHECKMATE!'
 				embed.description = f'Congratulazioni {players[lastTurn]} {emojis[lastTurn]}'
-				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303 
+				embed.color = col.white if lastTurn == 1 else col.black 
 				embed.set_footer(text='Rivincita? (vota entro 30 secondi)')
 				rematchMsg = await threadChannel.send(embed=embed)
 				resp = await roundOverActions('CHECKMATE', players, rematchMsg)
@@ -266,7 +267,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				score[lastTurn] += 1
 				embed.title = 'Stalemate!'
 				embed.description = f'Congratulazioni {players[lastTurn]}'
-				embed.color = 0xf2f2f2 if lastTurn == 1 else 0x030303
+				embed.color = col.white if lastTurn == 1 else col.black
 				embed.set_footer(text='Rivincita? (vota entro 30 secondi)')
 				rematchMsg = await threadChannel.send(embed=embed)
 				resp = await roundOverActions('Stalemate!', players, rematchMsg)
@@ -280,7 +281,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 			elif gs.draw:
 				#ask for opponent to accept draw
 				embed.title = 'Pareggio!'
-				embed.color = 0x7cdcfe
+				embed.color = col.aqua
 				embed.set_footer(text='Rivincita? (vota entro 30 secondi)')
 				rematchMsg = await threadChannel.send(embed=embed)
 				chessGame.result = "1/2-1/2"
@@ -314,7 +315,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 					embed = fetchThread[1]
 					embed.title = f'-- GAME OVER --\n{emojis[0]} {players[0]} {num2emoji(score[0])} :vs: {num2emoji(score[1])} {players[1]} {emojis[1]}'
 					embed.description = f'❌ Partita annullata ❌\nOverall winner: {getOverallWinnerName(players, score)}'
-					embed.color = 0xd32c41
+					embed.color = col.red
 					embed.set_footer(text=f'ID: {threadChannel.id}')
 					await fetchThread[0].edit(embed=embed)
 					await threadChannel.send(f"```{pgn}```")

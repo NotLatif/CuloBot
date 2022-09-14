@@ -6,9 +6,13 @@
 
 ✅ if music_precision is set to 0, the bar and timer should not appear in the embed
 
-🟧 test timeline_precision and shuffle
+✅ add !music to help
 
-🟦 add !music to help
+✅ test timeline_precision and shuffle
+
+✅ Embed colors are not consistent, fix
+
+🟦 Warn users that try to start the bot when it's already on in another text/voice chat
 
 🟦 update system/checker, changelog embed viewer
 
@@ -17,8 +21,6 @@
 🟦 Command for other_perc
 
 🟦 There are too many commands and they are not very consistent. It's starting to get overwelming, maybe command update?
-
-🟦 Embed colors are not consistent, fix
 
 🟦 speed pitch effects(filters nightcore, filters bassboost, filters list, filters reset)
 
@@ -36,25 +38,25 @@
 
 ✅`musicBridge.py@45` `overwritten = tuple[str:str])` = instead of : ? maybe typo, test pls
 
-🟧 Quando usi il comando queue non funzionano più i pulsanti
+✅ Quando usi il comando queue non funzionano più i pulsanti
 
-🟧[bot.py -> playSong()] Se la queue è in un altra chat si sminchia
+✅ mv x y: sposta la canzone x -> y
 
-🟧 MusicPlayer remove from queue
+✅ MusicPlayer remove from queue
 
-🟧 loop queue: quando una canzone finisce viene aggiunta in coda
+✅[bot.py -> playSong()] Se la queue è in un altra chat si sminchia
+
+✅ loop queue: quando una canzone finisce viene aggiunta in coda
+
+✅ skip while looping queue
 
 🟧 restart: ripete la traccia
 
-🟧 mv x y: sposta la canzone x -> y
-
-🟧 autoplay
+🟦 graphical bug while skipping with 1 song loop
 
 🟦 Aggiungere una canzone alla volta fa cose strane allo shuffle
 
 🟦 Raramente può capitare che queue e canzoni in riproduzione si desincronizzano???? (Bug copia.txt)
-
-🟦 Bugtest musicPlayer.Player.queue & musicPlayer.Player.queueOrder
 
 🟦 guildSettings `buttbotReplied` can get big
 

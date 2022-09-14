@@ -10,6 +10,7 @@ sys.path.insert(0, 'music/')
 import spotifyParser
 import youtubeParser
 import musicPlayer
+from config import Colors as col
 
 from mPrint import mPrint as mp
 def mPrint(tag, text):
@@ -81,7 +82,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, shuffle 
     embed = discord.Embed(
         title=f'Loading...',
         description=desc,
-        color=0xff866f
+        color=col.red
     )
 
     embed.add_field(name='Author:', value=f'`               `', inline=True)
@@ -185,10 +186,12 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, shuffle 
                 mPrint("WARN", "task was not closed.")
                 pTask.cancel()
 
+            player.loop = False
+
             if len(skip) == 2 and skip[1].isnumeric():
                 for x in range(int(skip[1])-1):
-                    if player.loop:
-                        mPrint("TEST", f'multipleskipping: appending {player.queueOrder[0]} to end')
+                    if player.loopQueue:
+                        mPrint("TEST", f'multipleskipping: appending {player.queueOrder[0]} to end (loopQueue)')
                         player.queueOrder.append(player.queueOrder[0])
                         del player.queueOrder[0]
                     else:
@@ -256,6 +259,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, shuffle 
             elif request[1] == 'queue':
                 player.loopQueue = True if player.loopQueue == False else False
                 player.loop = False
+
                 if textInput:
                     await userMessage.add_reaction('🔁')
 
@@ -276,9 +280,14 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, shuffle 
         elif userInput == 'queue':
             await messageHandler.embedMSG.clear_reactions()
             await messageHandler.embedMSG.edit(embed=messageHandler.getEmbed(move=True))
+            messageHandler.ready = False
             messageHandler.embedMSG = await ctx.send(embed=messageHandler.getEmbed())
+            
             for e in emojis: 
                 await messageHandler.embedMSG.add_reaction(emojis[e])
+
+            messageHandler.ready = True
+            await messageHandler.updateEmbed()
         
         elif userInput.split()[0] == 'precision' and userMessage.author.id in [348199387543109654, 974754149646344232]:
             if len(userInput.split()) == 2:
@@ -290,7 +299,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, shuffle 
             if len(request) == 1:
                 await ctx.send("Usage: remove [x]")
                 return
-            player.queueOrder.pop(request[1]+1)
+            player.queueOrder.pop(int(request[1])-1)
             await messageHandler.updateEmbed()
         
         elif userInput.split()[0] == 'mv':
@@ -299,7 +308,7 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, shuffle 
             if not request[1].isnumeric() or not request[2].isnumeric():
                 await ctx.send("Usage: mv start end; eg. mv 3 1")
             try:
-                temp = player.queueOrder[int(request[2])-1]
+                temp = player.queueOrder[int(request[1])-1]
                 player.queueOrder[int(request[1])-1] = player.queueOrder[int(request[2])-1]
                 player.queueOrder[int(request[2])-1] = temp
             except IndexError:
@@ -393,6 +402,8 @@ async def play(url : str, ctx : commands.Context, bot : discord.Client, shuffle 
 
     for e in emojis:
         await messageHandler.embedMSG.add_reaction(emojis[e])
+    messageHandler.ready = True
+    await messageHandler.updateEmbed()
 
     asyncio.create_task(emojiInput(playerTask))
 

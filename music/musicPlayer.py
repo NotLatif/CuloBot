@@ -14,9 +14,10 @@ from youtube_dl import YoutubeDL
 from youtubesearchpython import VideosSearch, Video
 from random import shuffle
 
-import youtubeParser #needed to link bot with youtubeParser
+import youtubeParser
 from mPrint import mPrint as mp
 import config
+from config import Colors as col
 
 max_precision = config.timeline_max
 
@@ -103,7 +104,7 @@ class Player():
             mPrint('TEST', f'Found overwritten track {url}')
 
             self.thumbnail = res['thumbnails'][1]['url']
-            self.queue[self.queueOrder[0]]["duration_sec"] = int(res['duration']['secondsText'])
+            self.currentSong["duration_sec"] = int(res['duration']['secondsText'])
             self.videoUrl = url
 
         else:
@@ -113,7 +114,7 @@ class Player():
 
             self.videoUrl = url
             self.thumbnail = res['thumbnails'][0]['url']
-            self.queue[self.queueOrder[0]]["duration_sec"] = textToSeconds(res['duration'])
+            self.currentSong["duration_sec"] = textToSeconds(res['duration'])
         
         # 'duration': '4:37'
     
@@ -135,24 +136,20 @@ class Player():
         if error != None: mPrint('ERROR', f"{error}")
         
         if len(self.queueOrder) != 0:
-            if self.currentSong == None: # first song
-                self.currentSong = self.queue[self.queueOrder[0]]
-                self.previousSongId = self.queueOrder[0]
 
-                if self.loopQueue:
-                    mPrint('INFO', "looping queue, append song to end")
-                    self.queueOrder.append(self.queueOrder[0])
+            if self.loopQueue:
+                mPrint('INFO', "looping queue, append song to end")
+                self.queueOrder.append(self.previousSongId)
 
-            else: #not first song
-                #get last song
-                self.previousSongId = self.queueOrder[0]
+            if not self.loop:
+                if self.currentSong == None: # first song
+                    self.currentSong = self.queue[self.queueOrder[0]]
+                    self.previousSongId = self.queueOrder[0]
 
-                #remove from order (or append to end if looping)
-                if self.loopQueue:
-                    mPrint('INFO', "looping queue, append song to end")
-                    self.queueOrder.append(self.queueOrder[0])
-                
-                self.currentSong = self.queue[self.queueOrder[0]]
+                else: #not first song
+                    #get last song
+                    self.previousSongId = self.queueOrder[0]
+                    self.currentSong = self.queue[self.queueOrder[0]]
         
         else:
             if self.loop == False: 
@@ -177,7 +174,8 @@ class Player():
                 self.songStartTime = time.time()
                 self.songStarted = True
                 source = discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS)
-                del self.queueOrder[0]
+                if not self.loop:
+                    del self.queueOrder[0]
                 self.voiceClient.play(source, after= self.playNext)
                
         except discord.ClientException:
@@ -237,6 +235,7 @@ class MessageHandler():
     def __init__(self, player : Player, embedMSG : discord.Message, vchannel : discord.VoiceChannel, precision) -> None:
         self.player = player
         self.embedMSG = embedMSG
+        self.ready = False
 
         self.printPrecision = True if precision != 0 else False
         self.timelinePrecision = 1 if precision == 0 else precision
@@ -385,10 +384,12 @@ class MessageHandler():
         else:
             desc = f'Now Playing: **{self.player.currentSong["trackName"]}**\n'
         
+        c = col.orange if self.ready else col.red
+
         embed = discord.Embed(
             title = f'Queue: {len(self.player.queueOrder)} songs. {"⏸" * self.player.isPaused} {"🔂" * self.player.loop} {"🔁" * self.player.loopQueue} {"🔀" * self.player.isShuffled}',
             description= desc,
-            color=0xff866f
+            color=c
         )
 
         artist = "N/A" if self.player.currentSong["artist"] == "" else self.player.currentSong["artist"]
@@ -406,13 +407,13 @@ class MessageHandler():
             for i in range(6):
                 last5 += f"**{i}**- `                                      `\n"
             embed.add_field(name="This message was moved, you may find the new one below", value=last5, inline=False)
-            embed.color = 0x1e1e1e
+            embed.color = col.black
 
         embed.set_footer(text='🍑 Comandi del player: https://notlatif.github.io/CuloBot/#MusicBot')
         
         if stop:
             embed.add_field(name=f'{"Queue finita" if self.player.endOfPlaylist else "Queue annullata"}', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
-            embed.color = 0x1e1e1e
+            embed.color = col.black
         elif leftAlone:
             embed.add_field(name="Queue annullata", value="Mi avete lasciato da solo nel canale vocale 😭", inline=False)
 

@@ -1,4 +1,4 @@
-#version 0.1.1 release
+#version 0.1.2 release
 import asyncio
 import os
 import shutil
@@ -19,6 +19,7 @@ import config
 import chessBridge
 import musicBridge
 import poll
+from config import Colors as col
 from mPrint import mPrint as mp
 def mPrint(tag, value):mp(tag, 'bot', value)
 
@@ -535,7 +536,7 @@ async def words(ctx : commands.Context): #send an embed with the words that the 
     embed = discord.Embed(
         title = strings['bot.words.known_words'],
         description = description,
-        colour = 0xf39641
+        colour = col.orange
     )
 
     value = ''
@@ -563,7 +564,7 @@ async def embedpages(ctx : commands.Context):
     e = discord.Embed (
         title = 'CuloBot',
         description = strings["bot.help.description"],
-        colour = 0xf39641
+        colour = col.orange
     ).set_footer(text=strings["bot.help.footer"])
     
     e.set_thumbnail(url='https://i.pinimg.com/originals/b5/46/3c/b5463c3591ec63cf076ac48179e3b0db.png')
@@ -746,7 +747,7 @@ async def chessGame(ctx : commands.Context):
             #i. prepare the embed
             embed = discord.Embed(
                 title = 'Scacchiere disponibili: ',
-                colour = 0xf39641
+                colour = col.orange
             )
 
             #ii. append the global data boards to the embed
@@ -772,7 +773,7 @@ async def chessGame(ctx : commands.Context):
                 #i. prepare the embed
                 embed = discord.Embed(
                     title = 'Design disponibili: ',
-                    colour = 0xf39641
+                    colour = col.orange
                 )
 
                 #ii. append the global data designs to the embed
@@ -1006,7 +1007,7 @@ async def chessGame(ctx : commands.Context):
             embed = discord.Embed(
                 title = 'Problema con il FEN: manca il Re!',
                 description= f'Re mancante: {"black" if "k" not in gameFEN else ""} {"white" if "K" not in gameFEN else ""}',
-                color = 0xd32c41)
+                color = col.red)
             await ctx.send(embed=embed)
             return -1
         #else, fen is valid
@@ -1021,7 +1022,7 @@ async def chessGame(ctx : commands.Context):
             board = ('BOARD', gameBoard)
         #iii. if not, the user is dumb
         else: #board not found
-            embed = discord.Embed(title = f'Errore 404, non trovo {gameBoard} tra le scacchiere salvare 😢\n riprova',color = 0xd32c41)
+            embed = discord.Embed(title = f'Errore 404, non trovo {gameBoard} tra le scacchiere salvare 😢\n riprova',color = col.red)
             await ctx.send(embed=embed)
             return -1
     
@@ -1045,21 +1046,21 @@ async def chessGame(ctx : commands.Context):
         challengedUser = ctx.guild.get_member(int(challenge['challenged'])) #await bot.fetch_user(challenged)
         embed = discord.Embed(title = f'@{challengedUser.name}, sei stato sfidato da {ctx.message.author}!\nUsate una reazione per unirti ad un team (max 1 per squadra)',
             description=f'Scacchiera: {board[1]}, design: {designName}',
-            color = 0x0a7ace)
+            color = col.blu)
         
     #3B. Challenge one guild
     elif challenge['type'] == 'Role':
         challengedRole = ctx.guild.get_role(int(challenge['challenged']))
         embed = discord.Embed(title = f'@{challengedRole.name}, siete stati sfidati da {ctx.message.author}!\nUno di voi può unirsi alla partita!',
             description=f'Scacchiera: {board[1]}, design: {designName}',
-            color = 0x0a7ace)
+            color = col.blu)
 
     #3C. Challenge everyone
     else:
         embed = discord.Embed(title = f'Cerco giocatori per una partita di scacchi! ♟,\nUsa una reazione per unirti ad un team (max 1 per squadra)',
             description=f'Scacchiera: {board[1]}, design: {designName}',
-            color = 0x0a7ace).set_footer(text=f'Partita richiesta da {ctx.message.author}')
-    
+            color = col.blu).set_footer(text=f'Partita richiesta da {ctx.message.author}')
+                    
     #3D. SEND THE EMBED FINALLY
     playerFetchMsg = await ctx.send(embed=embed)
     
@@ -1145,7 +1146,7 @@ async def chessGame(ctx : commands.Context):
     async def stopsearch():
         embed.title = "Ricerca annullata"
         embed.description = ""
-        embed.color = 0xdc143c
+        embed.color = col.red
 
         designFolder = f'{chessBridge.chessMain.gameRenderer.spritesFolder}{design}'
         if design.find('\\') != -1 or design.find('/') != -1:
@@ -1171,7 +1172,7 @@ async def chessGame(ctx : commands.Context):
         embed.description += f'\n{players[1]} si è unito a {r2}!\nGenerating game please wait...'
         embed.set_footer(text = 'tutti i caricamenti sono ovviamente falsissimi.')
         
-        embed.color = 0x77b255
+        embed.color = col.green
         await playerFetchMsg.edit(embed=embed)
         #iii. fake sleep for professionality
         await asyncio.sleep(random.randrange(0,2))
@@ -1179,7 +1180,7 @@ async def chessGame(ctx : commands.Context):
     except asyncio.TimeoutError: #players did not join in time
         embed = discord.Embed(
             title = 'Non ci sono abbastanza giocatori.',
-            colour = 0xdc143c
+            colour = col.red
         )
         await ctx.send(embed=embed)
         await playerFetchMsg.delete()
@@ -1199,7 +1200,7 @@ async def chessGame(ctx : commands.Context):
         embed = discord.Embed(
             title = f'Giocatori trovati\n{r1} {player1} :vs: {player2} {r2}',
             description=f"Impostazioni:\n- Scacchiera: {board[1]}, Design: {designName}",
-            colour = 0x27E039
+            colour = col.green
         )
         
         #v. start a thread where the game will be disputed, join the players in there
@@ -1226,7 +1227,7 @@ async def playSong(ctx : commands.Context):
         embed = discord.Embed(
             title=f"Saved playlists for {ctx.guild.name}",
             description="**Commands:** \n!playlist [add|edit] <name> <link>\n!playlist remove <name>",
-            color=0x1ed760
+            color=col.green
         )
         for plist in settings[int(ctx.guild.id)]["saved_playlists"]:
             urls=''
@@ -1257,7 +1258,7 @@ async def playSong(ctx : commands.Context):
                     embed = discord.Embed(
                         title="ERRORS:",
                         description=errors,
-                        color=0xff0000
+                        color=col.error
                     )
                     await ctx.send(embed=embed)
 
@@ -1316,7 +1317,7 @@ async def playSong(ctx : commands.Context):
                             embed = discord.Embed(
                                 title="ERRORS:",
                                 description=errors,
-                                color=0xff0000
+                                color=col.error
                             )
                             await ctx.send(embed=embed)
 
@@ -1406,7 +1407,7 @@ async def music(ctx : commands.Context):
         embed = discord.Embed(
             title="MusicBot Settings",
             description="**Commands:** \n!music shuffle <true/false>\n!music precision <int>",
-            color=0x1ed760
+            color=col.green
         )
         embed.add_field(name="Shuffle: ", value=f"{shuffle}", inline=False)
         embed.add_field(name="Precision: ", value=f"{precision} / {config.timeline_max}", inline=False)
@@ -1443,7 +1444,7 @@ async def music(ctx : commands.Context):
         embed = discord.Embed(
             title="Settings updated",
             description="**Commands:** \n!music shuffle <true/false>\n!music precision <int>",
-            color= 0x1ed760 if warnmsg=="" else 0xf7630c
+            color= col.green if warnmsg=="" else col.orange
         )
 
         embed.add_field(name="Shuffle: ", value=settings[int(ctx.guild.id)]['musicbot']["player_shuffle"], inline=True)
@@ -1460,6 +1461,7 @@ async def playSong(ctx : commands.Context):
     if voice_client != None:
         if voice_client.is_connected() and voice_client.channel != ctx.voice_client.channel:
             await ctx.send('Sono già connesso in un canale vocale')
+
         return
 
     request = ctx.message.content.split()
