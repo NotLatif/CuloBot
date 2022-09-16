@@ -16,8 +16,6 @@
 
 🟦 poll.py
 
-🟦 Permissions update `@app_commands.default_permissions()`
-
 🟥 Palindromi (italian)
 
 # Culobot bugs
@@ -38,25 +36,14 @@
 
 🟦 Check what happens when keys are not in the .env file
 
-
-
 🟥 reorganize musicPlayer.MessageHandler.getEmbed()
 
 # Code things
 
-🟦 Make settings a local variable under MyBot class
+🟥 Make settings a local variable under MyBot class
 
 -----legenda-----
 ✅ Done/Now working (resets with every release)
 🟧 Test needed
 🟦 TO DO/CHECK
 🟥 wontdo (for now)
-
-
-# Other IDEAS for the future
-
-## Music player ⏮ function should
-- if current step >= 1, repeat the current song
-- else go back one song
-  - The queue numbers should not be deleted but there should be a variable that keeps track of the index and can move on the list
-

@@ -1,4 +1,4 @@
-#version 1.0.0 beta 0
+#version 1.0.0 release
 import asyncio
 import os
 import shutil
@@ -1630,8 +1630,10 @@ async def playSong(interaction : discord.Interaction, tracks : str):
     await musicBridge.play(playContent, interaction, bot, shuffle, precision, overwrite)
 
 
-@bot.command(name='suggest', description="Sovrascrivi una canzone sbagliata") #Player
+@tree.command(name='suggest', description="Sovrascrivi una canzone sbagliata") #Player
 async def suggest(interaction : discord.Interaction):
+    await interaction.response.send_message('Function is currently disabled', ephemeral=True)
+    return
 
     await interaction.channel.typing()
     await asyncio.sleep(2) #ensure that file exists
@@ -1655,6 +1657,37 @@ async def ping(interaction : discord.Interaction):
     await interaction.response.send_message(f'Pong! {pingms}ms')
     mPrint('INFO', f'ping detected: {pingms} ms')
 
+@tree.command(name='getimage', description='generate an join image')
+@app_commands.default_permissions()
+async def test(interaction : discord.Interaction, user: discord.Member):
+    await interaction.channel.typing()
+    await joinImageSend(user, interaction.guild, interaction.channel)
+    
+
+@app_commands.default_permissions()
+@tree.command(name='bot_restart', description='AVOID USAGE AT ALL COSTS')
+async def test(interaction : discord.Interaction):
+    #ONLY FOR TESTING PURPOSES. DO NOT ABUSE THIS COMMAND
+    mPrint("WARN", "RESTARTING BOT")
+    await interaction.response.send_message("WARNING, DO NOT ABUSE THIS COMMAND...\nplease wait...", ephemeral=True)
+    os.system(f"bot.py RESTART {interaction.guild.id} {interaction.channel.id}")
+
+
+@app_commands.default_permissions()
+@tree.command(name='rawdump', description="debug tool")
+async def rawDump(interaction : discord.Interaction):
+    await interaction.response.send_message(f'```JSON dump for {interaction.guild.name}:\n{json.dumps(settings[int(interaction.guild.id)], indent=3)}```', ephemeral=True)
+
+@tree.command(name='send-join-image', description="Inviare un immagine quando entra un membro?")
+async def joinmsg(interaction : discord.Interaction, value:bool):
+
+    if value:
+        settings[int(interaction.guild.id)]['responseSettings']['join_image'] = True
+    else:
+        settings[int(interaction.guild.id)]['responseSettings']['join_image'] = False
+    dumpSettings()
+
+    await interaction.response.send_message(f"joinimage: {settings[int(interaction.guild.id)]['responseSettings']['join_image']}")
 
 loadSettings()
 try:
