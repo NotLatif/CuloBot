@@ -65,7 +65,7 @@ class Player():
         self.queueOrder = [x for x in range(len(queue))] #TEST last song in playlist
         self.overwritten = overwritten #the songs that get user reported as bad results from queries are specified here
 
-        self.isShuffled = is_shuffle
+        self.isShuffled = bool(is_shuffle)
         if self.isShuffled: shuffle(self.queueOrder)
 
         self.voiceClient = vc
@@ -387,7 +387,7 @@ class MessageHandler():
         c = col.orange if self.ready else col.red
 
         embed = discord.Embed(
-            title = f'Queue: {len(self.player.queueOrder)} songs. {"⏸" * self.player.isPaused} {"🔂" * self.player.loop} {"🔁" * self.player.loopQueue} {"🔀" * self.player.isShuffled}',
+            title = f'Queue: {len(self.player.queueOrder)} songs. {"⏸" * int(self.player.isPaused)} {"🔂" * int(self.player.loop)} {"🔁" * int(self.player.loopQueue)} {"🔀" * int(self.player.isShuffled)}',
             description= desc,
             color=c
         )

@@ -13,6 +13,7 @@ gamesFolder = f'chessGame/games/'
 tempFolder = 'chessGame/temp/'
 
 def doesDesignExist(design) -> bool: return os.path.isdir(f'{spritesFolder}{design}')
+def getGlobalDesign(design) -> str: return f'{spritesFolder}{design}/'
 
 def renderBoard(colors, id) -> str:
 	"""Reders a chessboards with the given colors and returns it's path"""
@@ -48,7 +49,7 @@ def renderBoard(colors, id) -> str:
 
 class GameRenderer():
 	def __init__(self, cg, designName, boardGS : Engine.GameState) -> None:
-		self.boardFolder = f'{spritesFolder}{designName}/'
+		self.boardFolder = f'{designName}'
 
 		self.boardGS = boardGS # list[][] containing board data
 		self.bezels = self.getBoardBezels()
@@ -124,6 +125,8 @@ class GameRenderer():
 		mPrint('INFO', 'Done')
 		#Compress
 		boardImg.resize((300,300)).save(f'{gamesFolder}{self.cg.gameID}.png')
+
+		
 		
 		return (f'{gamesFolder}{self.cg.gameID}.png', self.cg.gameID)
 	

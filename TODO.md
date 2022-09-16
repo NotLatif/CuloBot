@@ -1,17 +1,5 @@
 # Culobot features
 
-✅ merge contents of config.py into guildsData.json
-
-✅ make timeline_precision settable for each guild whithin a max you can set on `config.py`
-
-✅ if music_precision is set to 0, the bar and timer should not appear in the embed
-
-✅ add !music to help
-
-✅ test timeline_precision and shuffle
-
-✅ Embed colors are not consistent, fix
-
 🟦 Warn users that try to start the bot when it's already on in another text/voice chat
 
 🟦 update system/checker, changelog embed viewer
@@ -32,25 +20,11 @@
 
 # Culobot bugs
 
-✅(seems ok) CHECK IF joining to a second guilds bugs the guildData (also try joining both guilds at the same time)
-
-✅[musicPlayer.py -> getVideoURL()] Song duration is pulled from spotify not youtube!!!!
-
-✅`musicBridge.py@45` `overwritten = tuple[str:str])` = instead of : ? maybe typo, test pls
-
-✅ Quando usi il comando queue non funzionano più i pulsanti
-
-✅ mv x y: sposta la canzone x -> y
-
-✅ MusicPlayer remove from queue
-
-✅[bot.py -> playSong()] Se la queue è in un altra chat si sminchia
-
-✅ loop queue: quando una canzone finisce viene aggiunta in coda
-
-✅ skip while looping queue
-
 🟧 restart: ripete la traccia
+
+🟦 fix suggest command
+
+🟦 add missing commands
 
 🟦 graphical bug while skipping with 1 song loop
 
@@ -58,23 +32,18 @@
 
 🟦 Raramente può capitare che queue e canzoni in riproduzione si desincronizzano???? (Bug copia.txt)
 
-🟦 guildSettings `buttbotReplied` can get big
+🟦 remove butt-bot realted things
 
 🟦 Check what happens when keys are not in the .env file
 
 🟥 reorganize musicPlayer.MessageHandler.getEmbed()
 
+# Code things
+
+🟥 Make settings a local variable under MyBot class
+
 -----legenda-----
-✅ Done/Now working
+✅ Done/Now working (resets with every release)
 🟧 Test needed
 🟦 TO DO/CHECK
 🟥 wontdo (for now)
-
-
-# Other IDEAS for the future
-
-## Music player ⏮ function should
-- if current step >= 1, repeat the current song
-- else go back one song
-  - The queue numbers should not be deleted but there should be a variable that keeps track of the index and can move on the list
-
