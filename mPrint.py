@@ -7,11 +7,6 @@ init()
 useColors = config.useColors
 logLevel = config.logLevel
 printLevel = config.printLevel
-#levels: (0 will show every tag; 3 will only show ERROR and FATAL)
-# 0 - INFO, MUSIC, USER, GAME
-# 1 - DEBUG, VARS, TEST, FUNC
-# 2 - WARN, GAMEErr
-# 3 - ERROR, FATAL, SONGERROR
 
 def mPrint(tag, source, text):
     """
@@ -22,23 +17,25 @@ def mPrint(tag, source, text):
     willLog = False 
     songError = True if tag == 'SONGERROR' else False
 
-    if printLevel <= 3:
+    if printLevel <= 3: #ERROR
         if tag in ['ERROR', 'FATAL', 'SONGERROR']: willPrint = True
-    if printLevel <= 2:
+    if printLevel <= 2: #WARN
         if tag in ['WARN', 'GAMEErr']: willPrint = True
-    if printLevel <= 1:
-        if tag in ['DEBUG', 'VARS', 'TEST', 'FUNC']: willPrint = True
-    if printLevel <= 0:
+    if printLevel <= 1: #INFO
         if tag in ['INFO', 'MUSIC', 'USER', 'GAME']: willPrint = True
+    if printLevel <= 0: #DEBUG
+        if tag in ['DEBUG', 'VARS', 'TEST', 'FUNC', 'CMDS']: willPrint = True
+        
 
-    if logLevel <= 3:
+    if logLevel <= 3: #ERROR
         if tag in ['ERROR', 'FATAL', 'SONGERROR']: willLog = True
-    if logLevel <= 2:
+    if logLevel <= 2: #WARN
         if tag in ['WARN', 'GAMEErr']: willLog = True
-    if logLevel <= 1:
-        if tag in ['DEBUG', 'VARS', 'TEST', 'FUNC']: willLog = True
-    if logLevel <= 0:
+    if logLevel <= 1: #INFO
         if tag in ['INFO', 'MUSIC', 'USER', 'GAME']: willLog = True
+    if logLevel <= 0: #DEBUG
+        if tag in ['DEBUG', 'VARS', 'TEST', 'FUNC', 'CMDS']: willLog = True
+        
     
     if willPrint == False: return
 
@@ -62,7 +59,7 @@ def mPrint(tag, source, text):
     elif tag == 'DEBUG':
         tag = f"{Fore.MAGENTA}[{tag}]"
 
-    elif tag == 'FUNC':
+    elif tag in ['FUNC', 'CMDS']:
         tag = f"{Fore.LIGHTBLACK_EX}[{tag}]"
 
     elif tag == 'TEST':

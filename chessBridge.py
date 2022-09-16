@@ -431,12 +431,16 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				mPrint("GAME", f"your move: {userMove}")
 
 
-def getBoards() -> list:
+def getBoards() -> dict[str:str]:
 	return chessMain.getSavedBoards()
 
 def doesBoardExist(board : str) -> bool:
 	return chessMain.doesBoardExist(board)
 
 def getBoardImgPath(board, id) -> tuple[str]:
+	"""
+	Returns a tuple with
+	(filepath, filename)
+	"""
 	mPrint('DEBUG', f'RENDERING {board}')
 	return chessMain.renderBoard(board, id)

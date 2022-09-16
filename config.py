@@ -3,11 +3,11 @@ logLevel = 0 #determines what tags the script prints in the terminal
 printLevel = 0 #determines what tags the script prints in the "bot.log" file
 useColors = True #whether the terminal should display colored text
 
-#levels: (0 will show every tag; 3 will only show ERROR and FATAL)
-# 0 - INFO, MUSIC, USER, GAME
-# 1 - DEBUG, VARS, TEST, FUNC
-# 2 - WARN, GAMEErr
-# 3 - ERROR, FATAL, SONGERROR
+#levels: (0 will show every tag; 3 will only show ERROR)
+# 0 - DEBUG, VARS, TEST, FUNC, CMDS     < DEBUG, INFO, WARN and ERROR
+# 1 - INFO, MUSIC, USER, GAME           < INFO, WARN and ERROR
+# 2 - WARN, GAMEErr                     < WARN and ERROR
+# 3 - ERROR, FATAL, SONGERROR           < only ERROR
 
 #MUSIC PLAYER
 

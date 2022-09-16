@@ -1,14 +1,5 @@
-This is the first version I would be confident with for production!
-Thinks may still break tho :(
+# v1.0.0 - beta 0 Interactions update 
 
-# bugfix
-Fixed all bugs I could find affecting the musicbot commands:
-- queue
-- mv
-- delete
-- loop
-- loopqueue
-- skip (combined with loop and loopqueue)
+bot.py was completely redesined to allow usage of discord interactions
 
-# misc
-Now colors are organized inside config.py for easy editing
+sorry for the poor documentation, there are too many changes
