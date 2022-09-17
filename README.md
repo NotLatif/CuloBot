@@ -6,7 +6,7 @@ A discord bot that can play music, let's you play chess and do other things.
 
 If you like the project and want to help, consider [buying me a coffee!](https://www.buymeacoffee.com/CuloBot)
 
-[Add bot to your server](https://discord.com/api/oauth2/authorize?client_id=696013896254750792&permissions=401616202048&scope=bot)
+[Add bot to your server](https://notlatif.github.io/CuloBot/)
 
 [Join the Discord!](https://discord.com/invite/YTvn5Zwc5R)
 
