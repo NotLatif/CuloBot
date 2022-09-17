@@ -6,6 +6,8 @@ A discord bot that can play music, let's you play chess and do other things.
 
 If you like the project and want to help, consider [buying me a coffee!](https://www.buymeacoffee.com/CuloBot)
 
+[Join the Discord!](https://discord.com/invite/YTvn5Zwc5R)
+
 <img  align="right"  src="docs/logo.png"  width="150px">
 
   
