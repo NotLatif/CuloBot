@@ -1,10 +1,12 @@
 
-# CuloBot
+# [CuloBot](https://notlatif.github.io/CuloBot/)
 
 A discord bot that can play music, let's you play chess and do other things.
 **Please submit issues, thank you**
 
 If you like the project and want to help, consider [buying me a coffee!](https://www.buymeacoffee.com/CuloBot)
+
+[Add bot to your server](https://discord.com/api/oauth2/authorize?client_id=696013896254750792&permissions=401616202048&scope=bot)
 
 [Join the Discord!](https://discord.com/invite/YTvn5Zwc5R)
 
@@ -18,16 +20,16 @@ Sorry for the poor documentation, I'll improve it later (maybe)
 
 N.B. there will come translations some time in the future, but for now it's a mix of english and italian. Sorry
 
-###  Requirements
+
+## How to self-host the bot
+
+
+#### Prerequisites:
 
 - Python 3.9.2
   
 - modules in `requirements.txt` file
 - A copy of [ffmpeg](https://ffmpeg.org) added to [path](https://www.thewindowsclub.com/how-to-install-ffmpeg-on-windows-10) (Only needed to use the musicbot module)
-
-## How to self-host the bot
-
-#### Prerequisites:
 
 - The discord token of your bot [create a bot here](https://discord.com/developers/applications)
 
