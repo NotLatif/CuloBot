@@ -4,6 +4,8 @@
         "bot.source_code": "https://github.com/NotLatif/CuloBot",
         "bot.issues": "https://github.com/NotLatif/CuloBot/issues",
 
+        "bot.join_message": "A %name% piace il culo!",
+
         "nothing_changed": "Non è cambiato niente.",
         "done": "Fatto",
         "bot.joinmsg.none": "Il server non ha un messaggio di benvenuto, `!joinmsg help` per informazioni",

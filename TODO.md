@@ -1,22 +1,22 @@
 # Culobot features
 
-🟦 Warn users that try to start the bot when it's already on in another text/voice chat
+✅ add possibility to deactivate modules
 
-🟦 update system/checker, changelog embed viewer
+🟦 add possibility to whitelist channels for modules
+
+🟦 add default permissions
+
+🟦 add slash commands with musicbot
+
+🟦 Warn users that try to start the bot when it's already on in another text/voice chat
 
 🟦 Command to change language
 
 🟦 Command for other_perc
 
-🟦 There are too many commands and they are not very consistent. It's starting to get overwelming, maybe command update?
-
 🟦 speed pitch effects(filters nightcore, filters bassboost, filters list, filters reset)
 
 🟦 Finish lang.json
-
-🟦 poll.py
-
-🟥 Palindromi (italian)
 
 # Culobot bugs
 
@@ -24,15 +24,11 @@
 
 🟦 fix suggest command
 
-🟦 add missing commands
-
 🟦 graphical bug while skipping with 1 song loop
 
 🟦 Aggiungere una canzone alla volta fa cose strane allo shuffle
 
 🟦 Raramente può capitare che queue e canzoni in riproduzione si desincronizzano???? (Bug copia.txt)
-
-🟦 remove butt-bot realted things
 
 🟦 Check what happens when keys are not in the .env file
 

@@ -1,5 +1,4 @@
 import os
-from dotenv import load_dotenv
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from math import ceil
@@ -7,11 +6,19 @@ from math import ceil
 from mPrint import mPrint as mp
 def mPrint(tag, value):mp(tag, 'bot', value)
 
-load_dotenv()#Sensitive data is stored in a ".env" file
-CLIENT_ID = os.getenv('SPOTIFY_ID')
-CLIENT_ID = CLIENT_ID.strip('{}')
-CLIENT_SECRET = os.getenv('SPOTIFY_SECRET')
-CLIENT_SECRET = CLIENT_SECRET.strip('{}')
+#Since I had problems getting getenv to work on linux for some reason I'm writing my own function in case someone else has the same problems
+def getenv(var : str) -> str:
+    with open('.env', 'r') as env:
+        lines = env.readlines()
+        for l in lines:
+            if var in l:
+                token = l.strip(var)[2:-2]
+                if token != "":
+                    return token
+    mPrint('WARN', f'TOKEN {var} was not found')
+
+CLIENT_ID = getenv('SPOTIFY_ID')
+CLIENT_SECRET = getenv('SPOTIFY_SECRET')
 
 authenticated = False
 

@@ -1,4 +1,4 @@
-#version 1.0.0 release
+#version 1.0.1 release
 import asyncio
 import os
 import shutil
@@ -8,18 +8,16 @@ import copy
 import sys
 import traceback
 import codecs
-import discord #using py-cord dev version (discord.py v2.0.0-alpha)
+import discord
 from discord.utils import get
-from discord.ext import commands
+from datetime import datetime
 from discord import app_commands
 from typing import Union
-from PIL import Image, ImageOps, ImageDraw, ImageFont
 
 #custom modules
 import config
 import chessBridge
 import musicBridge
-import poll
 from config import Colors as col
 from mPrint import mPrint as mp
 def mPrint(tag, value):mp(tag, 'bot', value)
@@ -32,38 +30,44 @@ if not os.path.isfile(".env"):
     sys.exit()
 
 
-myServer = True
 try: #This is specific to my own server, if you want to delete this also delete the other myServer lines in on_message()
-    import myStuff
+    import NotLatif
 except ModuleNotFoundError:
-    myServer = False
+    pass
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
+#update 17/09/2022 actually kind of readable? I mean it was worse before
 
 #Sensitive data is stored in a ".env" file
-TOKEN : str = os.getenv('DISCORD_TOKEN')
-TOKEN = TOKEN.strip('{}')
+#Since I had problems getting getenv to work on linux for some reason I'm writing my own function in case someone else has the same problems
+def getenv(var : str) -> str:
+    with open('.env', 'r') as env:
+        lines = env.readlines()
+        for l in lines:
+            if var in l:
+                token = l.strip(var)[2:-2]
+                if token != "":
+                    return token
+    mPrint('WARN', f'TOKEN {var} was not found')
 
-GENIOUS : str = os.getenv('GENIOUS_SECRET')
-GENIOUS = GENIOUS.strip('{}')
-
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","join_image":True,"leave_message":"Salutiamo felicemente il coglione di %name%","response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board":"default","boards":{},"default_design":"default","designs":{}},"saved_playlists":{},"youtube_search_overwrite":{},"musicbot":{"player_shuffle": True,"timeline_precision": 14}}}
+TOKEN = getenv('DISCORD_TOKEN')
+GENIOUS = getenv('GENIOUS_SECRET')
 
 intents = discord.Intents.all()
 intents.members = True
 intents.messages = True
 
-# slash = SlashCommand(bot, sync_commands=True)
-
 settingsFile = "botFiles/guildsData.json"
 
 global settings
 settings = {}
-with open(settingsFile, 'a'): pass #make setting file if it does not exist
+with open(settingsFile, 'a'): pass #make guild setting file if it does not exist
 
 with codecs.open('botFiles/lang.json', 'r', 'utf-8') as f:
-    strings : dict[str:str] = json.load(f)['IT']
+    strings : dict[str,str] = json.load(f)['IT']
+
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"module_enabled":True,"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"module_enabled":True,"default_board":"default","boards":{},"default_design":"default","designs":{}},"saved_playlists":{},"youtube_search_overwrite":{},"musicbot":{"module_enabled":True,"player_shuffle": True,"timeline_precision": 14}}}
 
 #Useful funtions
 def splitString(str, separator = ' ', delimiter = '\"') -> list:
@@ -129,7 +133,7 @@ def createSettings(id : int): #creates settings for new guilds
   
 def checkSettingsIntegrity(id : int):
     id = int(id)
-    mPrint('DEBUG', f'Checking guildData integrity of ({id})')
+    mPrint('DEBUG', f'Checking guildData integrity')
 
     try:
         settingsToCheck = copy.deepcopy(settings[id])
@@ -165,7 +169,7 @@ def checkSettingsIntegrity(id : int):
 
     dumpSettings()
 
-    mPrint('INFO', 'GuildSettings seem good.')
+    mPrint('INFO', f'GuildSettings for {id} seem good.')
 
 def formatLangStr(string : str, replace : Union[list, str]) -> str: #this has no reason of being so well documented lmao
     """
@@ -233,78 +237,8 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
     
     return ('parsing error', 'parseWord(str, int, str, list[str]) -> tuple[str, str]')
 
-def getJoinImageData(membername) -> tuple[Image.Image, ImageFont.truetype, tuple[str, list[int]], tuple[int, list[int]]]:
-    image_path = 'botFiles/join_images/'
-    images = os.listdir(image_path)
-    image_path = f'{image_path}{random.choice(images)}'
 
-    print(image_path)
-    if image_path[-5:] == '.json':
-        image_path = image_path[:-5] + '.png'
-        image_path2 = image_path[:-5] + '.jpg'
-    try:
-        image = Image.open(image_path)
-    except:
-        image = Image.open(image_path2)
-
-    if os.path.isfile(f'{image_path[:-4]}.json'):
-        with open(f'{image_path[:-4]}.json', 'r') as f:
-            data = json.load(f)
-    else:
-        mPrint('WARN', f'{image_path[:-4]} HAS NO JSON DATA, CREATE ONE TO ENSURE THE IMAGE IS GOOD')
-        data = {
-            "avatar_position": [10, 10],
-            "avatar_size": 300,
-            "text_position": [400,50],
-            "text": "Benvenuto %name%!",
-            "font_size": 50
-        }
-
-    font = ImageFont.truetype("botFiles/georgia.ttf", data["font_size"], encoding='utf-8')
-    if '%name%' in data["text"]:
-        data["text"] = data["text"].replace('%name%', membername, -1)
-
-    return (
-        image, 
-        font, 
-        [data["text"], data["text_position"]],
-        (data["avatar_size"], data["avatar_position"])
-    )
-
-async def joinImageSend(member : discord.Member, guild : discord.Guild, channel : discord.TextChannel = None):
-    imagepath = f'botFiles/{member.id}.png'
-    try:
-        await member.avatar.save(imagepath)
-    except AttributeError:
-        await member.default_avatar.save(imagepath)
-
-    #load join image and add text
-    joinImage, font, textData, avatarData = getJoinImageData(member.name)
-
-    ImageDraw.Draw(joinImage).text((textData[1][0], textData[1][1]),f"{textData[0]}",(255,255,255),font=font)
-    
-    #edit avatar and paste it to joinimage
-    mask = Image.open('botFiles/avatar_mask.png').convert("L").resize((avatarData[0],avatarData[0]))
-    avatar = Image.open(imagepath).convert('RGBA').resize((avatarData[0],avatarData[0]))
-    avatar = ImageOps.fit(avatar, mask.size, centering=(0.5, 0.5))
-    avatar.putalpha(mask)
-    joinImage.paste(avatar, (avatarData[1][0],avatarData[1][1]), avatar)
-
-    #send image to discord and delete it
-    joinImage.save(imagepath)
-
-    joinImage.close()
-    mask.close()
-    avatar.close()
-
-    f = discord.File(imagepath)
-    if channel == None:
-        await guild.system_channel.send(file=f)
-    else:
-        await channel.send(file=f)
-    os.remove(imagepath)
-
-#           -----           DISCORD BOT COROUTINES           -----       #
+#           -----           DISCORD BOT            -----       #
 class MyBot(discord.Client):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -329,6 +263,7 @@ class MyBot(discord.Client):
         checkSettingsIntegrity(int(guild.id))
 
     async def on_ready(self):
+        self.dev = await bot.fetch_user(348199387543109654)
         await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="!help"))
         await tree.sync()
 
@@ -340,67 +275,56 @@ class MyBot(discord.Client):
             message = await channel.fetch_message(sys.argv[4])
             await message.reply("Bot restarted")
             
-        mPrint("INFO", f'Connected to the following guild(s):\n')
+        mPrint("INFO", f'Connected to {len(bot.guilds)} guild(s):')
         for guild in bot.guilds:
-            mPrint("INFO", f'{guild.name} (id: {guild.id})')
-
-            members = '\n - '.join([member.name for member in guild.members])
-            mPrint('DEBUG', f'Guild Members:\n - {members}')
+            mPrint('DEBUG', f'Checking {guild.id}')
             if (int(guild.id) not in settings):
-                mPrint('DEBUG', f'^ Generating settings for guild {int(guild.id)}')
+                mPrint('DEBUG', f'^ Generating settings')
                 createSettings(int(guild.id))
             else:
-                mPrint('DEBUG', f'settings for {int(guild.id)} are present.')
+                mPrint('DEBUG', f'settings for are present.')
 
             checkSettingsIntegrity(int(guild.id))
 
     async def on_member_join(self, member : discord.Member):
-        mPrint("INFO", "join detected")
-        joinString = settings[int(member.guild.id)]['responseSettings']['join_message']
-        
-        if(joinString != ''):
-            joinString= joinString.replace('%name%', member.name)
+        if settings[int(member.guild.id)]['responseSettings']['send_join_msg']:
+            joinString:str = settings[int(member.guild.id)]['responseSettings']['join_message']
+            joinString = joinString.replace('%name%', member.name)
             await member.guild.system_channel.send(joinString)
+#--------------------------------- This is specific to my server---# 
 
-        if settings[int(member.guild.id)]['responseSettings']['join_image']:
-            await joinImageSend(member, member.guild)
+        if member.guild.id == 1019985578772664441:                   #  There is another block like this 
+            await NotLatif.joinImageSend(member, member.guild)      #    a little below this one
+#--------------------------------- you can safely delete this------# 
 
     async def on_member_remove(self, member : discord.Member):
-        leaveString = settings[int(member.guild.id)]['responseSettings']['leave_message']
-        if(leaveString == ''): return
-        leaveString= leaveString.replace('%name%', member.name)
-        
-        await member.guild.system_channel.send(leaveString)   
-        mPrint("INFO", "join detected") 
+        if settings[int(member.guild.id)]['responseSettings']['send_leave_msg']:
+            leaveString:str = settings[int(member.guild.id)]['responseSettings']['leave_message']
+            leaveString= leaveString.replace('%name%', member.name)
+            await member.guild.system_channel.send(leaveString)
     
     async def on_message(self, message : discord.Message):
-        if len(message.content.split()) == 0: return
-
+        if len(message.content.split())==0: return
         global settings
 
-        if message.content.split()[0] in musicBridge.cmds: 
-            return #needed to not conflict with music player
-
-        try: #if message is nonetype just avoid it
+        try:
             respSettings = settings[int(message.guild.id)]["responseSettings"]
-        except:
+        except AttributeError:
+            return #this gets triggered with ephemeral messages
+
+        if settings[message.guild.id]['responseSettings']['module_enabled'] == False:
             return
-    #--------------------------------- This is specific to my server
-        if myServer:
-            value = await myStuff.parseData(message, settings, respSettings, bot)
-            if value != None:
-                settings = value
-                dumpSettings()
-                return
-    #--------------------------------- you can safely delete this
+
+#--------------------------------- This is specific to my server---#
+        if message.content[0] == '!' and  message.author.id == 348199387543109654:
+            await NotLatif.parseCmd(message, settings)
+            return
+#--------------------------------- you can safely delete this------# 
 
         #don't respond to self, commands, messages with less than 2 words
-        if message.author.id == bot.user.id or message.content[0] in ['!', "/", "?", '|', '$', "&", ">", "<"] or len(message.content.split()) < 2:
+        if message.author.id == bot.user.id or message.content[0] in ["!", "/", "?", "|", '$', "&", ">", "<"] or len(message.content.split()) < 2:
             return
 
-        if 'word' in message.content: #for future implementation, respond to specific string
-            pass
-        
         #if guild does not want bot responses and sender is a bot, ignore the message
         if message.author.bot and not respSettings["will_respond_to_bots"]: return 0
 
@@ -436,56 +360,54 @@ class MyBot(discord.Client):
         msg = " ".join(msg) #trasforma messaggio in stringa
 
         await message.reply(msg, mention_author=False)
-        mPrint('DEBUG', f'responded to message <resp_rate: {respSettings["response_perc"]}%>')
+        mPrint('DEBUG', f'Ho risposto ad un messaggio.')
 
 
 bot = MyBot(intents = intents)
 tree = app_commands.CommandTree(bot)
 
-# slash commands
+
+#           -----           DISCORD BOT SLASH COMMANDS           -----       #
 
 @tree.command(name="join-msg", description="Cambia il messaggio di benvenuto, /help join-msg per più info")
-async def joinmsg(interaction : discord.Interaction, message : str = ""):
+async def joinmsg(interaction : discord.Interaction, message : str = None, enabled : bool = None):
     mPrint('CMDS', f'called /join-msg {message}')
     guildID = int(interaction.guild.id)
 
-    if message == "": #no args passed -> send current join message
-        #if guild join message is not empty
-        if(settings[guildID]['responseSettings']['join_message'] != ''):
-            await interaction.response.send_message(settings[guildID]['responseSettings']['join_message'])
-        else:
-            await interaction.response.send_message(strings['bot.joinmsg.none'])
+    if enabled != None:
+        settings[guildID]['responseSettings']['send_join_msg'] = enabled
+        dumpSettings()
 
-    else: #edit join-message or show help
-        if message == 'None':
-            settings[guildID]['responseSettings']['join_message'] = ''
-            await interaction.response.send_message(strings["bot.joinmsg.deactivated"])
-            return
-
+    if message != None: #edit join-message or show help
         settings[guildID]['responseSettings']['join_message'] = message
         dumpSettings()
-        await interaction.response.send_message(formatLangStr(strings["bot.joinmsg.new_message"], settings[guildID]['responseSettings']['join_message']))
 
+    embed = discord.Embed(
+        title="Join Message",
+        description=f"Enabled: {settings[guildID]['responseSettings']['send_join_msg']}\nMessage: {settings[guildID]['responseSettings']['join_message']}",
+        color=col.orange
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @tree.command(name="leave-msg", description="Cambia il messaggio di addio, /help leave-msg per più info")
-async def leavemsg(interaction : discord.Interaction, message : str = ""):
+async def leavemsg(interaction : discord.Interaction, message : str = None, enabled : bool = None):
     mPrint('CMDS', f'called /leave-msg {message}')
     guildID = int(interaction.guild.id)
 
-    if message == "": #no args passed -> show current leave-msg
-        #if guild leave message is not empty
-        if(settings[guildID]['responseSettings']['leave_message'] != ''):
-            await interaction.response.send_message(settings[guildID]['responseSettings']['leave_message'])
-        else:
-            await interaction.response.send_message(strings["bot.leavemsg.none"])
-    else:
-        if message == 'None':
-            settings[guildID]['responseSettings']['leave_message'] = ''
-            await interaction.response.send_message(strings["bot.leavemsg.deactivated"])
-            return
+    if enabled != None:
+        settings[guildID]['responseSettings']['send_leave_msg'] = enabled
+        dumpSettings()
+
+    if message != None: #edit join-message or show help
         settings[guildID]['responseSettings']['leave_message'] = message
         dumpSettings()
-        await interaction.response.send_message(formatLangStr(strings["bot.leavemsg.new_message"], settings[guildID]['responseSettings']['leave_message']))
+    
+    embed = discord.Embed(
+        title="Leave Message",
+        description=f"Enabled: {settings[guildID]['responseSettings']['send_leave_msg']}\nMessage: {settings[guildID]['responseSettings']['leave_message']}",
+        color=col.orange
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 @tree.command(name="respond-perc", description="Imposta la percentuale di risposta del bot (0-100)")
 async def responsePerc(interaction : discord.Interaction, value : int = -1):
@@ -599,7 +521,7 @@ async def dictionary_add(interaction : discord.Interaction, new_word : str):
     guildID = int(interaction.guild.id)
 
     settings[guildID]['responseSettings']['custom_words'].append(new_word)
-    await interaction.response.send_message(strings['bot.words.learned'])
+    await interaction.response.send_message(strings['bot.words.learned'], ephemeral=True)
     dumpSettings()
     return
 
@@ -618,9 +540,9 @@ async def dictionary_edit(interaction : discord.Interaction, id : int, new_word 
     if len(settings[guildID]['responseSettings']['custom_words']) > editWord:
         settings[guildID]['responseSettings']['custom_words'][editWord] = new_word
         dumpSettings()
-        await interaction.response.send_message(strings['done'])
+        await interaction.response.send_message(strings['done'], ephemeral=True)
     else:
-        await interaction.response.send_message(strings['bot.words.id_not_found'])
+        await interaction.response.send_message(strings['bot.words.id_not_found'], ephemeral=True)
     return
 
 @tree.command(name="dictionary-del", description="Elimina una parola dal dizionario", )
@@ -637,9 +559,9 @@ async def dictionary_del(interaction : discord.Interaction, id : int):
     if len(settings[guildID]['responseSettings']['custom_words']) > delWord:
         del settings[guildID]['responseSettings']['custom_words'][delWord]
         dumpSettings()
-        await interaction.response.send_message(strings['done'])
+        await interaction.response.send_message(strings['done'], ephemeral=True)
     else:
-        await interaction.response.send_message(strings['bot.words.id_not_found'])
+        await interaction.response.send_message(strings['bot.words.id_not_found'], ephemeral=True)
     return
 
 @tree.command(name="dictionary-useglobal", description="Attiva/Disattiva il dizionario globale")
@@ -648,7 +570,7 @@ async def dictionary_default(interaction : discord.Interaction, value : bool ):
     guildID = int(interaction.guild.id)
 
     settings[guildID]["responseSettings"]["use_global_words"] = value
-    await interaction.response.send_message(f'useDefault: {value}')
+    await interaction.response.send_message(f'useDefault: {value}', ephemeral=True)
     dumpSettings()
     return
 
@@ -661,6 +583,10 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
     """
     mPrint('CMDS', f'called /chess: ch: {challenge}')
     guildID = int(interaction.guild.id)
+
+    if settings[guildID]['chessGame']['module_enabled'] == False:
+        await interaction.response.send_message("This module was disabled by an administrator.", ephemeral=True)
+        return
 
     await interaction.channel.typing()
 #1. Prepare the variables
@@ -1599,12 +1525,18 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
 async def playSong(interaction : discord.Interaction, tracks : str):
     guildID = int(interaction.guild.id)
     await interaction.channel.typing()
+
+    if settings[guildID]['musicbot']['module_enabled'] == False:
+        await interaction.response.send_message("This module was disabled by an administrator.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
     voice_client : discord.VoiceClient = get(bot.voice_clients, guild=interaction.guild)
 
     #TODO improve
     if voice_client != None:
         if voice_client.is_connected():
-            await interaction.response.send_message('Sono già connesso in un canale vocale', ephemeral=True)
+            await interaction.followup.send('Sono già connesso in un canale vocale', ephemeral=True)
         return
 
     #user searched a link
@@ -1621,16 +1553,19 @@ async def playSong(interaction : discord.Interaction, tracks : str):
     
     #user wants to search for a song title
     else:
-        mPrint('MUSIC', f'Searching for user requested song: ({" ".join(tracks)})')
-        trackURL = musicBridge.musicPlayer.youtubeParser.searchYTurl(' '.join(tracks))
+        mPrint('MUSIC', f'Searching for user requested song: ({tracks})')
+        trackURL = musicBridge.musicPlayer.youtubeParser.searchYTurl(tracks)
         mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
         playContent = trackURL
     
     overwrite,shuffle,precision = settings[guildID]['youtube_search_overwrite'],settings[guildID]['musicbot']["player_shuffle"],settings[guildID]['musicbot']["timeline_precision"]
     
     # interaction.response.defer()
-    await musicBridge.play(playContent, interaction, bot, shuffle, precision, overwrite)
-
+    try:
+        await musicBridge.play(playContent, interaction, bot, shuffle, precision, overwrite)
+    except Exception:
+        await interaction.followup.send("C'è stato un errore.", ephemeral=True)
+        mPrint('ERROR', traceback.print_exc())
 
 @tree.command(name='suggest', description="Sovrascrivi una canzone sbagliata") #Player
 async def suggest(interaction : discord.Interaction):
@@ -1659,37 +1594,92 @@ async def ping(interaction : discord.Interaction):
     await interaction.response.send_message(f'Pong! {pingms}ms')
     mPrint('INFO', f'ping detected: {pingms} ms')
 
-@tree.command(name='getimage', description='generate an join image')
+
+@tree.command(name="module", description="Attiva/Disattiva funzioni del bot")
+@app_commands.choices(modules=[
+        app_commands.Choice(name="Every Module", value="0"),
+        app_commands.Choice(name="Message Reply", value="1"),
+        app_commands.Choice(name="Chess", value="2"),
+        app_commands.Choice(name="Music", value="3"),
+])
 @app_commands.default_permissions()
-async def test(interaction : discord.Interaction, user: discord.Member):
-    await interaction.channel.typing()
-    await joinImageSend(user, interaction.guild, interaction.channel)
+async def module_settings(interaction : discord.Interaction, modules:app_commands.Choice[str], is_enabled:bool=None):
+    mPrint('CMDS', f'called /module: {modules.name}')
+    guildID = int(interaction.guild.id)
+    response = int(modules.value)
+
+    if response == 0 and is_enabled != None:
+        settings[guildID]['responseSettings']['module_enabled'] = is_enabled
+        settings[guildID]['chessGame']['module_enabled'] = is_enabled
+        settings[guildID]['musicbot']['module_enabled'] = is_enabled
+        dumpSettings()
+
+    elif response == 1:
+        if is_enabled == None:
+            await interaction.response.send_message(f"Message replies are currently {'Enabled' if settings[guildID]['responseSettings']['module_enabled'] else 'Disabled'}", ephemeral=True)
+            return
+        else:
+            settings[guildID]['responseSettings']['module_enabled'] = is_enabled
+            dumpSettings()
     
+    elif response == 2:
+        if is_enabled == None:
+            await interaction.response.send_message(f"Chess games are currently {'Enabled' if settings[guildID]['chessGame']['module_enabled'] else 'Disabled'}", ephemeral=True)
+            return
+        else:
+            settings[guildID]['chessGame']['module_enabled'] = is_enabled
+            dumpSettings()
+    
+    elif response == 3:
+        if is_enabled == None:
+            await interaction.response.send_message(f"Music bot is currently {'Enabled' if settings[guildID]['musicbot']['module_enabled'] else 'Disabled'}", ephemeral=True)
+            return
+        else:
+            settings[guildID]['musicbot']['module_enabled'] = is_enabled
+            dumpSettings()
 
-@app_commands.default_permissions()
-@tree.command(name='bot_restart', description='AVOID USAGE AT ALL COSTS')
-async def test(interaction : discord.Interaction):
-    #ONLY FOR TESTING PURPOSES. DO NOT ABUSE THIS COMMAND
-    mPrint("WARN", "RESTARTING BOT")
-    await interaction.response.send_message("WARNING, DO NOT ABUSE THIS COMMAND...\nplease wait...", ephemeral=True)
-    os.system(f"bot.py RESTART {interaction.guild.id} {interaction.channel.id}")
+    description = f"Message Reply: {settings[guildID]['responseSettings']['module_enabled']}\nChess: {settings[guildID]['chessGame']['module_enabled']}\nMusicbot: {settings[guildID]['musicbot']['module_enabled']}"
+    embed = discord.Embed (
+        title="Enabled modules:",
+        description=description,
+        color=col.orange
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+    return
 
 
-@app_commands.default_permissions()
-@tree.command(name='rawdump', description="debug tool")
-async def rawDump(interaction : discord.Interaction):
-    await interaction.response.send_message(f'```JSON dump for {interaction.guild.name}:\n{json.dumps(settings[int(interaction.guild.id)], indent=3)}```', ephemeral=True)
+@tree.command(name="feedback", description="Send a message to the developer!")
+@app_commands.choices(category=[
+        app_commands.Choice(name="Bug report", value="0"),
+        app_commands.Choice(name="Feature request", value="1"),
+        app_commands.Choice(name="Other", value="2"),
+])
+async def feedback(interaction : discord.Interaction, category:app_commands.Choice[str]):
+    """
+    :param category: PRESS ENTER AFTER SELECTING CATEGORY
+    """
+    class Feedback(discord.ui.Modal, title='Invia il feedback'):
+        input = discord.ui.TextInput(label="This form is anonymous", style=discord.TextStyle.long, required=True)
+ 
+        async def on_submit(self, interaction: discord.Interaction):
+            now = datetime.now().strftime("[%d/%m/%y %H:%M:%S]")
+            message = f"{now}-({interaction.id})\nUser submitted feedback **{category.name}**\n`{str(self.input.value)}`\n"
+            try:
+                await bot.dev.send(message)
+            except Exception:
+                await bot.dev.send(f"Someone sent a feedback: ID -> {interaction.id}")
 
-@tree.command(name='send-join-image', description="Inviare un immagine quando entra un membro?")
-async def joinmsg(interaction : discord.Interaction, value:bool):
+            mPrint('INFO', message)
+            with open('feedback.log', 'a') as f:
+                f.writelines(message)
 
-    if value:
-        settings[int(interaction.guild.id)]['responseSettings']['join_image'] = True
-    else:
-        settings[int(interaction.guild.id)]['responseSettings']['join_image'] = False
-    dumpSettings()
+            await interaction.response.send_message(f'Thank you for your feedback ❤', ephemeral=True)
+ 
+    await interaction.response.send_modal(Feedback())
 
-    await interaction.response.send_message(f"joinimage: {settings[int(interaction.guild.id)]['responseSettings']['join_image']}")
+    return
+
+
 
 loadSettings()
 try:

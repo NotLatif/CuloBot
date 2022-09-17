@@ -61,7 +61,7 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
     
     #check if tracks
     if tracks == None:
-        await interaction.response.send_message(f"An error occurred while looking for song(s).", ephemeral=True)
+        await interaction.followup.send(f"An error occurred while looking for song(s).", ephemeral=True)
         mPrint("WARN", f"play function did not find the track requested {url}")
         return
     
@@ -92,10 +92,10 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
     try: #try connecting to vc
         vchannel = bot.get_channel(interaction.user.voice.channel.id)
     except AttributeError:
-        await interaction.response.send_message('Devi essere in un culo vocale per usare questo comando.', ephemeral=True)
+        await interaction.followup.send('Devi essere in un culo vocale per usare questo comando.', ephemeral=True)
         return
     except discord.ClientException:
-        await interaction.response.send_message('Sono già in un altro canale vocale.', ephemeral=True)
+        await interaction.followup.send('Sono già in un altro canale vocale.', ephemeral=True)
         return
     else:
         voice : discord.VoiceClient = await vchannel.connect()
@@ -111,7 +111,7 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
         "report": "⁉",
     }
 
-    await interaction.response.send_message("Queue avviata", ephemeral=True)
+    await interaction.followup.send("Queue avviata", ephemeral=False)
     embedMSG = await channel.send(embed=embed)
 
     player = musicPlayer.Player(voice, queue, overwritten, shuffle)

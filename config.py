@@ -2,7 +2,9 @@
 logLevel = 0 #determines what tags the script prints in the terminal
 printLevel = 0 #determines what tags the script prints in the "bot.log" file
 useColors = True #whether the terminal should display colored text
+timeInTerminal = True
 
+#NOTE, if something won't print it won't log either even if you specified otherwise (printLevel <= logLevel)
 #levels: (0 will show every tag; 3 will only show ERROR)
 # 0 - DEBUG, VARS, TEST, FUNC, CMDS     < DEBUG, INFO, WARN and ERROR
 # 1 - INFO, MUSIC, USER, GAME           < INFO, WARN and ERROR

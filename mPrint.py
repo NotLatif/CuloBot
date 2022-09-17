@@ -7,6 +7,7 @@ init()
 useColors = config.useColors
 logLevel = config.logLevel
 printLevel = config.printLevel
+timeInTerminal = config.timeInTerminal
 
 def mPrint(tag, source, text):
     """
@@ -36,7 +37,6 @@ def mPrint(tag, source, text):
     if logLevel <= 0: #DEBUG
         if tag in ['DEBUG', 'VARS', 'TEST', 'FUNC', 'CMDS']: willLog = True
         
-    
     if willPrint == False: return
 
     now = datetime.now().strftime("[%d/%m/%y %H:%M:%S]")
@@ -84,7 +84,8 @@ def mPrint(tag, source, text):
         tag = f"[{tag}]"
         
 #							  p2 is only used for ENGINE
-    print(f'{style}{tag}({source}) - {text}{Fore.RESET}')
+    time = f"{Fore.LIGHTBLACK_EX}{now}" if timeInTerminal else ''
+    print(f'{time}{style}{tag}({source}) - {text}{Fore.RESET}')
 
     #log string
     if willLog:
