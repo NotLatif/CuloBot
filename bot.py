@@ -42,9 +42,11 @@ except ModuleNotFoundError:
 #I'm  not reorganizing the code for now (maybe willdo)
 
 #Sensitive data is stored in a ".env" file
-TOKEN = os.getenv('DISCORD_TOKEN')[1:-1]
+TOKEN : str = os.getenv('DISCORD_TOKEN')
+TOKEN = TOKEN.strip('{}')
 
-GENIOUS = os.getenv('GENIOUS_SECRET')[1:-1]
+GENIOUS : str = os.getenv('GENIOUS_SECRET')
+GENIOUS = GENIOUS.strip('{}')
 
 SETTINGS_TEMPLATE = {"id":{"responseSettings":{"join_message":"A %name% piace il culo!","join_image":True,"leave_message":"Salutiamo felicemente il coglione di %name%","response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":True,"use_global_words":True,"custom_words":[],"buttbot_replied":[]},"chessGame":{"default_board":"default","boards":{},"default_design":"default","designs":{}},"saved_playlists":{},"youtube_search_overwrite":{},"musicbot":{"player_shuffle": True,"timeline_precision": 14}}}
 

@@ -8,8 +8,10 @@ from mPrint import mPrint as mp
 def mPrint(tag, value):mp(tag, 'bot', value)
 
 load_dotenv()#Sensitive data is stored in a ".env" file
-CLIENT_ID = os.getenv('SPOTIFY_ID')[1:-1]
-CLIENT_SECRET = os.getenv('SPOTIFY_SECRET')[1:-1]
+CLIENT_ID = os.getenv('SPOTIFY_ID')
+CLIENT_ID = CLIENT_ID.strip('{}')
+CLIENT_SECRET = os.getenv('SPOTIFY_SECRET')
+CLIENT_SECRET = CLIENT_SECRET.strip('{}')
 
 authenticated = False
 
