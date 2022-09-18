@@ -402,8 +402,7 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
     asyncio.create_task(emojiInput(playerTask))
 
 cmds = ['!skip', '!shuffle', '!pause', '!resume','!stop', '!clear',
- '!loop', 'restart', '!restart',  '!queue', '!remove', '!mv',
-'!playnext', '!pnext',]
+ '!loop', '!restart', '!queue', '!remove', '!mv', '!playnext', '!pnext',]
 
 
 old_cmds = ['skip', '!skip', 'shuffle', '!shuffle', 'pause', '!pause',

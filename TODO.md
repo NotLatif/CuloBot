@@ -1,6 +1,10 @@
+# CRITICAL
+spotipy in spotifyParser causes heartbeat block, switch to an async module ASAP
+possible alternatives: https://pypi.org/project/async-spotify/
+
 # Culobot features
 
-✅ add possibility to deactivate modules
+🟦 guild count
 
 🟦 add possibility to whitelist channels for modules
 

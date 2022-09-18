@@ -1,4 +1,4 @@
-#version 1.0.1 release
+#version 1.0.2 release
 import asyncio
 import os
 import shutil
@@ -67,7 +67,7 @@ with open(settingsFile, 'a'): pass #make guild setting file if it does not exist
 with codecs.open('botFiles/lang.json', 'r', 'utf-8') as f:
     strings : dict[str,str] = json.load(f)['IT']
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"module_enabled":True,"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"module_enabled":True,"default_board":"default","boards":{},"default_design":"default","designs":{}},"saved_playlists":{},"youtube_search_overwrite":{},"musicbot":{"module_enabled":True,"player_shuffle": True,"timeline_precision": 14}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"enabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"enabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"saved_playlists":{},"youtube_search_overwrite":{},"musicbot":{"enabled_channels":[],"player_shuffle": True,"timeline_precision": 14}}}
 
 #Useful funtions
 def splitString(str, separator = ' ', delimiter = '\"') -> list:
@@ -262,6 +262,9 @@ class MyBot(discord.Client):
 
         checkSettingsIntegrity(int(guild.id))
 
+    async def on_guild_remove(self, guild:discord.Guild):
+        pass
+    
     async def on_ready(self):
         self.dev = await bot.fetch_user(348199387543109654)
         await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="!help"))
@@ -312,8 +315,8 @@ class MyBot(discord.Client):
         except AttributeError:
             return #this gets triggered with ephemeral messages
 
-        if settings[message.guild.id]['responseSettings']['module_enabled'] == False:
-            return
+        if message.channel.id not in settings[message.guild.id]['responseSettings']['enabled_channels']:
+            return #module is not in whitelist
 
 #--------------------------------- This is specific to my server---#
         if message.content[0] == '!' and  message.author.id == 348199387543109654:
@@ -584,8 +587,8 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
     mPrint('CMDS', f'called /chess: ch: {challenge}')
     guildID = int(interaction.guild.id)
 
-    if settings[guildID]['chessGame']['module_enabled'] == False:
-        await interaction.response.send_message("This module was disabled by an administrator.", ephemeral=True)
+    if interaction.channel.id not in settings[guildID]['chessGame']['enabled_channels']:
+        await interaction.response.send_message("This module is not enabled in this channel.", ephemeral=True)
         return
 
     await interaction.channel.typing()
@@ -1286,8 +1289,8 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
 
     savedPlaylists = settings[guildID]["saved_playlists"]
 
-    await interaction.channel.typing()
     if response == 0: #send the playlist list list to user
+        
         embed = discord.Embed(
             title=f"Saved playlists for {interaction.guild.name}",
             description="Puoi salvare più link in una playlist in modo da non dover rifare gli stessi comandi più volte!",
@@ -1298,7 +1301,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
             for i, t in enumerate(settings[guildID]["saved_playlists"][plist]):
                 urls += f'**{i}**: {t}\n' 
             embed.add_field(name=plist, value=urls, inline=False)
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
         return    
 
     elif response == 1:  #add a new playlist
@@ -1307,8 +1310,6 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
             links = discord.ui.TextInput(label='Tracce', placeholder="Inserisci i link o i nomi delle canzoni uno per riga (spotify/youtube, anche playlist)", style=discord.TextStyle.paragraph, required=True)
 
             async def on_submit(self, interaction: discord.Interaction):
-                await interaction.response.defer()
-                await interaction.channel.typing()
                 name = str(self.name)
                 links = str(self.links).split('\n')
 
@@ -1334,11 +1335,10 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                         description=errors,
                         color=col.error
                     )
-                    await interaction.channel.send(embed=embed)
 
-                if tracks == []:
-                    await interaction.response('Error: every song/playlist failed')
-                    return
+                    if tracks == []:
+                        embed.add_field(name='ERROR', value=': every song/playlist failed')
+                        interaction.response.send_message(embed=embed, ephemeral=True)
 
                 trackList = ''
                 for i, t in enumerate(tracks):
@@ -1348,8 +1348,12 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                 settings[guildID]["saved_playlists"][name] = tracks
                 dumpSettings()
 
-                embed = discord.Embed(title = f"Playlist {name}: ", description=trackList)
-                await interaction.channel.send(embed=embed)
+                embed = discord.Embed(
+                    title = f"Playlist {name}: ",
+                    description=f"{trackList}\n{errors}",
+                    color = col.orange if errors == "" else col.red
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
                 
                 return
 
@@ -1376,8 +1380,6 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                 async def on_submit(self, interaction: discord.Interaction): #this triggers when user submits the modal with the new data
                     links = str(self.links).split('\n')
                     # this is the same as creating a new playlist
-                    await interaction.response.defer()
-                    await interaction.channel.typing()
 
                     mPrint('TEST', f"{playlistName}: {links}")
 
@@ -1401,11 +1403,10 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                             description=errors,
                             color=col.error
                         )
-                        await interaction.channel.send(embed=embed)
 
-                    if tracks == []:
-                        await interaction.response('Error: every song/playlist failed')
-                        return
+                        if tracks == []:
+                            await interaction.response.send_message('Error: every song/playlist failed', ephemeral=True)
+                            return
 
                     trackList = ''
                     for i, t in enumerate(tracks):
@@ -1415,8 +1416,12 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                     settings[guildID]["saved_playlists"][playlistName] = tracks
                     dumpSettings()
 
-                    embed = discord.Embed(title = f"Playlist {playlistName}: ", description=trackList)
-                    await interaction.channel.send(embed=embed)
+                    embed = discord.Embed(
+                        title = f"Playlist {playlistName}: ",
+                        description=f"{trackList}\n{errors}",
+                        color = col.orange if errors == "" else col.red
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
                     
                     return
 
@@ -1445,7 +1450,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                 links = settings[guildID]['saved_playlists'].pop(playlistName)
                 dumpSettings()
                 links = "\n".join(links)
-                await interaction.response.send_message(formatLangStr(strings['bot.music.playlist.delete.ok'], [playlistName, f'```{links}```']))
+                await interaction.response.send_message(formatLangStr(strings['bot.music.playlist.delete.ok'], [playlistName, f'```{links}```']), ephemeral=True)
 
         choices.callback = delete_playlist
         if savedPlaylists != {}:
@@ -1464,6 +1469,9 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
         app_commands.Choice(name="Precision", value="2"),
 ])
 async def playerSettings(interaction : discord.Interaction, setting : app_commands.Choice[str], value : int = None):
+    """
+    :param setting: DO NOT INSERT value FOR SHUFFLE 
+    """
     mPrint('CMDS', f'called /player-settings: ')
     guildID = int(interaction.guild.id)
     response = int(setting.value)
@@ -1477,7 +1485,7 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
         embed.add_field(name="Shuffle: ", value=f"{settings[guildID]['musicbot']['player_shuffle']}", inline=False)
         embed.add_field(name="Precision: ", value=f"{settings[guildID]['musicbot']['timeline_precision']} / {config.timeline_max}", inline=False)
 
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
     
     elif response == 1: # shuffle setting
         current = bool(settings[guildID]['musicbot']["player_shuffle"])
@@ -1515,7 +1523,6 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
         
         settings[guildID]['musicbot']["timeline_precision"] = newPrec
         dumpSettings()
-        interaction.response.defer(ephemeral=True)
         await interaction.response.send_message(f"La nuova precisione è {newPrec}{warnmsg}", ephemeral=True)
 
     return
@@ -1524,10 +1531,9 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
 @app_commands.describe(tracks="URL / Title / saved playlist (/playlist)")
 async def playSong(interaction : discord.Interaction, tracks : str):
     guildID = int(interaction.guild.id)
-    await interaction.channel.typing()
 
-    if settings[guildID]['musicbot']['module_enabled'] == False:
-        await interaction.response.send_message("This module was disabled by an administrator.", ephemeral=True)
+    if interaction.channel.id not in settings[guildID]['musicbot']['enabled_channels']:
+        await interaction.response.send_message("This module is not enabled in this channel.", ephemeral=True)
         return
 
     await interaction.response.defer(ephemeral=True)
@@ -1595,57 +1601,109 @@ async def ping(interaction : discord.Interaction):
     mPrint('INFO', f'ping detected: {pingms} ms')
 
 
+@tree.command(name="module-info", description="Mostra lo stato dei moduli")
+@app_commands.default_permissions()
+async def module_info(interaction : discord.Interaction):
+    guildID = int(interaction.guild.id)
+    await interaction.response.defer(ephemeral=True)
+
+    embed=discord.Embed(
+        title=f"CuloBot modules for {interaction.guild.name}",
+        description="You can change this data using the command /module <module> [#channel] [enable]",
+        color=col.orange
+    )
+
+    responseChannels = ""
+    for ch in settings[guildID]['responseSettings']['enabled_channels']:
+        channel = await bot.fetch_channel(ch)
+        responseChannels = responseChannels + f"{channel.mention}\n"
+    #Add N/A if string
+    responseChannels = "No whitelisted channels" if responseChannels == "" else responseChannels
+
+    chessChannels = ""
+    for ch in settings[guildID]['chessGame']['enabled_channels']:
+        channel = await bot.fetch_channel(ch)
+        chessChannels = chessChannels + f"{channel.mention}\n"
+    #Add N/A if string
+    chessChannels = "No whitelisted channels" if chessChannels == "" else chessChannels
+
+    musicChannels = ""
+    for ch in settings[guildID]['musicbot']['enabled_channels']:
+        channel = await bot.fetch_channel(ch)
+        musicChannels = musicChannels + f"{channel.mention}\n"
+    #Add N/A if string
+    musicChannels = "No whitelisted channels" if musicChannels == "" else musicChannels
+
+    embed.add_field(name="**Chat replies:**", value=responseChannels, inline=False)
+    embed.add_field(name="**Chess:**", value=chessChannels, inline=False)
+    embed.add_field(name="**Music Bot:**", value=musicChannels, inline=False)
+    
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
 @tree.command(name="module", description="Attiva/Disattiva funzioni del bot")
 @app_commands.choices(modules=[
-        app_commands.Choice(name="Every Module", value="0"),
         app_commands.Choice(name="Message Reply", value="1"),
         app_commands.Choice(name="Chess", value="2"),
         app_commands.Choice(name="Music", value="3"),
 ])
 @app_commands.default_permissions()
-async def module_settings(interaction : discord.Interaction, modules:app_commands.Choice[str], is_enabled:bool=None):
-    mPrint('CMDS', f'called /module: {modules.name}')
+async def module_settings(interaction : discord.Interaction, modules:app_commands.Choice[str], channel:discord.TextChannel=None, enable:bool=None):
+    """
+    :param channel: on which text channel (default=every channel)
+    :param enable: whether to enable or disable the module
+    """
+    mPrint('CMDS', f'called /module: {modules.name})')
     guildID = int(interaction.guild.id)
     response = int(modules.value)
+    await interaction.response.defer(ephemeral=True)
 
-    if response == 0 and is_enabled != None:
-        settings[guildID]['responseSettings']['module_enabled'] = is_enabled
-        settings[guildID]['chessGame']['module_enabled'] = is_enabled
-        settings[guildID]['musicbot']['module_enabled'] = is_enabled
-        dumpSettings()
-
-    elif response == 1:
-        if is_enabled == None:
-            await interaction.response.send_message(f"Message replies are currently {'Enabled' if settings[guildID]['responseSettings']['module_enabled'] else 'Disabled'}", ephemeral=True)
-            return
-        else:
-            settings[guildID]['responseSettings']['module_enabled'] = is_enabled
-            dumpSettings()
-    
+    module = ""
+    if response == 1:
+        module = 'responseSettings'
     elif response == 2:
-        if is_enabled == None:
-            await interaction.response.send_message(f"Chess games are currently {'Enabled' if settings[guildID]['chessGame']['module_enabled'] else 'Disabled'}", ephemeral=True)
-            return
-        else:
-            settings[guildID]['chessGame']['module_enabled'] = is_enabled
-            dumpSettings()
-    
+        module = 'chessGame'
     elif response == 3:
-        if is_enabled == None:
-            await interaction.response.send_message(f"Music bot is currently {'Enabled' if settings[guildID]['musicbot']['module_enabled'] else 'Disabled'}", ephemeral=True)
-            return
-        else:
-            settings[guildID]['musicbot']['module_enabled'] = is_enabled
-            dumpSettings()
+        module = 'musicbot'
+    else:
+        mPrint('ERROR', f'Invalid response "{response}" for module_settings()')
+        return
 
-    description = f"Message Reply: {settings[guildID]['responseSettings']['module_enabled']}\nChess: {settings[guildID]['chessGame']['module_enabled']}\nMusicbot: {settings[guildID]['musicbot']['module_enabled']}"
-    embed = discord.Embed (
-        title="Enabled modules:",
-        description=description,
-        color=col.orange
-    )
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-    return
+    if enable == None: #send info about the module
+        resp = f"Module {modules.name} is enabled for:\n"
+        for ch in settings[guildID][module]['enabled_channels']:
+            channel = await bot.fetch_channel(ch)
+            resp = resp + f"{channel.mention}\n"
+        await interaction.followup.send(resp, ephemeral=True)
+        return
+    elif channel == None: #change setting for every channel
+        if enable == True: #user wants to enable setting in every channel
+            for c in await bot.get_all_channels():
+                settings[guildID][module]['enabled_channels'] = []
+                settings[guildID][module]['enabled_channels'].append(c.id)
+                dumpSettings()
+                await interaction.followup.send(f"Module {modules.name} was enabled for every channel", ephemeral=True)
+        else: #user wants to disable setting in every channel
+            settings[guildID][module]['enabled_channels'] = []
+            dumpSettings()
+            await interaction.followup.send(f"Module {modules.name} was disabled for every channel", ephemeral=True)
+    else: #change setting for specific channel
+        if channel.id in settings[guildID][module]['enabled_channels']: #channel was enabled
+            if enable == True:
+                await interaction.followup.send(f"Module {modules.name} was already enabled for {channel.mention}", ephemeral=True)
+                pass #channel was already enabled
+            else:
+                settings[guildID][module]['enabled_channels'].remove(channel.id)
+                dumpSettings()
+                await interaction.followup.send(f"Module {modules.name} is now disabled for {channel.mention}", ephemeral=True)
+        else: #channel was disabled
+            if enable == True:
+                settings[guildID][module]['enabled_channels'].append(channel.id)
+                dumpSettings()
+                await interaction.followup.send(f"Module {modules.name} is now enabled for {channel.mention}", ephemeral=True)
+            else:
+                await interaction.followup.send(f"Module {modules.name} was already disabled for {channel.mention}", ephemeral=True)
+                pass #channel was already disabled
+
 
 
 @tree.command(name="feedback", description="Send a message to the developer!")
@@ -1659,7 +1717,7 @@ async def feedback(interaction : discord.Interaction, category:app_commands.Choi
     :param category: PRESS ENTER AFTER SELECTING CATEGORY
     """
     class Feedback(discord.ui.Modal, title='Invia il feedback'):
-        input = discord.ui.TextInput(label="This form is anonymous", style=discord.TextStyle.long, required=True)
+        input = discord.ui.TextInput(label="This form is anonymous", style=discord.TextStyle.long, required=True, placeholder="If you want a reply, add your name#0000 in this form")
  
         async def on_submit(self, interaction: discord.Interaction):
             now = datetime.now().strftime("[%d/%m/%y %H:%M:%S]")
