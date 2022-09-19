@@ -1,4 +1,4 @@
-#version 1.0.2 release
+#version 1.0.2-0 release
 import asyncio
 import os
 import shutil
@@ -158,14 +158,14 @@ def checkSettingsIntegrity(id : int):
     for key in SETTINGS_TEMPLATE["id"]:
         if(key not in settings[id]): #check if there is a key that should not be there (avoid useless data)
             settings[id][key] = SETTINGS_TEMPLATE["id"][key]
-            mPrint('DEBUG', f'Missing key: {key}')
+            mPrint('DEBUG', f'Creating key: {key}')
 
         #it it's a dict also check it's keys
         if(type(SETTINGS_TEMPLATE["id"][key]) == dict):
             for subkey in SETTINGS_TEMPLATE["id"][key]:
                 if(subkey not in settings[id][key]): #check if there is a key that should not be there (avoid useless data)
                     settings[id][key][subkey] = SETTINGS_TEMPLATE["id"][key][subkey]
-                    mPrint('DEBUG', f'Missing subkey: {subkey}')
+                    mPrint('DEBUG', f'Creating subkey: {subkey}')
 
     dumpSettings()
 
@@ -267,7 +267,7 @@ class MyBot(discord.Client):
     
     async def on_ready(self):
         self.dev = await bot.fetch_user(348199387543109654)
-        await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="!help"))
+        await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="/help"))
         await tree.sync()
 
         mPrint("DEBUG", "Called on_ready")
@@ -1615,21 +1615,21 @@ async def module_info(interaction : discord.Interaction):
 
     responseChannels = ""
     for ch in settings[guildID]['responseSettings']['enabled_channels']:
-        channel = await bot.fetch_channel(ch)
+        channel = await interaction.guild.fetch_channel(ch)
         responseChannels = responseChannels + f"{channel.mention}\n"
     #Add N/A if string
     responseChannels = "No whitelisted channels" if responseChannels == "" else responseChannels
 
     chessChannels = ""
     for ch in settings[guildID]['chessGame']['enabled_channels']:
-        channel = await bot.fetch_channel(ch)
+        channel = await interaction.guild.fetch_channel(ch)
         chessChannels = chessChannels + f"{channel.mention}\n"
     #Add N/A if string
     chessChannels = "No whitelisted channels" if chessChannels == "" else chessChannels
 
     musicChannels = ""
     for ch in settings[guildID]['musicbot']['enabled_channels']:
-        channel = await bot.fetch_channel(ch)
+        channel = await interaction.guild.fetch_channel(ch)
         musicChannels = musicChannels + f"{channel.mention}\n"
     #Add N/A if string
     musicChannels = "No whitelisted channels" if musicChannels == "" else musicChannels
@@ -1677,11 +1677,13 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
         return
     elif channel == None: #change setting for every channel
         if enable == True: #user wants to enable setting in every channel
-            for c in await bot.get_all_channels():
-                settings[guildID][module]['enabled_channels'] = []
-                settings[guildID][module]['enabled_channels'].append(c.id)
-                dumpSettings()
-                await interaction.followup.send(f"Module {modules.name} was enabled for every channel", ephemeral=True)
+            allChannels = await interaction.guild.fetch_channels()
+            settings[guildID][module]['enabled_channels'] = []
+            for c in allChannels:
+                if c.type == discord.ChannelType.text:
+                    settings[guildID][module]['enabled_channels'].append(c.id)
+            dumpSettings()
+            await interaction.followup.send(f"Module {modules.name} was enabled for every channel", ephemeral=True)
         else: #user wants to disable setting in every channel
             settings[guildID][module]['enabled_channels'] = []
             dumpSettings()
@@ -1704,6 +1706,14 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
                 await interaction.followup.send(f"Module {modules.name} was already disabled for {channel.mention}", ephemeral=True)
                 pass #channel was already disabled
 
+
+
+@tree.command(name="help", description="Help")
+@app_commands.choices(command=[
+        app_commands.Choice(name="WIP", value="0"),
+])
+async def help(interaction : discord.Interaction, command:app_commands.Choice[str]=None):
+    await interaction.response.send_message("Sorry, this section is under construction, a quick startup is using the command `/module` to enable the bot in specific chats.", ephemeral=True)
 
 
 @tree.command(name="feedback", description="Send a message to the developer!")
