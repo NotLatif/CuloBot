@@ -392,7 +392,7 @@ class MessageHandler():
             color=c
         )
 
-        embed.add_field(name='WARN', value="music player commands are temporarely prefixed with a !, e.g.: `!skip`")
+        embed.add_field(name='WARN', value="music player commands are temporarely prefixed with a !, e.g.: `!skip`", inline=False)
 
         artist = "N/A" if self.player.currentSong["artist"] == "" else self.player.currentSong["artist"]
         
