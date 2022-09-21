@@ -1,13 +1,13 @@
 <img  align="right"  src="docs/logo.png"  width="200px">
 
-# [CuloBot](https://notlatif.github.io/CuloBot/)
+# [CuloBot](https://culobot.notlatif.com)
 
 A discord bot that can play music, let's you play chess and do other things.
 **Please submit issues, thank you**
 
 If you like the project and want to help, consider [buying me a coffee!](https://www.buymeacoffee.com/CuloBot)
 
-### [Add bot to your server](https://notlatif.github.io/CuloBot/)
+### [Add bot to your server](https://culobot.notlatif.com)
 
 ### [Join the Discord!](https://discord.com/invite/YTvn5Zwc5R)
 
@@ -62,4 +62,4 @@ N.B. there will come translations some time in the future, but for now it's a mi
 
 ## Discord commands
 
-You can find them here https://notlatif.github.io/CuloBot/
+You can find them [here](https://culobot.notlatif.com/#commands)
