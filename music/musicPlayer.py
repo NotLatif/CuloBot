@@ -10,7 +10,7 @@ import traceback
 import discord
 import asyncio
 import time
-from youtube_dl import YoutubeDL
+from youtube_dl import YoutubeDL, utils
 from youtubesearchpython import VideosSearch, Video
 from random import shuffle
 
@@ -173,8 +173,11 @@ class Player():
                     del self.queueOrder[0]
                     self.playNext("Song not found?")
                     return
-
-                info = ydl.extract_info(song_url, download=False)
+                try:
+                    info = ydl.extract_info(song_url, download=False)
+                except utils.DownloadError:
+                    del self.queueOrder[0]
+                    self.playNext("Error trying to get for song")
 
                 URL = info['formats'][0]['url']
 

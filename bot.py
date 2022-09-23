@@ -1,4 +1,4 @@
-#version 1.0.3-1 release
+#version 1.0.3-2 release
 import asyncio
 import os
 import shutil
@@ -1783,9 +1783,14 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
 
 @tree.command(name="help", description="Help")
 @app_commands.choices(command=[
-        app_commands.Choice(name="WIP", value="0"),
+        app_commands.Choice(name="WIP", value="-1"),
+        app_commands.Choice(name="Music", value="0"),
 ])
 async def help(interaction : discord.Interaction, command:app_commands.Choice[str]=None):
+    if command == "0":
+        await interaction.response.send_message("You can see music commands here https://culobot.notlatif.com", ephemeral=True)
+        return
+
     await interaction.response.send_message("Sorry, this section is under construction, a quick startup is using the command `/module` to enable the bot in specific chats.", ephemeral=True)
 
 

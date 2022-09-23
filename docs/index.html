@@ -5,7 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>Home - CuloBot</title>
-    <meta name="description" content="Discord musicbot, supports spotify and youtube">
+    <meta name="description" content="Simple discord bot with chess and music">
+    <link rel="icon" type="image/png" sizes="64x64" href="assets/img/favicon.png">
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic">
     <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
@@ -57,6 +58,10 @@
                     <h4><strong>Music</strong></h4>
                     <p class="mb-0 text-faded"><span>Has a music bot that supports youtube/spotify and custom playlists!</span></p>
                 </div>
+                <div class="col-md-6 col-lg-3 mb-5 mb-lg-0" style="float: none;margin-right: auto;"><span class="mx-auto service-icon rounded-circle mb-3"><i class="fab fa-discord"></i></span>
+                    <h4><strong>Slash Commands</strong></h4>
+                    <p class="mb-0 text-faded"><span>CuloBot now supports discord interactions (except for music commands, view below)</span></p>
+                </div>
             </div>
         </div>
         <p class="mb-0 text-faded"><br>Every module can be disabled</p>
@@ -64,18 +69,111 @@
     <section id="commands" class="content-section">
         <div class="container">
             <div class="content-section-heading text-center">
-                <h3 class="text-secondary mb-0">Commands</h3>
-                <h2 class="mb-5">This section is WIP</h2>
-            </div>
-            <div class="row no-gutters">
-                <div class="col-lg-6"></div>
-                <div class="col-lg-6"></div>
-                <div class="col-lg-6"></div>
-                <div class="col-lg-6"></div>
+                <h3 class="text-secondary mb-0">Commands (WIP)</h3>
+                <h2 class="mb-5">Music Bot</h2>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>/play [x]</strong>&nbsp;plays an url from spotify/youtube or a saved playlist<br></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>/playlist</strong>&nbsp;useful commands to edit the saved playlists</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!play [url]</strong>&nbsp;adds a song at the end of the queue</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!pnext [url]</strong>&nbsp;adds a song at the start of the queue</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!skip [x]</strong>&nbsp;skips x songs (default = 1)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!pause</strong>&nbsp;pauses the queue</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!resume</strong>&nbsp;resumes the queue</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!stop</strong>&nbsp;stops the queue</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!shuffle</strong>&nbsp;toggles queue shuffle</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!loop</strong>&nbsp;loops the song</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!clear</strong>&nbsp;clears the queue</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!remove&nbsp;[x]</strong>&nbsp;removes the song at position x in the queue</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;"><strong>!mv [x] [y]</strong>&nbsp;moves the song from position x to y in the queue</p>
+                        </div>
+                    </div>
+                </div>
+                <h2 class="mb-5">Other commands</h2>
+                <div class="row">
+                    <div class="col">
+                        <div class="commands_btn">
+                            <p class="d-inline-flex justify-content-xl-start align-items-xl-center" style="font-family: 'Source Sans Pro', sans-serif;">Every other command can be accessed on discord by typing&nbsp; /&nbsp; and clicking on the bot icon</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
-    <footer class="footer text-center bg-primary" id="join">
+    <footer id="join" class="footer text-center bg-primary">
         <div class="container text-center">
             <h2 class="mb-4">Join the community!</h2><a class="btn btn-light btn-xl mr-4" role="button" href="https://discord.gg/YTvn5Zwc5R" target="_blank">Discord&nbsp;<i class="fab fa-discord"></i></a><a class="btn btn-dark btn-xl mr-4" role="button" href="https://github.com/NotLatif/CuloBot">Source code&nbsp;<i class="fab fa-github"></i></a></div>
         <div
