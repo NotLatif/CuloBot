@@ -1,4 +1,4 @@
-#version 1.0.2-0 release
+#version 1.0.3 release
 import asyncio
 import os
 import shutil
@@ -18,17 +18,10 @@ from typing import Union
 import config
 import chessBridge
 import musicBridge
+import getevn
 from config import Colors as col
 from mPrint import mPrint as mp
 def mPrint(tag, value):mp(tag, 'bot', value)
-
-#generate .env file if first startup:
-if not os.path.isfile(".env"):
-    mPrint('WARN', '.env file not found, add your tokens there.')
-    with open('.env', 'w') as f:
-        f.write("DISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nGENIOUS_SECRET={}\n")
-    sys.exit()
-
 
 try: #This is specific to my own server, if you want to delete this also delete the other myServer lines in on_message()
     import NotLatif
@@ -39,20 +32,10 @@ except ModuleNotFoundError:
 #I'm  not reorganizing the code for now (maybe willdo)
 #update 17/09/2022 actually kind of readable? I mean it was worse before
 
-#Sensitive data is stored in a ".env" file
-#Since I had problems getting getenv to work on linux for some reason I'm writing my own function in case someone else has the same problems
-def getenv(var : str) -> str:
-    with open('.env', 'r') as env:
-        lines = env.readlines()
-        for l in lines:
-            if var in l:
-                token = l.strip(var)[2:-2]
-                if token != "":
-                    return token
-    mPrint('WARN', f'TOKEN {var} was not found')
-
-TOKEN = getenv('DISCORD_TOKEN')
-GENIOUS = getenv('GENIOUS_SECRET')
+TOKEN = getevn.getenv('DISCORD_TOKEN', True)
+GENIOUS = getevn.getenv('GENIOUS_SECRET')
+OWNER_ID = int(getevn.getenv('OWNER_ID')) #(optional) needed for the bot to send you feedback when users use /feedback command
+                                          # you will still see user-submitted feedback in the feedback.log file (will be createt automatically if not present)
 
 intents = discord.Intents.all()
 intents.members = True
@@ -101,13 +84,25 @@ def splitString(str, separator = ' ', delimiter = '\"') -> list:
          
     return lstStr
 
+def culobotData(mode, data = None):
+    with open('botFiles/culobotdata.json', mode) as f:
+        if mode == 'r':
+            return json.load(f)
+        elif mode == 'w':
+            json.dump(data, f, indent=2)
+
+def updateCulobotData(key, value):
+    data = culobotData('r')
+    data[key] = value
+    culobotData('w', data)
+
 def dumpSettings(): #only use this function to save data to guildData.json (This should avoid conflicts with coroutines idk)
     """Saves the settings to file"""
     dump = {str(k): settings[k] for k in settings}
     with open(settingsFile, 'w') as f:
         json.dump(dump, f, indent=2)
 
-def loadSettings(data = None):
+def loadSettings():
     template = {}
     global settings
     try:
@@ -251,6 +246,7 @@ class MyBot(discord.Client):
 
     async def on_guild_join(self, guild:discord.Guild):
         mPrint("INFO", f"Joined guild {guild.name} (id: {guild.id})")
+        updateCulobotData('total_guilds', len(bot.guilds))
 
         members = '\n - '.join([member.name for member in guild.members])
         mPrint('DEBUG', f'Guild Members:\n - {members}')
@@ -263,12 +259,17 @@ class MyBot(discord.Client):
         checkSettingsIntegrity(int(guild.id))
 
     async def on_guild_remove(self, guild:discord.Guild):
-        pass
+        updateCulobotData('total_guilds', len(bot.guilds))
     
     async def on_ready(self):
-        self.dev = await bot.fetch_user(348199387543109654)
+        try:
+            self.dev = await bot.fetch_user(OWNER_ID)
+        except discord.errors.NotFound:
+            self.dev = None
         await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="/help"))
         await tree.sync()
+
+        updateCulobotData('total_guilds', len(bot.guilds))
 
         mPrint("DEBUG", "Called on_ready")
         if len(sys.argv) == 5 and sys.argv[1] == "RESTART":
@@ -1568,10 +1569,11 @@ async def playSong(interaction : discord.Interaction, tracks : str):
     
     # interaction.response.defer()
     try:
+        mPrint('TEST', f'--- playing song --- \n{playContent}')
         await musicBridge.play(playContent, interaction, bot, shuffle, precision, overwrite)
     except Exception:
         await interaction.followup.send("C'è stato un errore.", ephemeral=True)
-        mPrint('ERROR', traceback.print_exc())
+        mPrint('ERROR', traceback.format_exc())
 
 @tree.command(name='suggest', description="Sovrascrivi una canzone sbagliata") #Player
 async def suggest(interaction : discord.Interaction):
@@ -1613,26 +1615,59 @@ async def module_info(interaction : discord.Interaction):
         color=col.orange
     )
 
+    #get all guild channels
+    allChannels = await interaction.guild.fetch_channels()
+    #extract only the TextChannels
+    allChannels:list[discord.TextChannel] = [x for x in allChannels if x.type == discord.ChannelType.text]
+    allChannelsID:list[int] = [x.id for x in allChannels if x.type == discord.ChannelType.text]
+
+    #well this is not confusing at all -.-
+
     responseChannels = ""
+    #foreach ch in [guild enabled channels]
     for ch in settings[guildID]['responseSettings']['enabled_channels']:
-        channel = await interaction.guild.fetch_channel(ch)
-        responseChannels = responseChannels + f"{channel.mention}\n"
+        #if ch is present in the guild channel
+        for guildCh in allChannels:
+            if ch == guildCh.id:
+                responseChannels = responseChannels + f"{guildCh.mention}\n"
+                break
+        #clean guildsData from no-longer existing channels:
+        if ch not in allChannelsID:
+            mPrint('DEBUG', f'found removed channel {ch}')
+            settings[guildID]['responseSettings']['enabled_channels'].remove(ch)
     #Add N/A if string
     responseChannels = "No whitelisted channels" if responseChannels == "" else responseChannels
 
     chessChannels = ""
+    #foreach ch in [guild enabled channels]
     for ch in settings[guildID]['chessGame']['enabled_channels']:
-        channel = await interaction.guild.fetch_channel(ch)
-        chessChannels = chessChannels + f"{channel.mention}\n"
+        #if ch is present in the guild channel
+        for guildCh in allChannels:
+            if ch == guildCh.id:
+                chessChannels = chessChannels + f"{guildCh.mention}\n"
+                break
+        #clean guildsData from no-longer existing channels:
+        if ch not in allChannelsID:
+            mPrint('DEBUG', f'found removed channel {ch}')
+            settings[guildID]['chessGame']['enabled_channels'].remove(ch)
     #Add N/A if string
     chessChannels = "No whitelisted channels" if chessChannels == "" else chessChannels
 
     musicChannels = ""
+    #foreach ch in [guild enabled channels]
     for ch in settings[guildID]['musicbot']['enabled_channels']:
-        channel = await interaction.guild.fetch_channel(ch)
-        musicChannels = musicChannels + f"{channel.mention}\n"
+        #if ch is present in the guild channel
+        for guildCh in allChannels:
+            if ch == guildCh.id:
+                musicChannels = musicChannels + f"{guildCh.mention}\n"
+                break
+        #clean guildsData from no-longer existing channels:
+        if ch not in allChannelsID:
+            mPrint('DEBUG', f'found removed channel {ch}')
+            settings[guildID]['musicbot']['enabled_channels'].remove(ch)
     #Add N/A if string
     musicChannels = "No whitelisted channels" if musicChannels == "" else musicChannels
+
 
     embed.add_field(name="**Chat replies:**", value=responseChannels, inline=False)
     embed.add_field(name="**Chess:**", value=chessChannels, inline=False)
@@ -1642,6 +1677,7 @@ async def module_info(interaction : discord.Interaction):
 
 @tree.command(name="module", description="Attiva/Disattiva funzioni del bot")
 @app_commands.choices(modules=[
+        app_commands.Choice(name="All Modules", value="0"),
         app_commands.Choice(name="Message Reply", value="1"),
         app_commands.Choice(name="Chess", value="2"),
         app_commands.Choice(name="Music", value="3"),
@@ -1657,56 +1693,93 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
     response = int(modules.value)
     await interaction.response.defer(ephemeral=True)
 
-    module = ""
-    if response == 1:
-        module = 'responseSettings'
+    wantedModules = ""
+    if response == 0:
+        wantedModules = ['responseSettings', 'chessGame', 'musicbot']
+    elif response == 1:
+        wantedModules = ['responseSettings']
     elif response == 2:
-        module = 'chessGame'
+        wantedModules = ['chessGame']
     elif response == 3:
-        module = 'musicbot'
+        wantedModules = ['musicbot']
     else:
         mPrint('ERROR', f'Invalid response "{response}" for module_settings()')
         return
 
-    if enable == None: #send info about the module
-        resp = f"Module {modules.name} is enabled for:\n"
-        for ch in settings[guildID][module]['enabled_channels']:
-            channel = await bot.fetch_channel(ch)
-            resp = resp + f"{channel.mention}\n"
-        await interaction.followup.send(resp, ephemeral=True)
-        return
-    elif channel == None: #change setting for every channel
-        if enable == True: #user wants to enable setting in every channel
+    if len(wantedModules) == 1:
+        module = wantedModules[0]
+        if enable == None: #send info about the module
+            resp = f"Module {modules.name} is enabled for:\n"
+            for ch in settings[guildID][module]['enabled_channels']:
+                channel = await bot.fetch_channel(ch)
+                resp = resp + f"{channel.mention}\n"
+            await interaction.followup.send(resp, ephemeral=True)
+            return
+        elif channel == None: #change setting for every channel
+            if enable == True: #user wants to enable setting in every channel
+                allChannels = await interaction.guild.fetch_channels()
+                settings[guildID][module]['enabled_channels'] = []
+                for c in allChannels:
+                    if c.type == discord.ChannelType.text:
+                        settings[guildID][module]['enabled_channels'].append(c.id)
+                dumpSettings()
+                await interaction.followup.send(f"Module {modules.name} was enabled for every channel", ephemeral=True)
+            else: #user wants to disable setting in every channel
+                settings[guildID][module]['enabled_channels'] = []
+                dumpSettings()
+                await interaction.followup.send(f"Module {modules.name} was disabled for every channel", ephemeral=True)
+        else: #change setting for specific channel
+            if channel.id in settings[guildID][module]['enabled_channels']: #channel was enabled
+                if enable == True:
+                    await interaction.followup.send(f"Module {modules.name} was already enabled for {channel.mention}", ephemeral=True)
+                    pass #channel was already enabled
+                else:
+                    settings[guildID][module]['enabled_channels'].remove(channel.id)
+                    dumpSettings()
+                    await interaction.followup.send(f"Module {modules.name} is now disabled for {channel.mention}", ephemeral=True)
+            else: #channel was disabled
+                if enable == True:
+                    settings[guildID][module]['enabled_channels'].append(channel.id)
+                    dumpSettings()
+                    await interaction.followup.send(f"Module {modules.name} is now enabled for {channel.mention}", ephemeral=True)
+                else:
+                    await interaction.followup.send(f"Module {modules.name} was already disabled for {channel.mention}", ephemeral=True)
+                    pass #channel was already disabled
+    else:
+        if enable == None:
+            await interaction.followup.send('You have to select a value for the "enable" variable when enabling/disabling every module at once.\nIf you want infos about the modules use /module-info', ephemeral=True)
+            return
+        try:
             allChannels = await interaction.guild.fetch_channels()
-            settings[guildID][module]['enabled_channels'] = []
-            for c in allChannels:
-                if c.type == discord.ChannelType.text:
-                    settings[guildID][module]['enabled_channels'].append(c.id)
+            for module in wantedModules:
+                if channel == None: #change every module for every channel
+                    if enable == True: #user wants to enable setting in every channel
+                        settings[guildID][module]['enabled_channels'] = []
+                        for ch in allChannels:
+                            if ch.type == discord.ChannelType.text:
+                                settings[guildID][module]['enabled_channels'].append(ch.id)
+                        
+                    else: #user wants to disable setting in every channel
+                        settings[guildID][module]['enabled_channels'] = []
+                        
+                else: #change setting for specific channel
+                    if channel.id in settings[guildID][module]['enabled_channels']: #channel was enabled
+                        if enable == True:
+                            pass #channel was already enabled
+                        else:
+                            settings[guildID][module]['enabled_channels'].remove(channel.id)
+                            
+                    else: #channel was disabled
+                        if enable == True:
+                            settings[guildID][module]['enabled_channels'].append(channel.id)
+                            
+                        else:
+                            pass #channel was already disabled
             dumpSettings()
-            await interaction.followup.send(f"Module {modules.name} was enabled for every channel", ephemeral=True)
-        else: #user wants to disable setting in every channel
-            settings[guildID][module]['enabled_channels'] = []
-            dumpSettings()
-            await interaction.followup.send(f"Module {modules.name} was disabled for every channel", ephemeral=True)
-    else: #change setting for specific channel
-        if channel.id in settings[guildID][module]['enabled_channels']: #channel was enabled
-            if enable == True:
-                await interaction.followup.send(f"Module {modules.name} was already enabled for {channel.mention}", ephemeral=True)
-                pass #channel was already enabled
-            else:
-                settings[guildID][module]['enabled_channels'].remove(channel.id)
-                dumpSettings()
-                await interaction.followup.send(f"Module {modules.name} is now disabled for {channel.mention}", ephemeral=True)
-        else: #channel was disabled
-            if enable == True:
-                settings[guildID][module]['enabled_channels'].append(channel.id)
-                dumpSettings()
-                await interaction.followup.send(f"Module {modules.name} is now enabled for {channel.mention}", ephemeral=True)
-            else:
-                await interaction.followup.send(f"Module {modules.name} was already disabled for {channel.mention}", ephemeral=True)
-                pass #channel was already disabled
-
-
+            await interaction.followup.send("Done, use /module-info if you want to see the changes\n")
+        except Exception:
+            mPrint('ERROR', f'0x1000\n{traceback.format_exc()}')
+            await interaction.followup.send("There was an unknown error, please report this issue 0x1000", ephemeral=True)
 
 @tree.command(name="help", description="Help")
 @app_commands.choices(command=[
@@ -1733,9 +1806,11 @@ async def feedback(interaction : discord.Interaction, category:app_commands.Choi
             now = datetime.now().strftime("[%d/%m/%y %H:%M:%S]")
             message = f"{now}-({interaction.id})\nUser submitted feedback **{category.name}**\n`{str(self.input.value)}`\n"
             try:
-                await bot.dev.send(message)
+                if bot.dev != None:
+                    await bot.dev.send(message)
             except Exception:
                 await bot.dev.send(f"Someone sent a feedback: ID -> {interaction.id}")
+
 
             mPrint('INFO', message)
             with open('feedback.log', 'a') as f:
@@ -1746,7 +1821,6 @@ async def feedback(interaction : discord.Interaction, category:app_commands.Choi
     await interaction.response.send_modal(Feedback())
 
     return
-
 
 
 loadSettings()

@@ -1,0 +1,1 @@
+[0x0001] unknown error in bot.py > module_settings()

@@ -1,9 +1,10 @@
 import sys
-import discord
-from discord.ext import commands
 import traceback
 import asyncio
 import json
+import discord
+from discord.ext import commands
+from discord import app_commands
 #import lyricsgenius as lg
 
 sys.path.insert(0, 'music/')
@@ -108,7 +109,7 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
         "shuffle": "🔀",
         "loop": "🔂",
         "loop queue": "🔁",
-        "report": "⁉",
+        #"report": "⁉", #temporarely disabled
     }
 
     await interaction.followup.send("Queue avviata", ephemeral=False)
@@ -171,8 +172,6 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
             mPrint('TEST', f'previous song {player.previousSongId}')
             
             player.queueOrder.insert(0, player.previousSongId)
-            
-            # mPrint('TEST', player.queueOrder[:5]) 
 
             pTask = asyncio.create_task(player.skip())
             await messageHandler.updateEmbed()
@@ -373,6 +372,9 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
                 emoji, user = await bot.wait_for('reaction_add', check=checkEmoji)
                 if player.endOfPlaylist:
                     return
+                await messageHandler.embedMSG.remove_reaction(str(emoji), user)	
+                if user not in voice.channel.members:
+                    continue
                 for e in emojis:
                     if str(emoji) == emojis[e]:
                         mPrint('USER', f"EmojiInput: {e}")
@@ -383,7 +385,7 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
                         else:
                             await actions(pTask, "pause", False)
                         break
-                await messageHandler.embedMSG.remove_reaction(str(emoji), user)	
+                
 
             except Exception:
                 await voice.disconnect()

@@ -109,7 +109,12 @@ class Player():
 
         else:
             mPrint('TEST', 'Searching track on youtube')
-            res = VideosSearch(track, limit = 1).result()['result'][0]
+            try:
+                res = VideosSearch(track, limit = 1).result()['result'][0]
+            except IndexError:
+                mPrint('ERROR', f'{traceback.format_exc()}') #Song not found I guess?? 404
+                return -1
+
             url = res['link']
 
             self.videoUrl = url
@@ -163,7 +168,14 @@ class Player():
     def playSong(self):
         try:
             with YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(self.getVideoURL(), download=False)
+                song_url = self.getVideoURL()
+                if song_url == -1:
+                    del self.queueOrder[0]
+                    self.playNext("Song not found?")
+                    return
+
+                info = ydl.extract_info(song_url, download=False)
+
                 URL = info['formats'][0]['url']
 
                 if self.voiceClient.is_playing(): 
@@ -176,7 +188,10 @@ class Player():
                 source = discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS)
                 if not self.loop:
                     del self.queueOrder[0]
-                self.voiceClient.play(source, after= self.playNext)
+                try:
+                    self.voiceClient.play(source, after= self.playNext)
+                except discord.errors.ClientException:
+                    mPrint("INFO", "bot was disconnected from vc")
                
         except discord.ClientException:
             #bot got disconnected
@@ -344,9 +359,13 @@ class MessageHandler():
                     mPrint("DEBUG","EOPlaylist, stopping embedloop")
                     return
 
-                elif not self.player.voiceClient.is_connected():
-                    mPrint("WARN", "Bot was disconnected from vc, stopping embedloop")
-                    return
+                if not self.player.voiceClient.is_connected():
+                    await asyncio.sleep(0.5)
+                    if not self.player.voiceClient.is_connected():
+                        mPrint("WARN", "Bot was disconnected from vc, stopping embedloop")
+                        return
+                    else:
+                        mPrint("WARN", "Bot was probably moved to another voice channel")
                 
                 if len(self.vchannel.members) == 1:
                     self.isAloneInVC == True
@@ -422,7 +441,7 @@ class MessageHandler():
         if self.player.wasReported and not stop:
             embed.add_field(name="Source", value=f">{self.player.videoUrl}\nQuesto link è stato segnalato, Grazie! 🧡")
         elif not stop and not leftAlone:
-            embed.add_field(name="Source", value=f">{self.player.videoUrl}\nÈ la canzone sbagliata? fammelo sapere con il tasto ⁉")
+            embed.add_field(name="Source", value=f">{self.player.videoUrl}")#\nÈ la canzone sbagliata? fammelo sapere con il tasto ⁉")
         else:
             embed.add_field(name="Source", value=f">{self.player.videoUrl}")
 

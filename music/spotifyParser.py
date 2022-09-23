@@ -7,18 +7,10 @@ from mPrint import mPrint as mp
 def mPrint(tag, value):mp(tag, 'bot', value)
 
 #Since I had problems getting getenv to work on linux for some reason I'm writing my own function in case someone else has the same problems
-def getenv(var : str) -> str:
-    with open('.env', 'r') as env:
-        lines = env.readlines()
-        for l in lines:
-            if var in l:
-                token = l.strip(var)[2:-2]
-                if token != "":
-                    return token
-    mPrint('WARN', f'TOKEN {var} was not found')
+import getevn
 
-CLIENT_ID = getenv('SPOTIFY_ID')
-CLIENT_SECRET = getenv('SPOTIFY_SECRET')
+CLIENT_ID = getevn.getenv('SPOTIFY_ID')
+CLIENT_SECRET = getevn.getenv('SPOTIFY_SECRET')
 
 authenticated = False
 
@@ -28,7 +20,7 @@ try:
     sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
     authenticated = True
 except spotipy.oauth2.SpotifyOauthError:
-    mPrint('ERROR', 'WARNING: Spotify keys are wrong or not present. The bot won\'t be able to play music from spotify')
+    mPrint('WARN', 'WARNING: Spotify keys are wrong or not present. The bot won\'t be able to play music from spotify')
 
 
 def spotifyUrlParser(URL:str) -> tuple[str, str]:
