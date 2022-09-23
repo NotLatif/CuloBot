@@ -1,4 +1,4 @@
-#version 1.0.3 release
+#version 1.0.3-1 release
 import asyncio
 import os
 import shutil
@@ -50,7 +50,7 @@ with open(settingsFile, 'a'): pass #make guild setting file if it does not exist
 with codecs.open('botFiles/lang.json', 'r', 'utf-8') as f:
     strings : dict[str,str] = json.load(f)['IT']
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"enabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"enabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"saved_playlists":{},"youtube_search_overwrite":{},"musicbot":{"enabled_channels":[],"player_shuffle": True,"timeline_precision": 14}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"enabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"enabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"musicbot":{"enabled_channels":[],"saved_playlists":{},"youtube_search_overwrite":{},"player_shuffle": True,"timeline_precision": 14}}}
 
 #Useful funtions
 def splitString(str, separator = ' ', delimiter = '\"') -> list:
@@ -143,7 +143,7 @@ def checkSettingsIntegrity(id : int):
             mPrint('DEBUG', f'Deleting: {key}')
 
         if(type(settingsToCheck[key]) == dict):
-            if(key in ["saved_playlists", "youtube_search_overwrite"]): continue #whitelist
+            #if(key in ["saved_playlists", "youtube_search_overwrite"]): continue #whitelist
             for subkey in settingsToCheck[key]:
                 if(subkey not in SETTINGS_TEMPLATE["id"][key]): #check if there is a subkey that should not be there (avoid useless data)
                     del settings[id][key][subkey]
@@ -1288,7 +1288,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
     guildID = int(interaction.guild.id)
     response = int(sub_command.value)
 
-    savedPlaylists = settings[guildID]["saved_playlists"]
+    savedPlaylists = settings[guildID]["musicbot"]["saved_playlists"]
 
     if response == 0: #send the playlist list list to user
         
@@ -1297,9 +1297,9 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
             description="Puoi salvare più link in una playlist in modo da non dover rifare gli stessi comandi più volte!",
             color=col.green
         )
-        for plist in settings[guildID]["saved_playlists"]:
+        for plist in settings[guildID]["musicbot"]["saved_playlists"]:
             urls=''
-            for i, t in enumerate(settings[guildID]["saved_playlists"][plist]):
+            for i, t in enumerate(settings[guildID]["musicbot"]["saved_playlists"][plist]):
                 urls += f'**{i}**: {t}\n' 
             embed.add_field(name=plist, value=urls, inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -1346,7 +1346,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                     trackList += f"\n**{i}**. {t}"
 
                 #Save the song/playlist URL in a list of one element and inform the user
-                settings[guildID]["saved_playlists"][name] = tracks
+                settings[guildID]["musicbot"]["saved_playlists"][name] = tracks
                 dumpSettings()
 
                 embed = discord.Embed(
@@ -1414,7 +1414,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                         trackList += f"\n**{i}**. {t}"
 
                     #Save the song/playlist URL in a list of one element and inform the user
-                    settings[guildID]["saved_playlists"][playlistName] = tracks
+                    settings[guildID]["musicbot"]["saved_playlists"][playlistName] = tracks
                     dumpSettings()
 
                     embed = discord.Embed(
@@ -1447,8 +1447,8 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
 
         async def delete_playlist(interaction : discord.Interaction): # This triggers when user selects the playlist to delete
             playlistName = str(choices.values[0])
-            if playlistName in settings[guildID]['saved_playlists']:
-                links = settings[guildID]['saved_playlists'].pop(playlistName)
+            if playlistName in settings[guildID]["musicbot"]['saved_playlists']:
+                links = settings[guildID]["musicbot"]['saved_playlists'].pop(playlistName)
                 dumpSettings()
                 links = "\n".join(links)
                 await interaction.response.send_message(formatLangStr(strings['bot.music.playlist.delete.ok'], [playlistName, f'```{links}```']), ephemeral=True)
@@ -1553,8 +1553,8 @@ async def playSong(interaction : discord.Interaction, tracks : str):
         playContent = tracks
 
     #user wants a saved playlist
-    elif tracks in settings[guildID]["saved_playlists"]:
-        trackURL_list : list = settings[guildID]["saved_playlists"][tracks]
+    elif tracks in settings[guildID]["musicbot"]["saved_playlists"]:
+        trackURL_list : list = settings[guildID]["musicbot"]["saved_playlists"][tracks]
         mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL_list}')
         playContent = trackURL_list
     
@@ -1565,7 +1565,7 @@ async def playSong(interaction : discord.Interaction, tracks : str):
         mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
         playContent = trackURL
     
-    overwrite,shuffle,precision = settings[guildID]['youtube_search_overwrite'],settings[guildID]['musicbot']["player_shuffle"],settings[guildID]['musicbot']["timeline_precision"]
+    overwrite,shuffle,precision = settings[guildID]['musicbot']['youtube_search_overwrite'],settings[guildID]['musicbot']["player_shuffle"],settings[guildID]['musicbot']["timeline_precision"]
     
     # interaction.response.defer()
     try:
@@ -1585,10 +1585,10 @@ async def suggest(interaction : discord.Interaction):
     if os.path.isfile(f'botFiles/suggestions/{str(interaction.guild.id)}.json'):
         with open(f'botFiles/{str(interaction.guild.id)}.json') as f:
             newOverwrites = json.load(f)
-            if settings[interaction.guild.id]['youtube_search_overwrite'] == newOverwrites:
+            if settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'] == newOverwrites:
                 await interaction.channel.send('Non è cambiato niente...')
             else:
-                settings[interaction.guild.id]['youtube_search_overwrite'] = newOverwrites
+                settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'] = newOverwrites
                 dumpSettings()
                 await interaction.channel.send('Done')
     else:
