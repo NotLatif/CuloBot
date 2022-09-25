@@ -1,4 +1,4 @@
-#version 1.0.3-2 release
+#version 1.0.3-3 release
 import asyncio
 import os
 import shutil
@@ -1503,7 +1503,6 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
             settings[guildID]['musicbot']["player_shuffle"] = choices.values[0]
             dumpSettings()
             await interaction.response.defer()
-
 
         choices.callback = shuffle_response
         await interaction.response.send_message(view=view, ephemeral=True)

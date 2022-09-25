@@ -38,6 +38,14 @@ possible alternatives: https://pypi.org/project/async-spotify/
     - The bug should appear
     - The embed message will only update if you interact with it (for example skipping)
 
+✅ Aggiungere una canzone alla volta fa cose strane allo shuffle (seems to have been fixed by accident)
+
+🟦 
+av_interleaved_write_fram(): Broken pipe
+./bot-start: line 2: 1298 Killed
+Error writing trailer of pipe:1: Broken pipe
+./bot-start: line 3: n3.9: command not found
+
 🟦 there are too many files in the main folder, reorganize?
 
 🟦 inform user when bot can't find song (404 in musicPlayer.py)
@@ -46,11 +54,7 @@ possible alternatives: https://pypi.org/project/async-spotify/
 
 🟦 graphical bug while skipping with 1 song loop
 
-🟦 Aggiungere una canzone alla volta fa cose strane allo shuffle
-
 🟦 Raramente può capitare che queue e canzoni in riproduzione si desincronizzano???? (Bug copia.txt)
-
-🟦 Check what happens when keys are not in the .env file
 
 🟥 reorganize musicPlayer.MessageHandler.getEmbed()
 

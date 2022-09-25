@@ -3,8 +3,8 @@ import traceback
 import asyncio
 import json
 import discord
-from discord.ext import commands
-from discord import app_commands
+from random import shuffle as queueshuffle
+
 #import lyricsgenius as lg
 
 sys.path.insert(0, 'music/')
@@ -62,7 +62,7 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
     
     #check if tracks
     if tracks == None:
-        await interaction.followup.send(f"An error occurred while looking for song(s).", ephemeral=True)
+        await interaction.followup.send(f"An error occurred while looking for song(s) please retry.", ephemeral=True)
         mPrint("WARN", f"play function did not find the track requested {url}")
         return
     
@@ -324,6 +324,10 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
                 if tracks == None:
                     await userMessage.reply("An error occurred while looking for the songs")
                     return
+                
+                if player.isShuffled:
+                    queueshuffle(tracks)
+
                 startindex = len(player.queueOrder)
                 for i, t in enumerate(tracks):
                     player.queue[i+startindex] = t
@@ -343,6 +347,9 @@ async def play(url : str, interaction : discord.Interaction, bot : discord.Clien
                 if tracks == None:
                     await userMessage.reply("An error occurred while looking for the songs")
                     return
+                
+                if player.isShuffled:
+                    queueshuffle(tracks)
 
                 startindex = len(player.queueOrder)
                 for i, t in enumerate(tracks):

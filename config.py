@@ -1,5 +1,5 @@
 # Terminal
-logLevel = 0 #determines what tags the script prints in the terminal
+logLevel = 2 #determines what tags the script prints in the terminal
 printLevel = 0 #determines what tags the script prints in the "bot.log" file
 useColors = True #whether the terminal should display colored text
 timeInTerminal = True
@@ -20,7 +20,7 @@ timeline_max = 14
 #the max timeline precision guilds can set
 # WARNING: a value too high could get you rate limited by the discord API
 
-max_alone_time = 60 * 5 
+max_alone_time = 60 * 5
 #Default: 300 -> (max=300) The maximum time (in seconds) the bot can play music while no one is connected to the voice channel
 
 class Colors:

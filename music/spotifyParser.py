@@ -17,7 +17,7 @@ authenticated = False
 #Authentication
 try:
     client_credentials_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
-    sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
+    sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager, requests_timeout=10, retries=5)
     authenticated = True
 except spotipy.oauth2.SpotifyOauthError:
     mPrint('WARN', 'WARNING: Spotify keys are wrong or not present. The bot won\'t be able to play music from spotify')

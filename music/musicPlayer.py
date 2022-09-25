@@ -5,7 +5,6 @@
         "canzone 1"
       ]
 """
-
 import traceback
 import discord
 import asyncio
@@ -14,7 +13,6 @@ from youtube_dl import YoutubeDL, utils
 from youtubesearchpython import VideosSearch, Video
 from random import shuffle
 
-import youtubeParser
 from mPrint import mPrint as mp
 import config
 from config import Colors as col
@@ -433,7 +431,7 @@ class MessageHandler():
             embed.add_field(name="This message was moved, you may find the new one below", value=last5, inline=False)
             embed.color = col.black
 
-        embed.set_footer(text='🍑 Comandi del player: https://notlatif.github.io/CuloBot/#MusicBot')
+        embed.set_footer(text='🍑 Comandi del player: https://culobot.notlatif.com/#commands')
         
         if stop:
             embed.add_field(name=f'{"Queue finita" if self.player.endOfPlaylist else "Queue annullata"}', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
