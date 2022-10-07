@@ -1327,7 +1327,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                     else:
                         if "open.spotify.com" not in x and "youtube.com" not in x:
                             mPrint('MUSIC', f'Searching for user requested song: ({x})')
-                            x = musicBridge.musicPlayer.youtubeParser.searchYTurl(x)
+                            x = musicBridge.youtubeParser.searchYTurl(x)
                         tracks.append(x)
 
                 if errors != '':
@@ -1395,7 +1395,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                         else:
                             if "open.spotify.com" not in x and "youtube.com" not in x:
                                 mPrint('MUSIC', f'Searching for user requested song: ({x})')
-                                x = musicBridge.musicPlayer.youtubeParser.searchYTurl(x)
+                                x = musicBridge.youtubeParser.searchYTurl(x)
                             tracks.append(x)
 
                     if errors != '':
@@ -1560,7 +1560,7 @@ async def playSong(interaction : discord.Interaction, tracks : str):
     #user wants to search for a song title
     else:
         mPrint('MUSIC', f'Searching for user requested song: ({tracks})')
-        trackURL = musicBridge.musicPlayer.youtubeParser.searchYTurl(tracks)
+        trackURL = musicBridge.youtubeParser.searchYTurl(tracks)
         mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
         playContent = trackURL
     
