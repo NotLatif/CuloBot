@@ -1,3 +1,3 @@
-# v1.0.3-3 - release 
+# v1.0.3-4 - release 
 
-- Now tracks can get shuffled if needed when yousing (!p, !play, !pnext, !playnext)
+- minor fixes

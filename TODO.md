@@ -8,17 +8,13 @@ possible alternatives: https://pypi.org/project/async-spotify/
 
 ✅ guild count
 
-🟦 add default permissions
+🟦 option to save playlist name internally when using a playlist link
 
-🟦 add slash commands with musicbot
+🟦 add default permissions
 
 🟦 Warn users that try to start the bot when it's already on in another text/voice chat
 
-🟦 Command to change language
-
 🟦 Command for other_perc
-
-🟦 speed pitch effects(filters nightcore, filters bassboost, filters list, filters reset)
 
 🟦 Finish lang.json
 
@@ -55,8 +51,6 @@ Error writing trailer of pipe:1: Broken pipe
 🟦 graphical bug while skipping with 1 song loop
 
 🟦 Raramente può capitare che queue e canzoni in riproduzione si desincronizzano???? (Bug copia.txt)
-
-🟥 reorganize musicPlayer.MessageHandler.getEmbed()
 
 # Code things
 

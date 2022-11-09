@@ -1,4 +1,4 @@
-#version 1.0.3-3 release
+#version 1.0.3-4
 import asyncio
 import os
 import shutil
@@ -25,8 +25,9 @@ def mPrint(tag, value):mp(tag, 'bot', value)
 
 try: #This is specific to my own server, if you want to delete this also delete the other myServer lines in on_message()
     import NotLatif
+    MM = True
 except ModuleNotFoundError:
-    pass
+    MM = False
 
 #oh boy for whoever is looking at this, good luck
 #I'm  not reorganizing the code for now (maybe willdo)
@@ -297,7 +298,7 @@ class MyBot(discord.Client):
             await member.guild.system_channel.send(joinString)
 #--------------------------------- This is specific to my server---# 
 
-        if member.guild.id == 1019985578772664441:                   #  There is another block like this 
+        if MM and member.guild.id == 1019985578772664441:                   #  There is another block like this 
             await NotLatif.joinImageSend(member, member.guild)      #    a little below this one
 #--------------------------------- you can safely delete this------# 
 
@@ -316,14 +317,14 @@ class MyBot(discord.Client):
         except AttributeError:
             return #this gets triggered with ephemeral messages
 
-        if message.channel.id not in settings[message.guild.id]['responseSettings']['enabled_channels']:
-            return #module is not in whitelist
-
 #--------------------------------- This is specific to my server---#
-        if message.content[0] == '!' and  message.author.id == 348199387543109654:
+        if MM and message.content[0] == '!' and  message.author.id == 348199387543109654:
             await NotLatif.parseCmd(message, settings)
             return
 #--------------------------------- you can safely delete this------# 
+
+        if message.channel.id not in settings[message.guild.id]['responseSettings']['enabled_channels']:
+            return #module is not in whitelist
 
         #don't respond to self, commands, messages with less than 2 words
         if message.author.id == bot.user.id or message.content[0] in ["!", "/", "?", "|", '$', "&", ">", "<"] or len(message.content.split()) < 2:

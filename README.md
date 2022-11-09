@@ -1,4 +1,4 @@
-<img  align="right"  src="docs/logo.png"  width="200px">
+<img  align="right"  src="botFiles/src/logo.png"  width="200px">
 
 # [CuloBot](https://culobot.notlatif.com)
 
