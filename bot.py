@@ -1571,7 +1571,7 @@ async def playSong(interaction : discord.Interaction, tracks : str):
     # interaction.response.defer()
     try:
         mPrint('TEST', f'--- playing song --- \n{playContent}')
-        await musicBridge.play(playContent, interaction, bot, shuffle, precision, overwrite, tree)
+        await musicBridge.play(playContent, interaction, bot, shuffle, precision, overwrite)
 
     except Exception:
         await interaction.followup.send("C'è stato un errore.", ephemeral=True)
