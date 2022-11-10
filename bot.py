@@ -297,9 +297,8 @@ class MyBot(discord.Client):
             joinString = joinString.replace('%name%', member.name)
             await member.guild.system_channel.send(joinString)
 #--------------------------------- This is specific to my server---# 
-
-        if MM and member.guild.id == 1019985578772664441:                   #  There is another block like this 
-            await NotLatif.joinImageSend(member, member.guild)      #    a little below this one
+        if MM and member.guild.id == 694106741436186665:          #  There is another block like this 
+            await NotLatif.joinImageSend(member, member.guild)     #    a little below this one
 #--------------------------------- you can safely delete this------# 
 
     async def on_member_remove(self, member : discord.Member):
@@ -1565,15 +1564,19 @@ async def playSong(interaction : discord.Interaction, tracks : str):
         mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
         playContent = trackURL
     
-    overwrite,shuffle,precision = settings[guildID]['musicbot']['youtube_search_overwrite'],settings[guildID]['musicbot']["player_shuffle"],settings[guildID]['musicbot']["timeline_precision"]
-    
+    overwrite = settings[guildID]['musicbot']['youtube_search_overwrite']
+    shuffle   = settings[guildID]['musicbot']["player_shuffle"]
+    precision = settings[guildID]['musicbot']["timeline_precision"]
+
     # interaction.response.defer()
     try:
         mPrint('TEST', f'--- playing song --- \n{playContent}')
-        await musicBridge.play(playContent, interaction, bot, shuffle, precision, overwrite)
+        await musicBridge.play(playContent, interaction, bot, shuffle, precision, overwrite, tree)
+
     except Exception:
         await interaction.followup.send("C'è stato un errore.", ephemeral=True)
         mPrint('ERROR', traceback.format_exc())
+    
 
 @tree.command(name='suggest', description="Sovrascrivi una canzone sbagliata") #Player
 async def suggest(interaction : discord.Interaction):
@@ -1601,7 +1604,6 @@ async def ping(interaction : discord.Interaction):
     pingms = round(bot.latency*1000)
     await interaction.response.send_message(f'Pong! {pingms}ms')
     mPrint('INFO', f'ping detected: {pingms} ms')
-
 
 @tree.command(name="module-info", description="Mostra lo stato dei moduli")
 @app_commands.default_permissions()
