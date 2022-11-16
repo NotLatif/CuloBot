@@ -1,10 +1,30 @@
 # import json #used for testing
-from youtubesearchpython import VideosSearch, Playlist, Video
+import youtube_dl
+from musicObjects import Track, ydl_opts, youtubeDomain, download
 
-def searchYTurl(query, limit=1) -> str: #gets the url of the first song in queue (the one to play)
-    return VideosSearch(query, limit = limit).result()['result'][0]['link']
+from mPrint import mPrint as mp
+def mPrint(tag, text):
+    mp(tag, 'youtubeParser', text)
 
-def stampToSec(str : str):
+
+def searchYTurl(query, overwrite) -> str:
+    """
+    gets the url of the first song in queue (the one to play)
+    """
+    if query in overwrite:
+        mPrint('DEBUG', f"Found overwritten track ({query})")
+        return overwrite[query]
+
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        result = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
+        try:
+            int(result['duration'])
+        except TypeError: #If duration is null video is probably was live, just skip it
+            mPrint('DEBUG', f'Skipping live video {youtubeDomain}{result["url"]}')
+            return None
+        return f'{youtubeDomain}{result["url"]}'
+
+def stampToSec(str : str) -> int:
     seconds = 0
     str = str.split(':')[::-1] # [sec, min, hr, ...]
     if len(str) >= 1: #we have seconds
@@ -15,52 +35,115 @@ def stampToSec(str : str):
         seconds += int(str[2]) * 60
     return seconds
 
-def getSongs(url : str, onlyThumbnail = False) -> list[dict]:
-    if onlyThumbnail:
-        print(f'Finding {url}')
-    tracks = None
-    if "www.youtube.com" not in url:
-        #query youtube for the url of the first result
-        if "music.youtube.com" in url:
-            url = url.replace("music.youtube.com", "www.youtube.com", 1)
+def getTracks(url : str) -> list[Track]:
+    # if url is youtube music link
+    if "music.youtube.com" in url:
+        #replacing the strings gets the same link in youtube video form
+        url = url.replace("music.youtube.com", "www.youtube.com", 1)
+
+    elif "www.youtube.com" not in url:
+        if ['http://', 'https://', 'www.'] in url: #not the best but should work for most cases
+            mPrint('DEBUG', 'Link is not a valid URL')
+            return None
+            
+        mPrint("DEBUG", "Link is not a youtube link, using query")
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             try:
-                url = url.split('&list=')[0]
-            except:
-                pass
-        else:
-            url = VideosSearch(url).result()["result"][0]['link']
+                r_result = ydl.extract_info(f"ytsearch:{url}", download=False)
+                result = r_result['entries'][0]
+                url = f'{youtubeDomain}{result["url"]}'
+                mPrint('DEBUG', f'Found url:{url}')
+            except TypeError:
+                mPrint('WARN', 'Query result is null (?)')
+                return None            
 
+    # Parse url to get IDs for video and playlist, as well as the current index
+    linkData = url.split('&')
+    video = linkData[0]
+    playlist = None
+    index = 1
+    for u in linkData:
+        if 'list' in u:
+            playlist = u.strip('list=')
+        elif 'index' in u:
+            index = int(u.strip('index='))
 
-    if 'list=' in url:
+    #Extract data from the url NB: videos and playlists have a different structure
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         try:
-            tracks = Playlist.getVideos(url)["videos"] # None if unavailable
-        except AttributeError:
-            pass #link was not a playlist
+            result = ydl.extract_info(url, download)
+        except youtube_dl.utils.DownloadError:
+            mPrint('ERROR', 'youtube_dl.utils.DownloadError: (Probably) Age restricted video')
+            return None
 
-    else:
-        #if link was not a playlist, search for a video
-        tracks = [Video.get(url)]
-
-    for t in tracks:
-        if type(t['duration']) == dict:
-            t['duration'] = t['duration']['secondsText']
-        else:
-            t['duration'] = stampToSec(t['duration'])
-
-    if onlyThumbnail:
-        t = tracks[0]
-        print(f"returning {t['thumbnails'][0]['url']}")
-        return t['thumbnails'][0]['url']
+    # Playlist link only returns one song
+    tracks : list[Track] = []
     
-    return [{
-            'trackName': t["title"],
-            'artist': t["channel"]["name"],
-            'search': f"{t['title']} {t['channel']['name']}",
-            'duration_sec': t['duration'],
-            'base_link': url,
-        } for t in tracks ]
+    if playlist != None: #link is a playlist
+        def addTracks(i) -> None:
+            videoData = result['entries'][i]
+
+            #Append Track foreach video in playlist
+            try:
+                duration = int(videoData['duration'])
+            except TypeError: #If duration is null video is probably was live, just skip it
+                mPrint('DEBUG', f'Skipping live video {youtubeDomain}{videoData["url"]}')
+                return -1
+
+            tracks.append(Track(
+                f"{youtubeDomain}{videoData['url']}",
+                videoData["title"],
+                [videoData["uploader"]],
+                duration,
+                f"{youtubeDomain}{videoData['url']}",
+                None
+            ))
+
+        # add songs in the same order as the one in the youtube playlist
+        # starting @ the video that the user took the link from
+        for i in range(index-1, len(result['entries'])):
+            addTracks(i)
+        for i in range(index-1):
+            addTracks(i)
+            
+    else: #link is a video
+        tracks.append(Track(
+            result['webpage_url'],
+            result['title'],
+            [result['uploader']],
+            int(result['duration']),
+            result['webpage_url'],
+            result['thumbnail']
+        ))
+
+    
+    return tracks
 
 
+# User defined playlist
+#https://www.youtube.com/watch?v=yJg-Y5byMMw&list=PLW-S5oymMexXTgRyT3BWVt_y608nt85Uj&index=7
+#https://www.youtube.com/      domain
+# watch?v=yJg-Y5byMMw          current video
+# &list=PLW-S5oymMexXTgRyT3BWVt_y608nt85Uj      video playlist
+# &index=7                      current video index in playlist
+
+# Youtube Mix
+# https://www.youtube.com/watch?v=yJg-Y5byMMw&list=RDyJg-Y5byMMw&start_radio=1&rv=yJg-Y5byMMw&t=1
+# https://www.youtube.com/
+# watch?v=yJg-Y5byMMw
+# &list=RDyJg-Y5byMMw
+# &start_radio=1
+# &rv=yJg-Y5byMMw
+# &t=1
+
+
+
+
+
+
+
+
+# Example urls
 
 # url = 'https://www.youtube.com/watch?v=kt1KWL9NZzo'
 # url = 'https://www.youtube.com/watch?v=2XM1OF2_6_4&list=OLAK5uy_lxsKqDHchO8VpAxRCPoayWUCyCVWfeJNg'
@@ -72,4 +155,11 @@ def getSongs(url : str, onlyThumbnail = False) -> list[dict]:
 # url = 'https://music.youtube.com/watch?v=jH8Yox66CtQ&list=RDAMVMjH8Yox66CtQ'
 # url = 'https://music.youtube.com/playlist?list=OLAK5uy_kg7ISwHyM0ZuQ1jWshC74yrnPmPdNNRoY'
 # url = 'https://music.youtube.com/watch?v=J7p4bzqLvCw&list=RDAMVMJ7p4bzqLvCw'
-# getSongs(url)
+
+
+
+# https://youtube.com/playlist?list=OLAK5uy_lxsKqDHchO8VpAxRCPoayWUCyCVWfeJNg
+#https://www.youtube.com/watch?v=2XM1OF2_6_4&list=OLAK5uy_lxsKqDHchO8VpAxRCPoayWUCyCVWfeJNg
+
+
+

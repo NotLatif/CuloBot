@@ -1,3 +1,4 @@
+from typing import Literal
 import config
 import codecs
 from datetime import datetime
@@ -9,7 +10,9 @@ logLevel = config.logLevel
 printLevel = config.printLevel
 timeInTerminal = config.timeInTerminal
 
-def mPrint(tag, source, text):
+def mPrint(tag:Literal['ERROR', 'FATAL', 'IMPORTANT', 'SONGERROR', 'WARN', 'GAMErr',
+    'INFO', 'MUSIC', 'USER', 'GAME', 'DEBUG', 'VARS', 'TEST', 'FUNC', 
+    'CMDS'], source, text):
     """
     Custom print function to use colors
     """
@@ -19,7 +22,7 @@ def mPrint(tag, source, text):
     songError = True if tag == 'SONGERROR' else False
 
     if printLevel <= 3: #ERROR
-        if tag in ['ERROR', 'FATAL', 'SONGERROR']: willPrint = True
+        if tag in ['ERROR', 'FATAL', 'SONGERROR', 'IMPORTANT']: willPrint = True
     if printLevel <= 2: #WARN
         if tag in ['WARN', 'GAMEErr']: willPrint = True
     if printLevel <= 1: #INFO
@@ -29,7 +32,7 @@ def mPrint(tag, source, text):
         
 
     if logLevel <= 3: #ERROR
-        if tag in ['ERROR', 'FATAL', 'SONGERROR']: willLog = True
+        if tag in ['ERROR', 'FATAL', 'SONGERROR', 'IMPORTANT']: willLog = True
     if logLevel <= 2: #WARN
         if tag in ['WARN', 'GAMEErr']: willLog = True
     if logLevel <= 1: #INFO
@@ -52,7 +55,7 @@ def mPrint(tag, source, text):
     elif tag == 'WARN':
         tag = f"{Fore.YELLOW}[{tag}]"
 
-    elif tag in ['ERROR', 'FATAL', 'SONGERROR']:
+    elif tag in ['ERROR', 'FATAL', 'SONGERROR', 'IMPORTANT']:
         tag = f"{Fore.RED}[{tag}]"
         style = Style.BRIGHT
 

@@ -1,4 +1,4 @@
-#version 1.0.3-4
+#version 1.0.4-beta0
 import asyncio
 import os
 import shutil
@@ -7,7 +7,6 @@ import random
 import copy
 import sys
 import traceback
-import codecs
 import discord
 from discord.utils import get
 from datetime import datetime
@@ -29,10 +28,6 @@ try: #This is specific to my own server, if you want to delete this also delete 
 except ModuleNotFoundError:
     MM = False
 
-#oh boy for whoever is looking at this, good luck
-#I'm  not reorganizing the code for now (maybe willdo)
-#update 17/09/2022 actually kind of readable? I mean it was worse before
-
 TOKEN = getevn.getenv('DISCORD_TOKEN', True)
 GENIOUS = getevn.getenv('GENIOUS_SECRET')
 OWNER_ID = int(getevn.getenv('OWNER_ID')) #(optional) needed for the bot to send you feedback when users use /feedback command
@@ -48,10 +43,7 @@ global settings
 settings = {}
 with open(settingsFile, 'a'): pass #make guild setting file if it does not exist
 
-with codecs.open('botFiles/lang.json', 'r', 'utf-8') as f:
-    strings : dict[str,str] = json.load(f)['IT']
-
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"enabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"enabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"musicbot":{"enabled_channels":[],"saved_playlists":{},"youtube_search_overwrite":{},"player_shuffle": True,"timeline_precision": 14}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"disabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"disabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"musicbot":{"disabled_channels":[],"saved_playlists":{},"youtube_search_overwrite":{},"player_shuffle": True,"timeline_precision": 14}}}
 
 #Useful funtions
 def splitString(str, separator = ' ', delimiter = '\"') -> list:
@@ -84,18 +76,6 @@ def splitString(str, separator = ' ', delimiter = '\"') -> list:
             lstStr[i-1] = lstStr[i-1] + s
          
     return lstStr
-
-def culobotData(mode, data = None):
-    with open('botFiles/culobotdata.json', mode) as f:
-        if mode == 'r':
-            return json.load(f)
-        elif mode == 'w':
-            json.dump(data, f, indent=2)
-
-def updateCulobotData(key, value):
-    data = culobotData('r')
-    data[key] = value
-    culobotData('w', data)
 
 def dumpSettings(): #only use this function to save data to guildData.json (This should avoid conflicts with coroutines idk)
     """Saves the settings to file"""
@@ -247,7 +227,6 @@ class MyBot(discord.Client):
 
     async def on_guild_join(self, guild:discord.Guild):
         mPrint("INFO", f"Joined guild {guild.name} (id: {guild.id})")
-        updateCulobotData('total_guilds', len(bot.guilds))
 
         members = '\n - '.join([member.name for member in guild.members])
         mPrint('DEBUG', f'Guild Members:\n - {members}')
@@ -259,8 +238,12 @@ class MyBot(discord.Client):
 
         checkSettingsIntegrity(int(guild.id))
 
+        # voice_client : discord.VoiceClient = get(bot.voice_clients, guild=guild)
+        # if voice_client != None and voice_client.is_connected():
+        #     await voice_client.disconnect()
+
     async def on_guild_remove(self, guild:discord.Guild):
-        updateCulobotData('total_guilds', len(bot.guilds))
+        pass
     
     async def on_ready(self):
         try:
@@ -269,8 +252,6 @@ class MyBot(discord.Client):
             self.dev = None
         await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="/help"))
         await tree.sync()
-
-        updateCulobotData('total_guilds', len(bot.guilds))
 
         mPrint("DEBUG", "Called on_ready")
         if len(sys.argv) == 5 and sys.argv[1] == "RESTART":
@@ -322,8 +303,8 @@ class MyBot(discord.Client):
             return
 #--------------------------------- you can safely delete this------# 
 
-        if message.channel.id not in settings[message.guild.id]['responseSettings']['enabled_channels']:
-            return #module is not in whitelist
+        if message.channel.id in settings[message.guild.id]['responseSettings']['disabled_channels']:
+            return #module is in blacklist for this channel
 
         #don't respond to self, commands, messages with less than 2 words
         if message.author.id == bot.user.id or message.content[0] in ["!", "/", "?", "|", '$', "&", ">", "<"] or len(message.content.split()) < 2:
@@ -588,7 +569,7 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
     mPrint('CMDS', f'called /chess: ch: {challenge}')
     guildID = int(interaction.guild.id)
 
-    if interaction.channel.id not in settings[guildID]['chessGame']['enabled_channels']:
+    if interaction.channel.id in settings[guildID]['chessGame']['disabled_channels']:
         await interaction.response.send_message("This module is not enabled in this channel.", ephemeral=True)
         return
 
@@ -1319,7 +1300,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                 errors = ''
                 tracks = []
                 for x in links:
-                    isUrlValid = musicBridge.evalUrl(x)
+                    isUrlValid = musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'])
 
                     if isUrlValid == False:
                         errors += f"Error: Could not find song/playlist {x}\n"
@@ -1387,7 +1368,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                     errors = ''
                     tracks = []
                     for x in links:
-                        isUrlValid = musicBridge.evalUrl(x)
+                        isUrlValid = musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'])
 
                         if isUrlValid == False:
                             errors += f"Error: Could not find song/playlist {x}\n"
@@ -1531,71 +1512,80 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
 @app_commands.describe(tracks="URL / Title / saved playlist (/playlist)")
 async def playSong(interaction : discord.Interaction, tracks : str):
     guildID = int(interaction.guild.id)
-
-    if interaction.channel.id not in settings[guildID]['musicbot']['enabled_channels']:
-        await interaction.response.send_message("This module is not enabled in this channel.", ephemeral=True)
-        return
-
     await interaction.response.defer(ephemeral=True)
-    voice_client : discord.VoiceClient = get(bot.voice_clients, guild=interaction.guild)
 
-    #TODO improve
-    if voice_client != None:
-        if voice_client.is_connected():
-            await interaction.followup.send('Sono già connesso in un canale vocale', ephemeral=True)
+    if interaction.channel.id in settings[guildID]['musicbot']['disabled_channels']:
+        await interaction.followup.send("This module is not enabled in this channel.", ephemeral=True)
         return
 
-    #user searched a link
-    playContent = ''
-    if "open.spotify.com" in tracks or "youtube.com" in tracks or "youtu.be" in tracks:
-        mPrint('INFO', f'FOUND SUPPORTED URL: {tracks}')
-        playContent = tracks
+    try:
+        userVC = bot.get_channel(interaction.user.voice.channel.id)
+    except AttributeError:
+        await interaction.followup.send('Devi essere in un canale vocale per usare questo comando', ephemeral=True)
+        return
 
-    #user wants a saved playlist
-    elif tracks in settings[guildID]["musicbot"]["saved_playlists"]:
-        trackURL_list : list = settings[guildID]["musicbot"]["saved_playlists"][tracks]
-        mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL_list}')
-        playContent = trackURL_list
-    
-    #user wants to search for a song title
-    else:
-        mPrint('MUSIC', f'Searching for user requested song: ({tracks})')
-        trackURL = musicBridge.youtubeParser.searchYTurl(tracks)
-        mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
-        playContent = trackURL
-    
+    voice_client : discord.VoiceClient = get(bot.voice_clients, guild=interaction.guild)
+    if voice_client != None and voice_client.is_connected():
+        if userVC!=None and voice_client.channel.id == userVC.id:
+            await interaction.followup.send('Usa /add_song per aggiungere una nuova traccia', ephemeral=True)
+        else:
+            await interaction.followup.send('Sono già connesso in un altro canale vocale', ephemeral=True)
+        return
+
     overwrite = settings[guildID]['musicbot']['youtube_search_overwrite']
     shuffle   = settings[guildID]['musicbot']["player_shuffle"]
     precision = settings[guildID]['musicbot']["timeline_precision"]
 
-    # interaction.response.defer()
-    try:
-        mPrint('TEST', f'--- playing song --- \n{playContent}')
-        await musicBridge.play(playContent, interaction, bot, shuffle, precision, overwrite, tree)
+    #user searched a link
+    playListURL : list[str]
+    if "spotify.com" in tracks or "youtube.com" in tracks or "youtu.be" in tracks:
+        mPrint('INFO', f'FOUND SUPPORTED URL: {tracks}')
+        playListURL = [tracks]
 
+    #user wants a saved playlist
+    elif tracks in settings[guildID]["musicbot"]["saved_playlists"]:
+        trackURL_list : list[str] = settings[guildID]["musicbot"]["saved_playlists"][tracks]
+        mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL_list}')
+        playListURL = trackURL_list
+    
+    #user wants to search for a song title
+    else:
+        mPrint('MUSIC', f'Searching for user requested song: ({tracks})')
+        trackURL = musicBridge.youtubeParser.searchYTurl(tracks, overwrite)
+        if trackURL == None:
+            interaction.followup.send("Unsupported video.")
+            return
+        mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
+        playListURL = [trackURL]
+
+    # Check that guidsData[overwritten tracks] are the same of botFiles/suggestion/guildID[overwritten tracks]
+    try:
+        with open(f'botFiles/suggestions/{str(interaction.guild.id)}.json', 'r') as f:
+            owTracks = json.load(f)
+        for query in owTracks:
+            if query not in settings[interaction.guild.id]['musicbot']['youtube_search_overwrite']:
+                settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'][query] = owTracks[query]
+                dumpSettings()
+    except json.decoder.JSONDecodeError:
+        mPrint('INFO', 'Could not decode reported overwrites as the file is probably empty')
+    except Exception:
+        mPrint('WARN', traceback.format_exc())
+
+    cmds = tree.get_commands(guild=interaction.guild)
+    if len(cmds) != 0:
+        tree.clear_commands(guild=interaction.guild)
+        mPrint('TEST', f'Syncing tree')
+        await tree.sync(guild=interaction.guild)
+        print(tree.get_commands(guild=interaction.guild))
+
+    #Start music module
+    try:
+        mPrint('TEST', f'--- playing queue --- \n{playListURL}')
+        await musicBridge.play(playListURL, interaction, bot, tree, shuffle, precision, overwrite, bot.dev)
+        mPrint('IMPORTANT', 'musicBridge.play() returned')
     except Exception:
         await interaction.followup.send("C'è stato un errore.", ephemeral=True)
         mPrint('ERROR', traceback.format_exc())
-    
-
-@tree.command(name='suggest', description="Sovrascrivi una canzone sbagliata") #Player
-async def suggest(interaction : discord.Interaction):
-    await interaction.response.send_message('Function is currently disabled', ephemeral=True)
-    return
-
-    await interaction.channel.typing()
-    await asyncio.sleep(2) #ensure that file exists
-    if os.path.isfile(f'botFiles/suggestions/{str(interaction.guild.id)}.json'):
-        with open(f'botFiles/{str(interaction.guild.id)}.json') as f:
-            newOverwrites = json.load(f)
-            if settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'] == newOverwrites:
-                await interaction.channel.send('Non è cambiato niente...')
-            else:
-                settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'] = newOverwrites
-                dumpSettings()
-                await interaction.channel.send('Done')
-    else:
-        await interaction.channel.send('C\'è stato un errore...')
 
 @tree.command(name="ping", description="ping del bot")
 async def ping(interaction : discord.Interaction):
@@ -1626,8 +1616,8 @@ async def module_info(interaction : discord.Interaction):
     #well this is not confusing at all -.-
 
     responseChannels = ""
-    #foreach ch in [guild enabled channels]
-    for ch in settings[guildID]['responseSettings']['enabled_channels']:
+    #foreach ch in [guild disabled channels]
+    for ch in settings[guildID]['responseSettings']['disabled_channels']:
         #if ch is present in the guild channel
         for guildCh in allChannels:
             if ch == guildCh.id:
@@ -1636,13 +1626,13 @@ async def module_info(interaction : discord.Interaction):
         #clean guildsData from no-longer existing channels:
         if ch not in allChannelsID:
             mPrint('DEBUG', f'found removed channel {ch}')
-            settings[guildID]['responseSettings']['enabled_channels'].remove(ch)
+            settings[guildID]['responseSettings']['disabled_channels'].remove(ch)
     #Add N/A if string
     responseChannels = "No whitelisted channels" if responseChannels == "" else responseChannels
 
     chessChannels = ""
-    #foreach ch in [guild enabled channels]
-    for ch in settings[guildID]['chessGame']['enabled_channels']:
+    #foreach ch in [guild disabled channels]
+    for ch in settings[guildID]['chessGame']['disabled_channels']:
         #if ch is present in the guild channel
         for guildCh in allChannels:
             if ch == guildCh.id:
@@ -1651,13 +1641,13 @@ async def module_info(interaction : discord.Interaction):
         #clean guildsData from no-longer existing channels:
         if ch not in allChannelsID:
             mPrint('DEBUG', f'found removed channel {ch}')
-            settings[guildID]['chessGame']['enabled_channels'].remove(ch)
+            settings[guildID]['chessGame']['disabled_channels'].remove(ch)
     #Add N/A if string
     chessChannels = "No whitelisted channels" if chessChannels == "" else chessChannels
 
     musicChannels = ""
     #foreach ch in [guild enabled channels]
-    for ch in settings[guildID]['musicbot']['enabled_channels']:
+    for ch in settings[guildID]['musicbot']['disabled_channels']:
         #if ch is present in the guild channel
         for guildCh in allChannels:
             if ch == guildCh.id:
@@ -1666,7 +1656,7 @@ async def module_info(interaction : discord.Interaction):
         #clean guildsData from no-longer existing channels:
         if ch not in allChannelsID:
             mPrint('DEBUG', f'found removed channel {ch}')
-            settings[guildID]['musicbot']['enabled_channels'].remove(ch)
+            settings[guildID]['musicbot']['disabled_channels'].remove(ch)
     #Add N/A if string
     musicChannels = "No whitelisted channels" if musicChannels == "" else musicChannels
 
@@ -1711,41 +1701,41 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
     if len(wantedModules) == 1:
         module = wantedModules[0]
         if enable == None: #send info about the module
-            resp = f"Module {modules.name} is enabled for:\n"
-            for ch in settings[guildID][module]['enabled_channels']:
+            resp = f"Module {modules.name} is disabled for:\n"
+            for ch in settings[guildID][module]['disabled_channels']:
                 channel = await bot.fetch_channel(ch)
                 resp = resp + f"{channel.mention}\n"
             await interaction.followup.send(resp, ephemeral=True)
             return
         elif channel == None: #change setting for every channel
-            if enable == True: #user wants to enable setting in every channel
+            if enable == False: #user wants to disable setting in every channel
                 allChannels = await interaction.guild.fetch_channels()
-                settings[guildID][module]['enabled_channels'] = []
+                settings[guildID][module]['disabled_channels'] = []
                 for c in allChannels:
                     if c.type == discord.ChannelType.text:
-                        settings[guildID][module]['enabled_channels'].append(c.id)
-                dumpSettings()
-                await interaction.followup.send(f"Module {modules.name} was enabled for every channel", ephemeral=True)
-            else: #user wants to disable setting in every channel
-                settings[guildID][module]['enabled_channels'] = []
+                        settings[guildID][module]['disabled_channels'].append(c.id)
                 dumpSettings()
                 await interaction.followup.send(f"Module {modules.name} was disabled for every channel", ephemeral=True)
+            else: #user wants to enable setting in every channel
+                settings[guildID][module]['disabled_channels'] = []
+                dumpSettings()
+                await interaction.followup.send(f"Module {modules.name} was enabled for every channel", ephemeral=True)
         else: #change setting for specific channel
-            if channel.id in settings[guildID][module]['enabled_channels']: #channel was enabled
-                if enable == True:
-                    await interaction.followup.send(f"Module {modules.name} was already enabled for {channel.mention}", ephemeral=True)
+            if channel.id in settings[guildID][module]['disabled_channels']: #channel was already disabled
+                if enable == False:
+                    await interaction.followup.send(f"Module {modules.name} was already disabled for {channel.mention}", ephemeral=True)
                     pass #channel was already enabled
                 else:
-                    settings[guildID][module]['enabled_channels'].remove(channel.id)
-                    dumpSettings()
-                    await interaction.followup.send(f"Module {modules.name} is now disabled for {channel.mention}", ephemeral=True)
-            else: #channel was disabled
-                if enable == True:
-                    settings[guildID][module]['enabled_channels'].append(channel.id)
+                    settings[guildID][module]['disabled_channels'].remove(channel.id)
                     dumpSettings()
                     await interaction.followup.send(f"Module {modules.name} is now enabled for {channel.mention}", ephemeral=True)
+            else: #channel was enabled
+                if enable == False:
+                    settings[guildID][module]['disabled_channels'].append(channel.id)
+                    dumpSettings()
+                    await interaction.followup.send(f"Module {modules.name} is now disabled for {channel.mention}", ephemeral=True)
                 else:
-                    await interaction.followup.send(f"Module {modules.name} was already disabled for {channel.mention}", ephemeral=True)
+                    await interaction.followup.send(f"Module {modules.name} was already enabled for {channel.mention}", ephemeral=True)
                     pass #channel was already disabled
     else:
         if enable == None:
@@ -1755,26 +1745,25 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
             allChannels = await interaction.guild.fetch_channels()
             for module in wantedModules:
                 if channel == None: #change every module for every channel
-                    if enable == True: #user wants to enable setting in every channel
-                        settings[guildID][module]['enabled_channels'] = []
+                    if enable == False: #user wants to disable setting in every channel
+                        settings[guildID][module]['disabled_channels'] = []
                         for ch in allChannels:
                             if ch.type == discord.ChannelType.text:
-                                settings[guildID][module]['enabled_channels'].append(ch.id)
+                                settings[guildID][module]['disabled_channels'].append(ch.id)
                         
-                    else: #user wants to disable setting in every channel
-                        settings[guildID][module]['enabled_channels'] = []
+                    else: #user wants to enable setting in every channel
+                        settings[guildID][module]['disabled_channels'] = []
                         
                 else: #change setting for specific channel
-                    if channel.id in settings[guildID][module]['enabled_channels']: #channel was enabled
-                        if enable == True:
-                            pass #channel was already enabled
+                    if channel.id in settings[guildID][module]['disabled_channels']: #channel was disabled
+                        if enable == False:
+                            pass #channel was already disabled
                         else:
-                            settings[guildID][module]['enabled_channels'].remove(channel.id)
+                            settings[guildID][module]['disabled_channels'].remove(channel.id)
                             
-                    else: #channel was disabled
-                        if enable == True:
-                            settings[guildID][module]['enabled_channels'].append(channel.id)
-                            
+                    else: #channel was enabled
+                        if enable == False:
+                            settings[guildID][module]['disabled_channels'].append(channel.id)
                         else:
                             pass #channel was already disabled
             dumpSettings()

@@ -57,7 +57,13 @@ N.B. there will come translations some time in the future, but for now it's a mi
 
 1. Everything should be good
 
-  
+#### Youtube age restricted videos
+
+To enable the download of age restricted videos
+
+1. Sign in to Youtube on your Web Browser, let's say Google Chrome.
+2. Install the following extension: [Get cookies](https://chrome.google.com/webstore/detail/get-cookiestxt/bgaddhkoddajcdgocldbbfleckgcbcid)
+3. While browsing youtube, click on the extension and export the cookies captured by the extension to `music/.yt_cookies.txt`
 
 ## Discord commands
 

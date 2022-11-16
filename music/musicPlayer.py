@@ -1,21 +1,17 @@
-"""
-"custom_playlist":{
-      "Pippo": [
-        "canzone 2",
-        "canzone 1"
-      ]
-"""
+import os
 import traceback
 import discord
 import asyncio
 import time
 from youtube_dl import YoutubeDL, utils
-from youtubesearchpython import VideosSearch, Video
-from random import shuffle
 
-from mPrint import mPrint as mp
+from musicObjects import Track, Queue
+
 import config
 from config import Colors as col
+from mPrint import mPrint as mp
+def mPrint(tag, text):
+    mp(tag, 'musicPlayer', text)
 
 max_precision = config.timeline_max
 
@@ -27,15 +23,16 @@ YDL_OPTIONS = {
         'preferredquality': '192',
     }],
     'outtmpl': '%(title)s.%(etx)s',
-    'quiet': False
+    'quiet': True
 }
+
+if os.path.isfile("music/.yt_cookies.txt"):
+    YDL_OPTIONS['cookiefile'] = 'music/.yt_cookies.txt'
+
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
 }
-
-def mPrint(tag, text):
-    mp(tag, 'musicPlayer', text)
 
 def conversion(sec):
     sec = int(sec)
@@ -55,274 +52,238 @@ def textToSeconds(text):
     seconds += int(text[-1])
     
     return seconds
-    
 
 class Player():
-    def __init__(self, vc : discord.VoiceClient, queue : dict[int:dict], overwritten : dict[str:str], is_shuffle) -> None:
-        self.queue : dict[int:dict] = queue
-        self.queueOrder = [x for x in range(len(queue))] #TEST last song in playlist
-        self.overwritten = overwritten #the songs that get user reported as bad results from queries are specified here
-
-        self.isShuffled = bool(is_shuffle)
-        if self.isShuffled: shuffle(self.queueOrder)
+    def __init__(self, vc : discord.VoiceClient, queue : Queue) -> None:
+        mPrint('DEBUG', 'called Player __init__')
+        self.queue : Queue = queue
+        self.currentTrack : Track = None
 
         self.voiceClient = vc
         self.isConnected = True
 
-        self.loop = False
-        self.loopQueue = False
-        self.currentSong = None
-        self.previousSongId = None
-        self.duration = 0
-        self.stepProgress = 0 #keep track of seconds passed in 10 chuncks
-
-        self.stopped = False
-
-        self.videoUrl = ''
-        self.thumbnail = ''
-        self.lastthumbnail = ''
-        self.wasReported = False
-
         #flags needed to communicate with EmbedHandler
+        self.wasReported = False
         self.skipped = False
         self.isPaused = False
         self.songStartTime = 0
         self.songStarted = False
         self.pauseStart = 0
         self.pauseEnd = 0
-        self.endOfPlaylist = False
 
-    def getVideoURL(self): #gets the url of the first song in queue (the one to play)
-        mPrint('DEBUG', f'searching for url (QUERY: {self.currentSong["search"]})')
-
-        track = self.currentSong['search']
-        if track in self.overwritten:
-            url = self.overwritten[track]
-            res = Video.get(url)
-            mPrint('TEST', f'Found overwritten track {url}')
-
-            self.thumbnail = res['thumbnails'][1]['url']
-            self.currentSong["duration_sec"] = int(res['duration']['secondsText'])
-            self.videoUrl = url
-
-        else:
-            mPrint('TEST', 'Searching track on youtube')
-            try:
-                res = VideosSearch(track, limit = 1).result()['result'][0]
-            except IndexError:
-                mPrint('ERROR', f'{traceback.format_exc()}') #Song not found I guess?? 404
-                return -1
-
-            url = res['link']
-
-            self.videoUrl = url
-            self.thumbnail = res['thumbnails'][0]['url']
-            self.currentSong["duration_sec"] = textToSeconds(res['duration'])
-        
-        # 'duration': '4:37'
-    
-        mPrint('DEBUG', f'FOUND URL: {url}')
-        mPrint('DEBUG', f'thumbnail = {self.thumbnail}')
-        return url
-    
     #wrapper that handles embed and song
-    async def starter(self):
-        self.playNext(None)
         
-
-    def playNext(self, error):
-        if self.stopped:
-            mPrint('INFO', 'Player was stoppend. Returning.')
-            return
-        mPrint('INFO', "---------------- PLAYNEXT ----------------")
-        self.wasReported = False
+    def playQueue(self, error = None):
         if error != None: mPrint('ERROR', f"{error}")
-        
-        if len(self.queueOrder) != 0:
 
-            if self.loopQueue:
-                mPrint('INFO', "looping queue, append song to end")
-                self.queueOrder.append(self.previousSongId)
+        # get current track and check that it exists
+        self.currentTrack = self.queue.getNext()
+        if self.currentTrack == None: #if not, end music
+            mPrint('INFO', 'QUEUE Ended.')
+            self.stop()
+            return 0
 
-            if not self.loop:
-                if self.currentSong == None: # first song
-                    self.currentSong = self.queue[self.queueOrder[0]]
-                    self.previousSongId = self.queueOrder[0]
+        if self.isConnected == False:
+            mPrint('INFO', "#--------------- DONE ---------------#")
 
-                else: #not first song
-                    #get last song
-                    self.previousSongId = self.queueOrder[0]
-                    self.currentSong = self.queue[self.queueOrder[0]]
-        
-        else:
-            if self.loop == False: 
-                self.endOfPlaylist = True
-                mPrint('MUSIC', 'End of playlist.')
-                return
+        mPrint('INFO', "---------------- PLAYNEXT ----------------")
+        if self.isPaused: self.resume()
 
-        self.playSong()
-        
-
-    def playSong(self):
         try:
+            song_url = self.currentTrack.getVideoUrl()
+            mPrint('DEBUG', f'URL: {song_url}')
+            if song_url == None:
+                # careful with recursion
+                self.playQueue("Expected video url, got None, trying next")
+                return  
+
+            if self.voiceClient.is_playing(): 
+                # if this triggers something very weird happened
+                mPrint('ERROR', 'musicbot was already playing, stopping song.')
+                self.voiceClient.stop()
+            
+            mPrint('MUSIC', f'Now Playing: ({self.currentTrack.title}) URL = {self.currentTrack.getVideoUrl()}')
+
             with YoutubeDL(YDL_OPTIONS) as ydl:
-                song_url = self.getVideoURL()
-                if song_url == -1:
-                    del self.queueOrder[0]
-                    self.playNext("Song not found?")
-                    return
                 try:
                     info = ydl.extract_info(song_url, download=False)
                 except utils.DownloadError:
-                    del self.queueOrder[0]
-                    self.playNext("Error trying to get for song")
+                    # careful with recursion
+                    self.playQueue("Error trying to download song")
+                    return
 
-                URL = info['formats'][0]['url']
-
-                if self.voiceClient.is_playing(): 
-                    mPrint('WARN', 'musicbot was already playing, stopping song.')
-                    self.voiceClient.stop()
-
-                mPrint('MUSIC', f'Now Playing: ({self.currentSong["trackName"]}) ')
-                self.songStartTime = time.time()
-                self.songStarted = True
-                source = discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS)
-                if not self.loop:
-                    del self.queueOrder[0]
-                try:
-                    self.voiceClient.play(source, after= self.playNext)
-                except discord.errors.ClientException:
-                    mPrint("INFO", "bot was disconnected from vc")
+            # get and play audio data
+            format_url = info['formats'][0]['url']
+            source = discord.FFmpegPCMAudio(format_url, **FFMPEG_OPTIONS)
+            self.songStarted = True
+            self.songStartTime = time.time()
+            try:
+                self.voiceClient.play(source, after=self.playQueue)
+            except discord.errors.ClientException:
+                mPrint("INFO", "bot was disconnected from vc")
                
         except discord.ClientException:
             #bot got disconnected
             mPrint('FATAL', f'Bot is not connected to vc {traceback.format_exc()}')
-            self.voiceClient.cleanup()
-            self.isConnected = False
-            return
+            self.stop()
+            return -1
 
         except Exception:
             mPrint('FATAL', traceback.format_exc())
     
-    async def skip(self):
-        if len(self.queueOrder) > 0:
-            mPrint('MUSIC', f'skipped track ({self.currentSong["trackName"]})')
-            mPrint('MUSIC', f'next is {self.currentSong["trackName"] if self.loop else self.queue[self.queueOrder[0]]["trackName"]}')
-            self.voiceClient.stop()
-            self.skipped = True
-            # no need to call playNext since lambda will do it for us
+    def skip(self, times = 1):
+        if times == 1:
+            mPrint('MUSIC', f'Track skipped.')
         else:
-            await self.stop()
+            mPrint('MUSIC', f'Skipping {times} tracks')
+            self.queue.skipMultiple(times-1)
 
-    def restart(self):
-        self.queueOrder.insert(0, self.previousSongId)
-        mPrint('MUSIC', f'restarted track ({self.currentSong["trackName"]})')
         self.voiceClient.stop()
+        self.skipped = True
 
+    def previous(self):
+        self.queue.previous()
+        self.voiceClient.stop()
+    
     def shuffle(self):
-        if self.isShuffled:
-            self.isShuffled = False
-            self.queueOrder = sorted(self.queueOrder)
+        if self.queue.isShuffle:
+            self.queue.unshuffleQueue()
         else:
-            self.isShuffled = True
-            shuffle(self.queueOrder)
+            self.queue.shuffleQueue()
+
+    def play_pause(self):
+        if self.isPaused: self.resume()
+        else: self.pause()
 
     def pause(self):
+        mPrint('MUSIC', 'Pausing song')
         self.voiceClient.pause()
         self.isPaused = True
         self.pauseStart = time.time()
 
     def resume(self):
+        mPrint('MUSIC', 'Resuming song')
         self.voiceClient.resume()
         self.isPaused = False
-        self.pauseEnd = time.time()
+        self.pauseStart = time.time()
 
     def clear(self): #kind of does not make sense this just seems like stop() but spicy
-        self.queueOrder = []
-        self.queue = {}
+        self.queue.clear()
 
-    async def stop(self):
-        self.clear()
-        await self.voiceClient.disconnect()
+    def stop(self):
+        self.isConnected = False
         self.voiceClient.cleanup()
+        self.clear()
+        return 0
+
 
 class MessageHandler():
+    class MessageType:
+        stop = 0
+        playNext = 1,
+        leftAlone = 2
+        
     #Handles the embed of the player in parallel with the player
-    def __init__(self, player : Player, embedMSG : discord.Message, vchannel : discord.VoiceChannel, precision) -> None:
+    def __init__(self, player : Player, embedMSG : discord.Message, queue : Queue, precision, view : discord.ui.View) -> None:
+        mPrint('DEBUG', 'called MessageHandler __init__')
         self.player = player
         self.embedMSG = embedMSG
+        self.queue = queue
+        self.view = view
         self.ready = False
+
+        self.currentTrack = None
 
         self.printPrecision = True if precision != 0 else False
         self.timelinePrecision = 1 if precision == 0 else precision
-        self.timelineChars = ('▂', '▅')
+        self.timelineChars = config.timeline_chars
         self.timeBar = []
+
         self.timeStart = 0
         self.timeDone = 0
-
         self.stepProgress = 0
         self.duration = 0
         self.pauseDiff = 0
 
-        self.vchannel = vchannel
+        self.spotifyBtn = discord.ui.Button(label="Listen on Spotify", url="https://culobot.notlatif.com", row=3, disabled=True)
+        self.lastThumbnail = None
+
+        self.vchannel : discord.VoiceChannel = player.voiceClient.channel
         self.isAloneInVC = False
         self.aloneTimeStart = 0
         self.maxAloneTime = config.max_alone_time if config.max_alone_time <= 300 else 300
 
     async def start(self):
         await self.embedLoop()
-        mPrint('DEBUG', 'Embed handler finished')
+        mPrint('IMPORTANT', '[MessageHandler] Done, returning.')
+        return
 
     async def embedLoop(self):
-        while True: #foreach song
+        while True:
+            #this will execute after a song ends
             self.timeDone = time.time()
-            if self.player.endOfPlaylist:
-                mPrint("DEBUG","EOPlaylist, stopping embedloop")
-                await self.updateEmbed(True)
-                await self.player.stop()
+            if not self.player.isConnected:
+                mPrint("DEBUG", f"[MessageHandler] detected EOPlaylist, stopping embedloop (1) {self.player.isConnected=}")
+                await self.updateEmbed(stop = True)
                 return
 
             if not self.player.songStarted:
-                # mPrint("TEST", f"Song has not started yet, waiting... (duration: {self.player.currentSong['duration_sec']}, done after {self.timeDone - self.timeStart})")
+                # mPrint("TEST", f"[MessageHandler] Song has not started yet, waiting... (duration: {self.player.currentSong['duration_sec']}, done after {self.timeDone - self.timeStart})")
                 await asyncio.sleep(0.3)
-                if not self.player.voiceClient.is_connected():
-                    mPrint("WARN", "Bot was disconnected from vc, stopping embedloop")
+                if not self.player.isConnected:
+                    mPrint("DEBUG", "[MessageHandler] Bot was disconnected from vc, stopping embedloop")
                     return
-                continue #don't do anything if player did not change song
+                continue #don't do anything if player did not change song yet
 
-            self.player.songStarted = False
-
-            currentSong = self.player.currentSong
-
+            self.player.songStarted = False #flag song as not started for next iteration
+            self.currentTrack = self.queue.getCurrentTrack()
             self.timeBar = [self.timelineChars[0] for x in range(self.timelinePrecision)]
-            
-            mPrint('MUSIC', f'Song name: {currentSong["trackName"]}')
-            mPrint('MUSIC', f'Song duration: {currentSong["duration_sec"]}')
 
-            stepSeconds = float(currentSong["duration_sec"]) / self.timelinePrecision
-            self.duration = currentSong["duration_sec"]
+            self.duration = self.currentTrack.durationSeconds
+            stepSeconds = float(self.duration) / self.timelinePrecision
             self.stepProgress = 0
 
-            await self.updateEmbed()
+            mPrint('MUSIC', f'[MessageHandler] Song duration: {self.duration} sec.')
 
             initialTime = self.player.songStartTime
             #update timestamp every "step" seconds
             currentStep = 1
-            mPrint('DEBUG', f"Step sec: {stepSeconds}")
+            mPrint('DEBUG', f"[MessageHandler] Step duration: {stepSeconds} sec.")
             timeDeltaError = 0
             self.timeStart = time.time()
             while True:
                 await asyncio.sleep(0.5)
 
-                if self.player.pauseEnd - self.player.pauseStart != 0: #pause started
-                    if self.player.pauseEnd == 0:
-                        continue
+                # Detect if alone in voice channel
+                if len(self.vchannel.members) == 1:
+                    self.isAloneInVC == True
+                    if self.aloneTimeStart == 0:
+                        mPrint('WARN', 'I\'m alone in the vc...')
+                        self.aloneTimeStart = time.time()
+                    else:
+                        if time.time() - self.aloneTimeStart > self.maxAloneTime:
+                            mPrint('DEBUG', f'Waited for {time.time() - self.aloneTimeStart}s for people to join, now quitting')
+                            self.player.stop()
+                            await self.updateEmbed(leftAlone = True)
+                            return
+                else:
+                    if self.isAloneInVC:
+                        mPrint('WARN', 'Not alone anymore!')
+                        self.isAloneInVC == False
+                        self.aloneTimeStart = 0
+
+                await self.updateEmbed()
+
+                if self.player.isPaused: #pause started
+                    if self.player.pauseEnd == 0: continue
+
+                    #this won't get executed unless player resumes
                     self.pauseDiff = self.player.pauseStart - self.player.pauseEnd
                     self.player.pauseStart = 0
                     self.player.pauseEnd = 0
-                    mPrint('DEBUG', f'timePassed = {time.time() - initialTime}')
-                    mPrint('DEBUG', f'pauseTime = {self.pauseDiff}')
-                    mPrint('DEBUG', f'paused = {self.player.isPaused}')
+                    mPrint('DEBUG', f'[MessageHandler] timePassed = {time.time() - initialTime}')
+                    mPrint('DEBUG', f'[MessageHandler] pauseTime = {self.pauseDiff}')
+                    mPrint('DEBUG', f'[MessageHandler] paused = {self.player.isPaused}')
 
                 timePassed = time.time() - initialTime + self.pauseDiff
                 if self.player.isPaused == False and timePassed >= stepSeconds:
@@ -345,121 +306,145 @@ class MessageHandler():
                     # mPrint('TEST', f'step: {currentStep-1} of {self.timelinePrecision}')
                     
                 if currentStep-1 == self.timelinePrecision: # BUG this gets triggered too soon
-                    mPrint('DEBUG', "[EMBEDLOOP] Steps finished")
+                    mPrint('DEBUG', "[MessageHandler] Steps finished")
                     break
                 
                 if self.player.skipped:
-                    mPrint('DEBUG', "[EMBEDLOOP] Skip detected")
+                    mPrint('DEBUG', "[MessageHandler] Skip detected")
                     self.player.skipped = False
-                    await asyncio.sleep(0.5) #wait for player to set it's vars
-                    break
+                    await asyncio.sleep(0.5) #wait for player to get ready
+                    break #repeat loop for next song
 
-                if self.player.endOfPlaylist:
-                    await self.updateEmbed(True)
-                    await self.player.stop()
-                    mPrint("DEBUG","EOPlaylist, stopping embedloop")
+                if not self.player.isConnected:
+                    mPrint("DEBUG", "[MessageHandler] detected EOPlaylist, stopping embedloop (2)")
+                    await self.updateEmbed(stop = True)
                     return
 
-                if not self.player.voiceClient.is_connected():
+                if not self.player.isConnected:
                     await asyncio.sleep(0.5)
-                    if not self.player.voiceClient.is_connected():
-                        mPrint("WARN", "Bot was disconnected from vc, stopping embedloop")
+                    if not self.player.isConnected:
+                        mPrint("WARN", "[MessageHandler] Bot was disconnected from vc, stopping embedloop")
                         return
                     else:
-                        mPrint("WARN", "Bot was probably moved to another voice channel")
+                        mPrint("WARN", "[MessageHandler] Bot was probably moved to another voice channel")
                 
-                if len(self.vchannel.members) == 1:
-                    self.isAloneInVC == True
-                    if self.aloneTimeStart == 0:
-                        mPrint('WARN', 'I\'m alone in the vc...')
-                        self.aloneTimeStart = time.time()
-                    else:
-                        if time.time() - self.aloneTimeStart > self.maxAloneTime:
-                            mPrint('DEBUG', f'Waited for {time.time() - self.aloneTimeStart}s for people to join, now quitting')
-                            mPrint('WARN', 'Fuck this, I\'m going where people actually want me')
-                            await self.player.stop()
-                            await self.updateEmbed(leftAlone = True)
-                            return
-                else:
-                    self.isAloneInVC == False
-                    self.aloneTimeStart = 0
-
-
     def getEmbed(self, stop = False, move = False, pnext = False, leftAlone = False) -> discord.Embed:
-        last5 = f'__**0-** {self.player.currentSong["trackName"]} [{self.player.currentSong["artist"]}]__\n'
+        self.currentTrack = self.player.currentTrack
 
-        queue = []
-        for x in self.player.queueOrder[0:5]:
-            queue.append(self.player.queue[x])
-
-        for i, x in enumerate(queue):
-            if pnext and i == 0:
+        # Create queue title, get the next 6 Tracks in queue, add them in the last5 variable (one per line)
+        last5 = f'__**0-** {self.currentTrack}__\n'
+        queue : list[str] = [str(track) for track in self.queue.getQueue(limit=6)]
+        for i in range(len(queue)):
+            if pnext and i == 0: # add arrow emoji if song was added
                 last5 += '➡ '
-            last5 += f'**{i+1}-** {x["trackName"]} [by: {x["artist"]}]\n'
+            last5 += f'**{i+1}-** {queue[i]}\n'
+        last5 = last5[:-1] # remove last \n
 
-        last5 = last5[:-1]
+        # Create variable to store the title
+        precision = self.printPrecision * f'{"".join(self.timeBar)} {conversion(self.stepProgress)} / {conversion(self.duration)}\n'
 
-        if self.printPrecision:
-            desc = f'Now Playing: **{self.player.currentSong["trackName"]}**\n{"".join(self.timeBar)} {conversion(self.stepProgress)} / {conversion(self.duration)}\n'
-        else:
-            desc = f'Now Playing: **{self.player.currentSong["trackName"]}**\n'
-        
-        c = col.orange if self.ready else col.red
+        try:
+            desc = f'Now Playing: **{self.currentTrack.title}**\n{precision}'
+        except AttributeError:
+            desc = f'Now Playing: `                                      `\n▂▂▂▂▂▂▂▂▂▂ (00:00 - 00:00)\n'
 
+        # Create Embed Object with title
         embed = discord.Embed(
-            title = f'Queue: {len(self.player.queueOrder)} songs. {"⏸" * int(self.player.isPaused)} {"🔂" * int(self.player.loop)} {"🔁" * int(self.player.loopQueue)} {"🔀" * int(self.player.isShuffled)}',
-            description= desc,
-            color=c
+            title = f'Queue: {len(self.queue)} songs. {"⏸" * int(self.player.isPaused)} {"🔂" * int(self.queue.isLoopOne())} {"🔁" * int(self.queue.isLoopQueue())} {"🔀" * int(self.queue.isShuffle)}',
+            description = desc,
+            color = col.orange if self.ready else col.red
         )
 
-        embed.add_field(name='WARN', value="music player commands are temporarely prefixed with a !, e.g.: `!skip`", inline=False)
+        # Define artists and add them to the embed
+        try:
+            artists = self.currentTrack.getArtists()
+            artistLabel = "Author:" if len(self.currentTrack.artists) >= 1 else "Authors:"
+        except AttributeError:
+            artists = 'N/A'
+            artistLabel = "Author:"
+        embed.add_field(name=artistLabel, value=artists)
 
-        artist = "N/A" if self.player.currentSong["artist"] == "" else self.player.currentSong["artist"]
-        
-        embed.add_field(name='Author:', value=f'{artist}')
-
+        # Add latency to the embed
         if self.printPrecision:
             latency = "N/A" if self.player.voiceClient.latency == float('inf') else ("%.3fms" % self.player.voiceClient.latency)
             embed.add_field(name='Latency:', value=f'{latency}')
 
         if not move:
-            embed.add_field(name='Last 5 in queue', value=last5, inline=False)
+            # Add songs in queue
+            embed.add_field(name='Next in queue:', value=last5, inline=False)
         else:
+            # If /queue was used, inform the user with a message in the embed
             last5 = ''
             for i in range(6):
                 last5 += f"**{i}**- `                                      `\n"
             embed.add_field(name="This message was moved, you may find the new one below", value=last5, inline=False)
             embed.color = col.black
 
-        embed.set_footer(text='🍑 Comandi del player: https://culobot.notlatif.com/#commands')
+        embed.set_footer(text='🍑 Powered by CuloBot')
         
         if stop:
-            embed.add_field(name=f'{"Queue finita" if self.player.endOfPlaylist else "Queue annullata"}', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
+            embed.add_field(name=f'{"Queue finita" if not self.player.isConnected else "Queue annullata"}', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
             embed.color = col.black
         elif leftAlone:
             embed.add_field(name="Queue annullata", value="Mi avete lasciato da solo nel canale vocale 😭", inline=False)
 
+        try:
+            youtubeURL = self.currentTrack.youtubeURL
+        except AttributeError:
+            youtubeURL = None
+
         if self.player.wasReported and not stop:
-            embed.add_field(name="Source", value=f">{self.player.videoUrl}\nQuesto link è stato segnalato, Grazie! 🧡")
+            embed.add_field(name="Source", value=f"> {youtubeURL}\nQuesto link è stato segnalato, Grazie! 🧡")
         elif not stop and not leftAlone:
-            embed.add_field(name="Source", value=f">{self.player.videoUrl}")#\nÈ la canzone sbagliata? fammelo sapere con il tasto ⁉")
+            embed.add_field(name="Source", value=f"> {youtubeURL}")#\nÈ la canzone sbagliata? fammelo sapere con il tasto ⁉")
         else:
-            embed.add_field(name="Source", value=f">{self.player.videoUrl}")
+            embed.add_field(name="Source", value=f"> {youtubeURL}")
 
-        if self.player.thumbnail != '':
-            self.player.lastthumbnail = self.player.thumbnail
-            embed.set_image(url=self.player.thumbnail)
+        try:
+            thumbnailURL = self.currentTrack.getVideoThumbnailUrl()
+            if thumbnailURL == None:
+                thumbnailURL = self.lastThumbnail
+            self.lastThumbnail = thumbnailURL
+        except AttributeError:
+            thumbnailURL = self.lastThumbnail
+        embed.set_image(url=thumbnailURL)
         
-
         return embed
+    
+    def updateButtons(self) -> None:
+        def clearRow3BTNs():
+            row3btns = [btn for btn in self.view.children if btn.row == 3]
+            for btn in row3btns:
+                self.view.remove_item(btn)
+
+        if self.currentTrack.getSource() == 'spotify':
+            #do not update the buttons if there is nothing to change
+            if self.currentTrack.title in self.spotifyBtn.label: return
+
+            clearRow3BTNs()
+            self.spotifyBtn.label = f"Ascolta {self.currentTrack.title} su Spotify"
+            self.spotifyBtn.url = self.currentTrack.getOriginalURL()
+            self.spotifyBtn.disabled = False
+            self.view.add_item(self.spotifyBtn)
+        else:
+            clearRow3BTNs()
+            self.spotifyBtn.disabled = True
 
     async def updateEmbed(self, stop = False, pnext = False, leftAlone = False):
         await asyncio.sleep(0.5)
         try:
             if stop or leftAlone:
-                await self.embedMSG.edit(embed=self.getEmbed(stop=stop, leftAlone=leftAlone))
-                await self.embedMSG.clear_reactions()
+                self.view.clear_items()
+                await self.embedMSG.edit(embed=self.getEmbed(stop=stop, leftAlone=leftAlone), view=self.view)
+                mPrint('INFO', '[MessageHandler] Detected stop.')
             else:
-                await self.embedMSG.edit(embed=self.getEmbed(pnext=pnext))
+                self.updateButtons()
+                await self.embedMSG.edit(embed=self.getEmbed(pnext=pnext), view=self.view)
+
         except discord.errors.HTTPException:
             mPrint('ERROR', f"DISCORD ERROR (probably embed had blank value)\n{traceback.format_exc()}")
+        except AttributeError:
+            mPrint('WARN', f"There was an error while creating the Embed, skipping. {stop=} {pnext=} {leftAlone=}")
+            mPrint('WARN', traceback.print_exc())
+        except Exception:
+            mPrint('ERROR', traceback.format_exc())
