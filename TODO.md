@@ -1,4 +1,8 @@
 # Culobot features
+🟦 Bot does not know when the player finished playing, possible solution:
+    Leverage the EmbedHandler coroutine (when it returns the player is usually done)
+    https://stackoverflow.com/questions/44345139/python-asyncio-add-done-callback-with-async-def
+
 🟦 option to save playlist name internally when using a playlist link
 
 🟥 add default permissions
