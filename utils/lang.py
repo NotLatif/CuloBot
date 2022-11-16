@@ -1,0 +1,57 @@
+# mark variables with lambda functions e.g.:  test = lamda a, b: f"This is a test {a} {b}"
+# you can now call test("one", "two") which will return "This is a test one two"
+# giving meaningful variable names can also help you if your IDE shows you the variable names when calling the function
+class it:
+    source_code = "https://github.com/NotLatif/CuloBot"
+    issues = "https://github.com/NotLatif/CuloBot/issues"
+    nothing_changed = "Non è cambiato niente."
+    done = "Fatto"
+
+    class commands:
+        resp_info = lambda percent: f"Rispondo il {percent}% delle volte"
+        resp_to_bots_info = lambda isEnabled, percent : f"Risposta ai bot: {isEnabled}\nRispondo il {percent}% delle volte"
+        resp_to_bots_edit = lambda percent: f"ok, risponderò il {percent}% delle volte ai bot"
+        resp_newperc = lambda percent: f"ok, risponderò il {percent}% delle volte"
+
+        words_id_not_found = "Id parola non trovato, `!words` per la lista di parole"
+        words_learned = "Nuova parola imparata!"
+        words_info = lambda guildName: f"Comandi disponibili:\n`/dictionary del <x>` per eliminare una parola\n`/dictionary edit <x> <parola>` per cambiare una parola\n`/dictionary add <parola>` per aggiungere una parola nuova\n`/dictionary del <id>` per rimuovere una parola nuova\n`/dictionary useDefault [true|false]` per scegliere se usare le parole globali\neg: `/dictionary add il culo, i culi` < per un esperienza migliore specifica l'articolo e la forma singolare(plurale)\neg: `/dictionary add culo` < specificare le forme non è obbligatorio\n**Puoi modificare solo le parole di {guildName}.**"
+        words_use_global_words = lambda guildName: f"\n**{guildName} non usa le parole globali, quindi non verranno mostrate**, per mostrarle usare il comando: `/dictionary useDefault `"
+        words_known_words = "Ecco le parole che conosco: "
+        words_bot_words = "Prole del bot:"
+        words_guild_words = lambda guildName: f"Prole di {guildName}:"
+
+    class chess:
+        layout_description = "Scacchiere disponibili:"
+        layout_global_layouts = "Scacchiere globali:"
+        layout_guild_layouts = lambda guildName: f"Scacchiere di {guildName}:"
+        layout_render_error = "Qualcosa è andato storto, probabilmente il FEN è errato"
+        layout_render_invalid = "Invalid board"
+        layout_render_select = "Seleziona il layout"
+        layout_add_exists = "La schacchiera esiste già, usa\n`/chess-layouts` per vedere le scacchiere\n`/chess-layout edit` per modificare una scacchiera"
+        layout_add_done = lambda name, fen: f"Ho aggiunto {name} {fen} !"
+        layout_edit_select = "Seleziona il layout da modificare"
+        layout_edit_title = lambda name: f"Modifica il layout {name}"
+        layout_edit_ok = lambda name, fen: f"Ho modificato il FEN {name} -> {fen}"
+        layout_delete_ok = lambda name, fen: f"Ho eliminato {name}, {fen}"
+        layout_delete_select = "Scegli il layout da eliminare"
+        layout_no_layouts = "Non esiste nessun layout del server"
+        
+        design_generated = lambda username, design: f"{username} ha generato il design {design}"
+        design_404 = "Design non trovato, usa `!chess design` per vedere i design disponibili"
+        design_render_select = "Seleziona il design"
+        design_add_exists = "Il design esiste già, per modificarlo usa /chess-designs edit"
+        design_add_done = lambda name, colors: f"Design aggiunto: **{name}**: {colors}"
+        design_no_designs = "Non esiste nessun design del server"
+        design_edit_title = lambda name: f"Modifica il design {name}"
+        design_edit_ok = lambda name, colors: f"Ho modificato il design {name} -> {colors}"
+        design_edit_select = "Scegli il design da modificare"
+        design_delete_select = "Scegli il design da eliminare"
+        design_delete_ok = lambda name, colors: f"Ho eliminato {name}, {colors}"
+
+    class music:
+        playlist_edit_select = "Scegli la playlist da modificare"
+        playlist_edit_title = lambda playlistName: f"Cambia i link di {playlistName}"
+        playlist_delete_ok = lambda playlistName, links: f"Ho eliminato {playlistName}, {links}"
+        playlist_delete_select = "Scegli la playlist da eliminare"
+        playlist_404 = "Non esiste nessun design del server"

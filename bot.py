@@ -14,12 +14,20 @@ from discord import app_commands
 from typing import Union
 
 #custom modules
+sys.path.insert(0, 'utils/')
+sys.path.insert(0, 'music/')
+sys.path.insert(0, 'chessGame/')
 import config
-import chessBridge
-import musicBridge
 import getevn
 from config import Colors as col
 from mPrint import mPrint as mp
+from lang import it as lang # Change it with your language, currently supported: it
+
+#sys.path.insert(0, 'chessGame/') # for future implementation of the bridge files outside the root folder
+import chessBridge
+#sys.path.insert(0, 'music/')
+import musicBridge
+
 def mPrint(tag, value):mp(tag, 'bot', value)
 
 try: #This is specific to my own server, if you want to delete this also delete the other myServer lines in on_message()
@@ -45,38 +53,8 @@ with open(settingsFile, 'a'): pass #make guild setting file if it does not exist
 
 SETTINGS_TEMPLATE = {"id":{"responseSettings":{"disabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"disabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"musicbot":{"disabled_channels":[],"saved_playlists":{},"youtube_search_overwrite":{},"player_shuffle": True,"timeline_precision": 14}}}
 
-#Useful funtions
-def splitString(str, separator = ' ', delimiter = '\"') -> list:
-    #https://icodelog.wordpress.com/2018/08/01/splitting-on-comma-outside-quotes-python/
-    #splits string based on separator only if outside double quotes
-    i = -1
-    isQ = False
-    lstStr = []
-    for s in str:
-        if s != separator and s != delimiter:
-            if i == -1 or i < len(lstStr):
-                lstStr.append(s)
-                i = len(lstStr)
-            else:
-                lstStr[i-1] = lstStr[i-1] + s
-         
-        elif s == separator and isQ == False:
-            lstStr.append('')
-            i = len(lstStr)
-             
-        elif s == delimiter and isQ == False:
-            isQ = True
-            continue
-         
-        elif s == delimiter and isQ == True:
-            isQ = False
-            continue
-         
-        elif s == separator and isQ == True:
-            lstStr[i-1] = lstStr[i-1] + s
-         
-    return lstStr
 
+#Useful funtions
 def dumpSettings(): #only use this function to save data to guildData.json (This should avoid conflicts with coroutines idk)
     """Saves the settings to file"""
     dump = {str(k): settings[k] for k in settings}
@@ -146,31 +124,6 @@ def checkSettingsIntegrity(id : int):
     dumpSettings()
 
     mPrint('INFO', f'GuildSettings for {id} seem good.')
-
-def formatLangStr(string : str, replace : Union[list, str]) -> str: #this has no reason of being so well documented lmao
-    """
-    Replaces the occurences of `$varx` in `string` with the contents of `replace`
-    - ##### E.g.1
-    - `format('this is $var0 test $var1.', ['a'])`
-    - `format('this is $var0 test $var1.', 'a')`
-    - will result in -> `this is a test $var1.`
-    - ##### E.g. 2
-    - `format('this is $var0 test $var1.', ['a', 'bye', 'whatever'])`
-    - will result in -> `this is a test bye.`
-    """
-
-    if type(replace) != list: replace = str(replace)
-
-    if type(replace) == str:
-        return string.replace('$var0', str(replace))
-    #else
-    for x, r in enumerate(replace):
-        keyword = '$varx'.replace('x', str(x))
-        string = string.replace(keyword, str(r))
-
-        print(f'x: {x}; r: {r}; keyword: {keyword}')
-
-    return string
 
 def getWord(all=False) -> Union[str,list]:
     """
@@ -402,17 +355,17 @@ async def responsePerc(interaction : discord.Interaction, value : int = -1):
     respSettings = settings[guildID]["responseSettings"] #readonly 
 
     if(value == -1):
-        await interaction.response.send_message(formatLangStr(strings["bot.resp.info"], str(respSettings["response_perc"])))
+        await interaction.response.send_message(lang.commands.resp_info(str(respSettings["response_perc"])))
         return
     
     elif (respSettings['response_perc'] == value):
-        await interaction.response.send_message(strings['nothing_changed'])
+        await interaction.response.send_message(lang.nothing_changed)
         return
     #else
     #keep value between 0 and 100
     value = 100 if value > 100 else 0 if value < 0 else value
 
-    await interaction.response.send_message(formatLangStr(strings['bot.resp.newperc'], value))
+    await interaction.response.send_message(lang.commands.resp_newperc(value))
 
     mPrint('INFO', f'{interaction.user.name} set response to {value}%')
     settings[guildID]['responseSettings']['response_perc'] = value
@@ -424,9 +377,9 @@ async def botRespToggle(interaction : discord.Interaction, value : bool):
     guildID = int(interaction.guild.id)
         
     if value == True:
-        response = strings['bot.resp.resp_to_bots.affirmative']
+        response = lang.commands.resp_resp_to_bots_affirmative
     else:
-        response = strings['bot.resp.resp_to_bots.negative']
+        response = lang.commands.resp_resp_to_bots_negative
     await interaction.response.send_message(response)
 
     settings[guildID]['responseSettings']['will_respond_to_bots'] = value
@@ -439,20 +392,20 @@ async def botRespPerc(interaction : discord.Interaction, value : int = -1):
     guildID = int(interaction.guild.id)
 
     if value == -1:
-        await interaction.response.send_message(formatLangStr( #this just formats the string in lang.json with the data
-            strings["bot.resp.resp_to_bots.info"],[#list of 2 variables to replace
-                settings[guildID]["responseSettings"]["will_respond_to_bots"],#0
-                settings[guildID]["responseSettings"]["response_to_bots_perc"]#1
-            ]
+        await interaction.response.send_message(
+            lang.commands.resp_to_bots_info(
+                settings[guildID]["responseSettings"]["will_respond_to_bots"],
+                settings[guildID]["responseSettings"]["response_to_bots_perc"]
             )
         )
+        
         return
 
     #else
     #keep value between 0 and 100
     value = 100 if value > 100 else 0 if value < 0 else value
 
-    await interaction.response.send_message(formatLangStr(strings["bot.resp.resp_to_bots.edit"], value))
+    await interaction.response.send_message(lang.commands.resp_to_bots_edit(value))
     settings[guildID]['responseSettings']['response_to_bots_perc'] = value
     dumpSettings()
     return
@@ -464,13 +417,13 @@ async def dictionary(interaction : discord.Interaction):
 
     #1. Send a description
     custom_words = settings[guildID]['responseSettings']['custom_words']
-    description = formatLangStr(strings['bot.words.info'], interaction.guild.name)
+    description = lang.commands.words_info(interaction.guild.name)
 
     if not settings[guildID]['responseSettings']['use_global_words']:
-        description += formatLangStr(strings['bot.words.use_global_words'], interaction.guild.name)
+        description += lang.commands.words_use_global_words(interaction.guild.name)
         
     embed = discord.Embed(
-        title = strings['bot.words.known_words'],
+        title = lang.commands.words_known_words,
         description = description,
         colour = col.orange
     )
@@ -483,14 +436,14 @@ async def dictionary(interaction : discord.Interaction):
     if settings[guildID]['responseSettings']['use_global_words']:
         #is server uses default words
         value = '\n'.join(botWords)
-        embed.add_field(name = strings['bot.words.bot_words'], value=value)
+        embed.add_field(name = lang.commands.words_bot_words, value=value)
         value = '' 
 
     #2c. append the guild(local) words to value
     for i, cw in enumerate(custom_words):
         value += f'[`{i}`]: {cw}\n'
-    if value == '': value=strings['bot.words.no_guild_words']
-    embed.add_field(name = formatLangStr(strings['bot.words.guild_words'], interaction.guild.name), value=value)
+    if value == '': value=lang.commands.words_guild_words
+    embed.add_field(name = lang.commands.words_guild_words(interaction.guild.name), value=value)
     
     #3. send the words
     await interaction.response.send_message(embed=embed)
@@ -506,7 +459,7 @@ async def dictionary_add(interaction : discord.Interaction, new_word : str):
     guildID = int(interaction.guild.id)
 
     settings[guildID]['responseSettings']['custom_words'].append(new_word)
-    await interaction.response.send_message(strings['bot.words.learned'], ephemeral=True)
+    await interaction.response.send_message(lang.commands.words_learned, ephemeral=True)
     dumpSettings()
     return
 
@@ -525,9 +478,9 @@ async def dictionary_edit(interaction : discord.Interaction, id : int, new_word 
     if len(settings[guildID]['responseSettings']['custom_words']) > editWord:
         settings[guildID]['responseSettings']['custom_words'][editWord] = new_word
         dumpSettings()
-        await interaction.response.send_message(strings['done'], ephemeral=True)
+        await interaction.response.send_message(lang.done, ephemeral=True)
     else:
-        await interaction.response.send_message(strings['bot.words.id_not_found'], ephemeral=True)
+        await interaction.response.send_message(lang.commands.words_id_not_found, ephemeral=True)
     return
 
 @tree.command(name="dictionary-del", description="Elimina una parola dal dizionario", )
@@ -544,9 +497,9 @@ async def dictionary_del(interaction : discord.Interaction, id : int):
     if len(settings[guildID]['responseSettings']['custom_words']) > delWord:
         del settings[guildID]['responseSettings']['custom_words'][delWord]
         dumpSettings()
-        await interaction.response.send_message(strings['done'], ephemeral=True)
+        await interaction.response.send_message(lang.done, ephemeral=True)
     else:
-        await interaction.response.send_message(strings['bot.words.id_not_found'], ephemeral=True)
+        await interaction.response.send_message(lang.commands.words_id_not_found, ephemeral=True)
     return
 
 @tree.command(name="dictionary-useglobal", description="Attiva/Disattiva il dizionario globale")
@@ -611,7 +564,7 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
     #FEN options
     globalBoards = chessBridge.getBoards()
     guildBoards = settings[guildID]['chessGame']['boards']
-    layoutChoices = discord.ui.Select(options=[], placeholder=strings['bot.chess.layout.render.select'])
+    layoutChoices = discord.ui.Select(options=[], placeholder=lang.chess.layout_render_select)
 
     for layout in globalBoards: #global layouts
         isDefault = False
@@ -630,7 +583,7 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
     #Design options
     globalDesigns = chessBridge.chessMain.getDesignNames()
     guildDesigns = settings[guildID]['chessGame']['designs']
-    designChoices = discord.ui.Select(options=[], placeholder=strings['bot.chess.design.render.select'])
+    designChoices = discord.ui.Select(options=[], placeholder=lang.chess.design_render_select)
 
     for design in globalDesigns: #guild layouts
         isDefault = False
@@ -932,7 +885,7 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
     #send saved layouts
     if response == 0: 
         embed = discord.Embed(
-            title = strings['bot.chess.layout.description'],
+            title = lang.chess.layout_description,
             colour = col.orange
         )
         #ii. append the global data boards to the embed
@@ -940,14 +893,14 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
         value = ''
         for b in botBoards:
             value += f"**{b}**: {botBoards[b]}\n"
-        embed.add_field(name = strings['bot.chess.layout.global_layouts'], value=value, inline=False)
+        embed.add_field(name = lang.chess.layout_global_layouts, value=value, inline=False)
 
         #iii. if guild data has boards, append them to the embed
         if settings[guildID]['chessGame']['boards'] != {}:
             guildBoards = ''
             for b in settings[guildID]['chessGame']['boards']:
                 guildBoards += f"**{b}**: {settings[guildID]['chessGame']['boards'][b]}\n"
-            embed.add_field(name = formatLangStr(strings['bot.chess.layout.guild_layouts'], interaction.guild.name), value=guildBoards, inline=False)
+            embed.add_field(name = lang.chess.layout_guild_layouts(interaction.guild.name), value=guildBoards, inline=False)
         
         #iv. send the embed
         await interaction.response.send_message(embed=embed)
@@ -956,7 +909,7 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
     elif response == 1: # renders a FEN and send it in chat
         choices = discord.ui.Select(options= #global layouts
             [discord.SelectOption(label=name, description=botBoards[name], value=botBoards[name]) for name in botBoards],
-            placeholder=strings['bot.chess.layout.render.select']
+            placeholder=lang.chess.layout_render_select
         )
         for layout in guildBoards: #guild layouts
             choices.add_option(label=layout, description=guildBoards[layout], value=guildBoards[layout])
@@ -973,11 +926,11 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
                 image = chessBridge.getBoardImgPath(layoutFEN, interaction.id)
                 mPrint('DEBUG', f'got image path: {image}')
             except Exception:
-                await interaction.response.send_message(strings['bot.chess.layout.render.error'])
+                await interaction.response.send_message(lang.chess.layout_render_error)
                 return -2
 
             if image == 'Invalid':
-                await interaction.response.send_message(f"{strings['bot.chess.layout.render.invalid']} {layoutFEN}")
+                await interaction.response.send_message(f"{lang.chess.layout_render_invalid} {layoutFEN}")
                 return -1
             mPrint('DEBUG', f'rendered image: {image}')
 
@@ -1012,9 +965,9 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
                     #iii. append the board and dump the json data
                     settings[guildID]['chessGame']['boards'][str(self.name)] = str(self.fen)
                     dumpSettings()
-                    await interaction.response.send_message(formatLangStr(strings['bot.chess.layout.add.done'], [str(self.name), str(self.fen)]))
+                    await interaction.response.send_message(lang.chess.layout_add_done(str(self.name), str(self.fen)))
                 else:
-                    await interaction.response.send_message(strings['bot.chess.layout.add.exists'])
+                    await interaction.response.send_message(lang.chess.layout_add_exists)
 
         await interaction.response.send_modal(NewLayoutData())
 
@@ -1024,20 +977,20 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
         # setup guild layout in choices
         choices = discord.ui.Select(options=
             [discord.SelectOption(label=name, description=guildBoards[name]) for name in guildBoards],
-            placeholder=strings['bot.chess.layout.edit.select']
+            placeholder=lang.chess.layout_edit_select
         )
         view = discord.ui.View()
         view.add_item(choices)
 
         async def edit_board(interaction : discord.Interaction): # This triggers when user selects the board to edit
             layoutname = str(choices.values[0])
-            class EditLayoutData(discord.ui.Modal, title=formatLangStr(strings['bot.chess.layout.edit.title'], layoutname)):
+            class EditLayoutData(discord.ui.Modal, title=lang.chess.layout_edit_title(layoutname)):
                 newfen = discord.ui.TextInput(label=f'Edit the FEN for "{layoutname}"', default=guildBoards[layoutname], style=discord.TextStyle.long, required=True)
 
                 async def on_submit(self, interaction: discord.Interaction): #this triggers when user submits the modal with the new data
                     settings[guildID]['chessGame']['boards'][layoutname] = str(self.newfen)
                     dumpSettings()
-                    await interaction.response.send_message(formatLangStr(strings['bot.chess.layout.edit.ok'], [layoutname, str(self.newfen)]))
+                    await interaction.response.send_message(lang.chess.layout_edit_ok(layoutname, str(self.newfen)))
             await interaction.response.send_modal(EditLayoutData())
 
         choices.callback = edit_board
@@ -1045,14 +998,14 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
         if guildBoards != {}:
             await interaction.response.send_message(view=view, ephemeral=True)
         else:
-            await interaction.response.send_message(strings['bot.chess.layout.no_layouts'], ephemeral=True)
+            await interaction.response.send_message(lang.chess.layout_no_layouts, ephemeral=True)
         return 0
     
     elif response == 4: #delete a board
         # setup guild layout in choices
         choices = discord.ui.Select(options=
             [discord.SelectOption(label=name, description=guildBoards[name]) for name in guildBoards],
-            placeholder=strings['bot.chess.layout.delete.select']
+            placeholder=lang.chess.layout_delete_select
         )
         view = discord.ui.View()
         view.add_item(choices)
@@ -1062,13 +1015,13 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
             if layoutname in settings[guildID]['chessGame']['boards']:
                 fen = settings[guildID]['chessGame']['boards'].pop(layoutname)
                 dumpSettings()
-                await interaction.response.send_message(formatLangStr(strings['bot.chess.layout.delete.ok'], [layoutname, fen]))
+                await interaction.response.send_message(lang.chess.layout_delete_ok(layoutname, fen))
 
         choices.callback = delete_board
         if guildBoards != {}:
             await interaction.response.send_message(view=view, ephemeral=True)
         else:
-            await interaction.response.send_message(strings['bot.chess.layout.no_layouts'], ephemeral=True)
+            await interaction.response.send_message(lang.chess.layout_no_layouts, ephemeral=True)
         return 0
     
 @tree.command(name="chess-designs", description="Informazioni sui design delle scachiere")
@@ -1136,7 +1089,7 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
     if response == 1: # Render and send designs
         choices = discord.ui.Select(options= #global layouts
             [discord.SelectOption(label=x, value=x) for x in globalDesigns],
-            placeholder=strings['bot.chess.design.render.select']
+            placeholder=lang.chess.design_render_select
         )
         for design in guildDesigns: #guild layouts
             choices.add_option(label=design, description=str(guildDesigns[design]), value=design)
@@ -1152,7 +1105,7 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
                 designPath = chessBridge.chessMain.gameRenderer.renderBoard(colors, interaction.message.id)
                 with open(designPath+'chessboard.png', "rb") as fh:
                     f = discord.File(fh, filename=(designPath + 'chessboard.png'))
-                    await interaction.response.send_message(formatLangStr(strings['bot.chess.design.generated'], [interaction.user.name, str(designChoice)]), file=f)
+                    await interaction.response.send_message(lang.chess.design_generated(interaction.user.name, designChoice), file=f)
                 shutil.rmtree(designPath, ignore_errors=False, onerror=None)
                 return 0
 
@@ -1161,9 +1114,9 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
                 design = f'{chessBridge.chessMain.gameRenderer.spritesFolder}{designChoice}/chessboard.png'
                 with open(design, "rb") as fh:
                     f = discord.File(fh, filename=design)
-                    await interaction.response.send_message(formatLangStr(strings['bot.chess.design.generated'], [interaction.user.name, str(designChoice)]), file=f)
+                    await interaction.response.send_message(lang.chess.design_generated(interaction.user.name, designChoice), file=f)
             else:
-                await interaction.response.send_message(strings['bot.chess.design.404'])
+                await interaction.response.send_message(lang.chess.design_404)
     
         choices.callback = render_and_send_image
         await interaction.response.send_message(view=view, ephemeral=True)
@@ -1189,11 +1142,11 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
                         await interaction.response.send_message(f"Invalid hex {col1} {col2}", ephemeral=True)
                         return -2
                     settings[guildID]['chessGame']['designs'][name] = colors
-                    await interaction.response.send_message(formatLangStr(strings['bot.chess.design.add.done'], [name, colors]))
+                    await interaction.response.send_message(lang.chess.design_add_done(name, colors))
                     dumpSettings()
                     
                 else:
-                    await interaction.response.send_message(strings['bot.chess.design.add.exists'])
+                    await interaction.response.send_message(lang.chess.design_add_exists)
 
         await interaction.response.send_modal(NewDesignData())
 
@@ -1203,7 +1156,7 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
         # setup guild designs in choices
         choices = discord.ui.Select(options=
             [discord.SelectOption(label=design, description=str(guildDesigns[design]), value=design) for design in guildDesigns],
-            placeholder=strings['bot.chess.design.edit.select']
+            placeholder=lang.chess.design_edit_select
         )
 
         view = discord.ui.View()
@@ -1211,7 +1164,7 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
 
         async def edit_design(interaction : discord.Interaction): # This triggers when user selects the board to edit
             designName = choices.values[0]
-            class EditDesignData(discord.ui.Modal, title=formatLangStr(strings['bot.chess.design.edit.title'], designName)):
+            class EditDesignData(discord.ui.Modal, title=lang.chess.design_edit_title(designName)):
                 c1 = discord.ui.TextInput(label=f'Primary  ', default=guildDesigns[designName][0], placeholder="#aabbcc | #abc", style=discord.TextStyle.short, required=True, max_length=7)
                 c2 = discord.ui.TextInput(label=f'Secondary', default=guildDesigns[designName][1], placeholder="#11dd33 | #1d3", style=discord.TextStyle.short, required=True, max_length=7)
 
@@ -1223,7 +1176,7 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
                         return -2
                     #else
                     settings[guildID]['chessGame']['designs'][designName] = [col1, col2]
-                    await interaction.response.send_message(formatLangStr(strings['bot.chess.design.edit.ok'], [designName, str([col1, col2])]))
+                    await interaction.response.send_message(lang.chess.design_edit_ok(designName, str([col1, col2])))
             await interaction.response.send_modal(EditDesignData())
 
         choices.callback = edit_design
@@ -1231,14 +1184,14 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
         if guildDesigns != {}:
             await interaction.response.send_message(view=view, ephemeral=True)
         else:
-            await interaction.response.send_message(strings['bot.chess.design.no_designs'], ephemeral=True)
+            await interaction.response.send_message(lang.chess.design_no_designs, ephemeral=True)
         return 0
 
     elif response == 4: # deletes a design in guildsData
         # setup guild designs in choices
         choices = discord.ui.Select(options=
             [discord.SelectOption(label=design, description=str(guildDesigns[design]), value=design) for design in guildDesigns],
-            placeholder=strings['bot.chess.design.delete.select']
+            placeholder=lang.chess.design_delete_select
         )
         view = discord.ui.View()
         view.add_item(choices)
@@ -1248,13 +1201,13 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
             if designname in settings[guildID]['chessGame']['designs']:
                 colors = settings[guildID]['chessGame']['designs'].pop(designname)
                 dumpSettings()
-                await interaction.response.send_message(formatLangStr(strings['bot.chess.design.delete.ok'], [designname, str(colors)]))
+                await interaction.response.send_message(lang.chess.design_delete_ok(designname, colors))
 
         choices.callback = delete_board
         if guildDesigns != {}:
             await interaction.response.send_message(view=view, ephemeral=True)
         else:
-            await interaction.response.send_message(strings['bot.chess.design.no_layouts'], ephemeral=True)
+            await interaction.response.send_message(lang.chess.design_no_designs, ephemeral=True)
         return 0
 
 @tree.command(name="playlist", description="Gestisci le playlist salvate")
@@ -1346,7 +1299,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
         # get playlists and put them in choices
         choices = discord.ui.Select(options=
             [discord.SelectOption(label=playlist, value=playlist) for playlist in savedPlaylists],
-            placeholder=strings['bot.music.playlist.edit.select']
+            placeholder=lang.music.playlist_edit_select
         )
 
         view = discord.ui.View()
@@ -1355,7 +1308,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
         async def edit_playlist(interaction : discord.Interaction): # This triggers when user selects which playlist to edit
             playlistName = str(choices.values[0])
             mPrint('TEST', f'playlist name: {playlistName}')
-            class EditPlaylistData(discord.ui.Modal, title=formatLangStr(strings['bot.music.playlist.edit.title'], playlistName)):
+            class EditPlaylistData(discord.ui.Modal, title=lang.music.playlist_edit_title(playlistName)):
                 plists = '\n'.join(savedPlaylists[playlistName])
                 links = discord.ui.TextInput(label='Tracce', placeholder="Inserisci i link o i nomi delle canzoni uno per riga (spotify/youtube, anche playlist)", default=plists, style=discord.TextStyle.paragraph, required=True)
 
@@ -1414,14 +1367,14 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
         if savedPlaylists != {}:
             await interaction.response.send_message(view=view, ephemeral=True)
         else:
-            await interaction.response.send_message(strings['bot.music.playlists.404'], ephemeral=True)
+            await interaction.response.send_message(lang.music.playlist_404, ephemeral=True)
         return 0
 
     elif response == 3: #remove a playlist
         # setup guild designs in choices
         choices = discord.ui.Select(options=
             [discord.SelectOption(label=playlist, value=playlist) for playlist in savedPlaylists],
-            placeholder=strings['bot.music.playlist.delete.select']
+            placeholder=lang.music.playlist_delete_select
         )
         view = discord.ui.View()
         view.add_item(choices)
@@ -1432,13 +1385,13 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                 links = settings[guildID]["musicbot"]['saved_playlists'].pop(playlistName)
                 dumpSettings()
                 links = "\n".join(links)
-                await interaction.response.send_message(formatLangStr(strings['bot.music.playlist.delete.ok'], [playlistName, f'```{links}```']), ephemeral=True)
+                await interaction.response.send_message(lang.music.playlist_delete_ok(playlistName, f'```{links}```'), ephemeral=True)
 
         choices.callback = delete_playlist
         if savedPlaylists != {}:
             await interaction.response.send_message(view=view, ephemeral=True)
         else:
-            await interaction.response.send_message(strings['bot.music.playlist.404'], ephemeral=True)
+            await interaction.response.send_message(lang.music.playlist_404, ephemeral=True)
         return 0
 
     return

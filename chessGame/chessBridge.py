@@ -8,8 +8,7 @@ from config import Colors as col
 from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'chessBridge', text)
-
-sys.path.insert(0, 'chessGame/') #needed since Main is in another folder
+	
 import chessMain
 
 if not os.path.isdir(f'{chessMain.gameRenderer.gamesFolder}'):

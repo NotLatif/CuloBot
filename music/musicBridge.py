@@ -8,7 +8,6 @@ import discord.ui
 from discord import app_commands
 from random import shuffle as queueshuffle
 
-sys.path.insert(0, 'music/')
 import spotifyParser
 import youtubeParser
 import musicPlayer
@@ -19,11 +18,6 @@ from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'musicBridge', text)
 
-def isPlaylist(query) -> bool:
-    pass
-
-def getPlaylist(name) -> dict[str, list[str]]:
-    pass
 
 def getTracksFromURL(url, overwritten) -> Union[list[musicObjects.Track], None]:
     """return a list of track objects found from an url, if the song is only 1, returns a list of one element"""

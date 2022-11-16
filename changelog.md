@@ -1,4 +1,11 @@
-# v1.0.4-beta0 (Big rewrite of the musicbot module)
+# v1.0.4-beta1 (Big rewrite of the musicbot module)
+
+# beta 1
+- lang is now a python file for better management
+- utilities files are now moved in the utils folder
+- musicBridge and chessBridge were moved in the music/ and chessGame/ folders
+
+# beta 0
 
 ### Changes
 - Links now get parsed in a smarter way
