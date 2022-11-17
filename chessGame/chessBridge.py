@@ -1,7 +1,6 @@
 import asyncio
 import random
 import discord
-import sys
 import os
 
 from config import Colors as col

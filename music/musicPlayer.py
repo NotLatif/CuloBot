@@ -215,7 +215,8 @@ class MessageHandler():
 
     async def start(self):
         await self.embedLoop()
-        mPrint('IMPORTANT', '[MessageHandler] Done, returning.')
+        await self.player.voiceClient.disconnect()
+        mPrint('IMPORTANT', '[MessageHandler] Queue done, returning.')
         return
 
     async def embedLoop(self):
