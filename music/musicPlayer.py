@@ -61,6 +61,8 @@ class Player():
 
         self.voiceClient = vc
         self.isConnected = True
+        self.timeout = config.no_music_timeout
+        self.isWaiting = False
 
         #flags needed to communicate with EmbedHandler
         self.wasReported = False
@@ -71,17 +73,55 @@ class Player():
         self.pauseStart = 0
         self.pauseEnd = 0
 
-    #wrapper that handles embed and song
+    async def waitAfterQueueEnd(self) -> bool:
+        self.isWaiting = True
+        if self.timeout == -1: # wait indefinitely for user input
+            mPrint('INFO', "Waiting until new track gets added or bot gets disconnected")
+            while True:
+                await asyncio.sleep(1)
+                if self.queue.hasNext():
+                    mPrint('DEBUG', "Found new song, playing...")
+                    self.isWaiting = False
+                    return True
+                if not self.isConnected: #Stop waiting if the user stops or disconnects the bot
+                    mPrint('DEBUG', "Bot was disconnected by user, stopping wait function")
+                    self.isWaiting = False
+                    return False
+        #else
+        mPrint('INFO', f"Waiting ({self.timeout}seconds) until new track gets added or bot gets disconnected")
+        start = time.time()
+        while time.time() - start < self.timeout:
+            await asyncio.sleep(1)
+            if self.queue.hasNext():
+                self.isWaiting = False
+                mPrint('DEBUG', "Found new song, playing...")
+                return True
+            if not self.isConnected: #Stop waiting if the user stops or disconnects the bot
+                mPrint('DEBUG', "Bot was disconnected by user, stopping wait function")
+                self.isWaiting = False
+                return False
+        self.isWaiting = False
+        return False
         
     def playQueue(self, error = None):
         if error != None: mPrint('ERROR', f"{error}")
 
         # get current track and check that it exists
         self.currentTrack = self.queue.getNext()
-        if self.currentTrack == None: #if not, end music
-            mPrint('INFO', 'QUEUE Ended.')
-            self.stop()
-            return 0
+        if self.currentTrack == None: #if there is no next
+            if self.timeout == 0: # if timeout is 0s, quit
+                mPrint('INFO', f'QUEUE Ended, quitting.')
+                self.stop()
+                return 0
+
+            # else wait for user the estabilished time            
+            if not asyncio.run(self.waitAfterQueueEnd()):
+                # No song added after timeout
+                mPrint('INFO', f'QUEUE Ended, quitting after {self.timeout}')
+                self.stop()
+                return 0
+            else:
+                self.currentTrack = self.queue.getNext()
 
         if self.isConnected == False:
             mPrint('INFO', "#--------------- DONE ---------------#")
@@ -171,6 +211,7 @@ class Player():
         self.queue.clear()
 
     def stop(self):
+        self.isWaiting = False
         self.isConnected = False
         self.voiceClient.cleanup()
         self.clear()
@@ -205,6 +246,10 @@ class MessageHandler():
         self.duration = 0
         self.pauseDiff = 0
 
+        self.didInformWaiting = False
+
+        self.disconnectedCheck =  2 # When this value gets to 0 the embed loop stops 
+
         self.spotifyBtn = discord.ui.Button(label="Listen on Spotify", url="https://culobot.notlatif.com", row=3, disabled=True)
         self.lastThumbnail = None
 
@@ -221,6 +266,16 @@ class MessageHandler():
 
     async def embedLoop(self):
         while True:
+            if self.player.isWaiting: # wait until Player stops waiting
+                if not self.didInformWaiting:
+                    mPrint('DEBUG', "Informing user that the bot is waiting")
+                    self.didInformWaiting = True
+                    await self.updateEmbed()
+
+                await asyncio.sleep(1)
+                continue
+            self.didInformWaiting = False
+
             #this will execute after a song ends
             self.timeDone = time.time()
             if not self.player.isConnected:
@@ -254,6 +309,10 @@ class MessageHandler():
             self.timeStart = time.time()
             while True:
                 await asyncio.sleep(0.5)
+                if not self.player.voiceClient.is_connected(): self.disconnectedCheck -= 1
+                else: self.disconnectedCheck = 2
+
+                if self.disconnectedCheck <= 0: self.player.isConnected = False
 
                 # Detect if alone in voice channel
                 if len(self.vchannel.members) == 1:
@@ -383,6 +442,11 @@ class MessageHandler():
 
         embed.set_footer(text='🍑 Powered by CuloBot')
         
+        if self.player.isWaiting:
+            availableTime = f"{config.no_music_timeout}s" if config.no_music_timeout != -1 else "♾️ time"
+            embed.add_field(name="Waiting", value=f"The queue ended, you have {availableTime} to add another track with `/add_song` or stop the bot")
+            embed.color = col.white
+
         if stop:
             embed.add_field(name=f'{"Queue finita" if not self.player.isConnected else "Queue annullata"}', value=f'Grazie per aver ascoltato con CuloBot!', inline=False)
             embed.color = col.black
@@ -439,7 +503,10 @@ class MessageHandler():
                 await self.embedMSG.edit(embed=self.getEmbed(stop=stop, leftAlone=leftAlone), view=self.view)
                 mPrint('INFO', '[MessageHandler] Detected stop.')
             else:
-                self.updateButtons()
+                try:
+                    self.updateButtons()
+                except AttributeError:
+                    mPrint('WARN', f"There was a problem updating Buttons, you can probably ignore this\n{traceback.format_exc()}")
                 await self.embedMSG.edit(embed=self.getEmbed(pnext=pnext), view=self.view)
 
         except discord.errors.HTTPException:

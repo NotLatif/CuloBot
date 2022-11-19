@@ -42,9 +42,10 @@ def getTracks(url : str) -> list[Track]:
         url = url.replace("music.youtube.com", "www.youtube.com", 1)
 
     elif "www.youtube.com" not in url:
-        if ['http://', 'https://', 'www.'] in url: #not the best but should work for most cases
-            mPrint('DEBUG', 'Link is not a valid URL')
-            return None
+        for x in ['http://', 'https://', 'www.']:
+            if x in url: #not the best but should work for most cases
+                mPrint('DEBUG', 'Link is not a valid URL')
+                return None
             
         mPrint("DEBUG", "Link is not a youtube link, using query")
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -160,6 +161,3 @@ def getTracks(url : str) -> list[Track]:
 
 # https://youtube.com/playlist?list=OLAK5uy_lxsKqDHchO8VpAxRCPoayWUCyCVWfeJNg
 #https://www.youtube.com/watch?v=2XM1OF2_6_4&list=OLAK5uy_lxsKqDHchO8VpAxRCPoayWUCyCVWfeJNg
-
-
-

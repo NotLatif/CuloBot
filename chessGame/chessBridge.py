@@ -429,7 +429,7 @@ async def loadGame(threadChannel : discord.Thread, bot, players : list[discord.M
 				mPrint("GAME", f"your move: {userMove}")
 
 
-def getBoards() -> dict[str:str]:
+def getBoards() -> dict[str, str]:
 	return chessMain.getSavedBoards()
 
 def doesBoardExist(board : str) -> bool:

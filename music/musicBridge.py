@@ -92,7 +92,7 @@ async def play(
         return -1
 
     #check that queue is not empty; this is probably redundant
-    if len(queue) == 0:
+    if len(queue.queue) == 0:
         await interaction.followup.send(f"An error occurred while looking for song(s) please retry.", ephemeral=True)
         mPrint("WARN", f"play function did not find the track requested {url}")
         return
@@ -147,7 +147,7 @@ async def play(
         loop = 13
 
     #Define buttons
-    buttons = {
+    buttonsCommands = {
         #cmd  : [emoji, row, optional(style)]
         Commands.previous:   ["⏮", 1],
         Commands.play_pause: ["⏯", 1],
@@ -181,15 +181,19 @@ async def play(
                 #user was not in a voice channel
                 pass
             
-    # Add buttons to View
+    # Create discord view
     view = discord.ui.View()
-    for b in buttons:
+
+    # Add buttons to view
+    # buttons : list[discord.ui.Button] = []
+    for b in buttonsCommands:
         try:
-            style = buttons[b][2]
+            style = buttonsCommands[b][2]
         except IndexError:
             style = discord.ButtonStyle.secondary
 
-        btn = EmbedButtons(label="", style=style, emoji=buttons[b][0], row=buttons[b][1], command=b)
+        btn = EmbedButtons(label="", style=style, emoji=buttonsCommands[b][0], row=buttonsCommands[b][1], command=b)
+        # buttons.append(btn)
         view.add_item(btn)
 
     #send embed with view
@@ -403,7 +407,7 @@ async def play(
             await interaction.followup.send(f"Ho scambiato {traccia1} con {traccia2}", ephemeral=True)
 
     @tree.command(name="add_song", description="Aggiungi canzone in queue", guild=interaction.guild)
-    async def play(interaction : discord.Interaction, url:str, position:str = '0'):
+    async def add_song(interaction : discord.Interaction, url:str, position:str = '0'):
         """
         :param position: Usa 'END' per aggiungere una traccia alla fine (default: 0)
         """
@@ -413,12 +417,12 @@ async def play(
             await interaction.response.defer(ephemeral=True)
             resp = await actions(Commands.add_song, url, int(position)-1)
 
-            if resp == -1:
+            if resp == None:
                 await interaction.followup.send(f"C'è stato un errore durante la ricerca della traccia {url}", ephemeral=True)
                 return
             else:
                 if len(resp) == 1:
-                    try: message = f"Ho aggiunto {resp} in queue"
+                    try: message = f"Ho aggiunto {resp[0]} in queue"
                     except AttributeError: message = 'Fatto'
                 else:
                     message = f"Fatto"

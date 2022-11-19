@@ -19,7 +19,7 @@ def getDesignNames() -> list:
 	mPrint('DEBUG', 'design ' + gameRenderer.spritesFolder)
 	return next(os.walk(gameRenderer.spritesFolder))[1]
 
-def getSavedBoards() -> dict[str:str]:
+def getSavedBoards() -> dict[str, str]:
 	try:
 		with open('chessGame/boards.json', 'r') as f:
 			boards = json.load(f)

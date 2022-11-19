@@ -1,4 +1,10 @@
-# v1.0.4-beta1 (Big rewrite of the musicbot module)
+# v1.0.4-beta2 (Big rewrite of the musicbot module)
+
+# beta 2
+- file bot.py now supports the lang.py file (TODO: easy language change in config.py)
+- new config for music player to wait in VC after the queue finishes
+- other fixes
+
 
 # beta 1
 - lang is now a python file for better management
@@ -47,9 +53,7 @@ position can be int or number (default = 0)
 
 ✅ **[TODO]** musicbot slash commands
 
-✅ **[TODO]** Rewrite musicPlayer.py, seriously, it sucks especially the way EMBED works and how it links to the player 
-(maybe, maybe, maybe, API calls?? makes no sense honestly but could be a way)
-Nah makes no sense, but Player should also update a file so it updates on the web!!!
+✅ **[TODO]** Rewrite musicPlayer.py, seriously, it sucks especially the way EMBED works and how it links to the player
 
 ✅ **[FIX]** youtubeParser caps @ 100 tracks per playlist
 

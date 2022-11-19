@@ -1,4 +1,4 @@
-#version 1.0.4-beta0
+#version in line 1 of ./changelog.md
 import asyncio
 import os
 import shutil
@@ -125,7 +125,7 @@ def checkSettingsIntegrity(id : int):
 
     mPrint('INFO', f'GuildSettings for {id} seem good.')
 
-def getWord(all=False) -> Union[str,list]:
+def getWord(all=False) -> Union[str, list]:
     """
     :return: A random line from the words.txt file.
     e.g. culo, i culi
@@ -307,7 +307,7 @@ tree = app_commands.CommandTree(bot)
 
 #           -----           DISCORD BOT SLASH COMMANDS           -----       #
 
-@tree.command(name="join-msg", description="Cambia il messaggio di benvenuto, /help join-msg per più info")
+@tree.command(name="join-msg", description=lang.slash.join_msg)
 async def joinmsg(interaction : discord.Interaction, message : str = None, enabled : bool = None):
     mPrint('CMDS', f'called /join-msg {message}')
     guildID = int(interaction.guild.id)
@@ -321,13 +321,13 @@ async def joinmsg(interaction : discord.Interaction, message : str = None, enabl
         dumpSettings()
 
     embed = discord.Embed(
-        title="Join Message",
-        description=f"Enabled: {settings[guildID]['responseSettings']['send_join_msg']}\nMessage: {settings[guildID]['responseSettings']['join_message']}",
+        title=lang.commands.join_msg_embed_title,
+        description=lang.commands.join_msg_embed_desc(settings[guildID]['responseSettings']['send_join_msg'], settings[guildID]['responseSettings']['join_message']),
         color=col.orange
     )
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
-@tree.command(name="leave-msg", description="Cambia il messaggio di addio, /help leave-msg per più info")
+@tree.command(name="leave-msg", description=lang.slash.leave_msg)
 async def leavemsg(interaction : discord.Interaction, message : str = None, enabled : bool = None):
     mPrint('CMDS', f'called /leave-msg {message}')
     guildID = int(interaction.guild.id)
@@ -341,13 +341,13 @@ async def leavemsg(interaction : discord.Interaction, message : str = None, enab
         dumpSettings()
     
     embed = discord.Embed(
-        title="Leave Message",
-        description=f"Enabled: {settings[guildID]['responseSettings']['send_leave_msg']}\nMessage: {settings[guildID]['responseSettings']['leave_message']}",
+        title=lang.commands.leave_msg_embed_title,
+        description=lang.commands.leave_msg_embed_desc(settings[guildID]['responseSettings']['send_leave_msg'], settings[guildID]['responseSettings']['leave_message']),
         color=col.orange
     )
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
-@tree.command(name="respond-perc", description="Imposta la percentuale di risposta del bot (0-100)")
+@tree.command(name="respond-perc", description=lang.slash.respond_perc)
 async def responsePerc(interaction : discord.Interaction, value : int = -1):
     mPrint('CMDS', f'called /respond-perc {value}')
     guildID = int(interaction.guild.id)
@@ -371,7 +371,7 @@ async def responsePerc(interaction : discord.Interaction, value : int = -1):
     settings[guildID]['responseSettings']['response_perc'] = value
     dumpSettings()
 
-@tree.command(name="respond-to-bots", description="Decidi se culobot può rispondere ad altri bot")
+@tree.command(name="respond-to-bots", description=lang.slash.respond_to_bots)
 async def botRespToggle(interaction : discord.Interaction, value : bool):
     mPrint('CMDS', f'called /respond-to-bots {value}')
     guildID = int(interaction.guild.id)
@@ -386,7 +386,7 @@ async def botRespToggle(interaction : discord.Interaction, value : bool):
     dumpSettings()
     return
 
-@tree.command(name="respond-to-bots-perc", description="Imposta la percentuale di probabilità di rispondere ad un bot (0-100)")
+@tree.command(name="respond-to-bots-perc", description=lang.slash.respond_to_bots_perc)
 async def botRespPerc(interaction : discord.Interaction, value : int = -1):
     mPrint('CMDS', f'called /respond-to-bots-perc {value}')
     guildID = int(interaction.guild.id)
@@ -410,7 +410,7 @@ async def botRespPerc(interaction : discord.Interaction, value : int = -1):
     dumpSettings()
     return
 
-@tree.command(name="dictionary", description="Mostra le parole conosciute dal bot")
+@tree.command(name="dictionary", description=lang.slash.dictionary)
 async def dictionary(interaction : discord.Interaction):
     mPrint('CMDS', f'called /dictionary')
     guildID = int(interaction.guild.id)
@@ -448,7 +448,7 @@ async def dictionary(interaction : discord.Interaction):
     #3. send the words
     await interaction.response.send_message(embed=embed)
 
-@tree.command(name="dictionary-add", description="Aggiunge una parola al dizionario")
+@tree.command(name="dictionary-add", description=lang.slash.dictionary_add)
 async def dictionary_add(interaction : discord.Interaction, new_word : str):
     """
     Aggiunge una parola al dizionario.
@@ -463,7 +463,7 @@ async def dictionary_add(interaction : discord.Interaction, new_word : str):
     dumpSettings()
     return
 
-@tree.command(name="dictionary-edit", description="Modifica una parola del dizionario")
+@tree.command(name="dictionary-edit", description=lang.slash.dictionary_edit)
 async def dictionary_edit(interaction : discord.Interaction, id : int, new_word : str):
     """
     Modifica una parola del dizionario.
@@ -483,7 +483,7 @@ async def dictionary_edit(interaction : discord.Interaction, id : int, new_word 
         await interaction.response.send_message(lang.commands.words_id_not_found, ephemeral=True)
     return
 
-@tree.command(name="dictionary-del", description="Elimina una parola dal dizionario", )
+@tree.command(name="dictionary-del", description=lang.slash.dictionary_del)
 async def dictionary_del(interaction : discord.Interaction, id : int):
     """
     It deletes a word from the dictionary.
@@ -502,7 +502,7 @@ async def dictionary_del(interaction : discord.Interaction, id : int):
         await interaction.response.send_message(lang.commands.words_id_not_found, ephemeral=True)
     return
 
-@tree.command(name="dictionary-useglobal", description="Attiva/Disattiva il dizionario globale")
+@tree.command(name="dictionary-useglobal", description=lang.slash.dictionary_use_global)
 async def dictionary_default(interaction : discord.Interaction, value : bool ):
     mPrint('CMDS', f'called /dictionary useglobal {value}')
     guildID = int(interaction.guild.id)
@@ -512,7 +512,7 @@ async def dictionary_default(interaction : discord.Interaction, value : bool ):
     dumpSettings()
     return
 
-@tree.command(name="chess", description="Fai una partita di scacchi!")
+@tree.command(name="chess", description=lang.slash.chess)
 async def chess(interaction : discord.Interaction, challenge : Union[discord.Role, discord.User] = None):
     """
     :param challenge: Il ruolo o l'utente da sfidare
@@ -523,7 +523,7 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
     guildID = int(interaction.guild.id)
 
     if interaction.channel.id in settings[guildID]['chessGame']['disabled_channels']:
-        await interaction.response.send_message("This module is not enabled in this channel.", ephemeral=True)
+        await interaction.response.send_message(lang.module_not_enabled, ephemeral=True)
         return
 
     await interaction.channel.typing()
@@ -656,9 +656,10 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
             if('k' not in gameFEN or 'K' not in gameFEN):
                 print(gameFEN)
                 embed = discord.Embed(
-                    title = 'Problema con il FEN: manca il Re!',
-                    description= f'Re mancante: {"black" if "k" not in gameFEN else ""} {"white" if "K" not in gameFEN else ""}',
-                    color = col.red)
+                    title = lang.chess.embedTitle_fen_king_missing,
+                    description= lang.chess.embedDesc_fen_king_missing("black" if "k" not in gameFEN else "", "white" if "K" not in gameFEN else ""),
+                    color = col.red
+                )
                 await interaction.response.send_message(embed=embed)
                 return -1
             #else, fen is valid
@@ -865,15 +866,15 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
             if gameDesign.find('\\') != -1 or design.find('/') != -1:
                 shutil.rmtree(designFolder)
 
-@tree.command(name="chess-layout", description="Informazioni sui layout (FEN) delle scachiere")
+@tree.command(name="chess-layout", description=lang.slash.chess_layout)
 @app_commands.choices(sub_command=[
-        app_commands.Choice(name="Info", value="0"),
-        app_commands.Choice(name="Render", value="1"),
-        app_commands.Choice(name="Add", value="2"),
-        app_commands.Choice(name="Edit", value="3"),
-        app_commands.Choice(name="Remove", value="4"),
+        app_commands.Choice(name=lang.choices.info, value="0"),
+        app_commands.Choice(name=lang.choices.render, value="1"),
+        app_commands.Choice(name=lang.choices.add, value="2"),
+        app_commands.Choice(name=lang.choices.edit, value="3"),
+        app_commands.Choice(name=lang.choices.remove, value="4"),
 ])
-@app_commands.describe(sub_command="choose a subcommand")
+@app_commands.describe(sub_command=lang.choices.description)
 async def chess_layout(interaction : discord.Interaction, sub_command: app_commands.Choice[str]): #, name:str=None, fen:str = None
     mPrint('CMDS', f'called /chess-layout: {sub_command.name}')
     guildID = int(interaction.guild.id)
@@ -939,7 +940,7 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
             with open(imgpath, "rb") as fh:
                 f = discord.File(fh, filename=imgpath)
             #iv. data hoarding is bad
-            await interaction.response.send_message(f"{interaction.user.name} rendered board {layoutFEN}", file=f)
+            await interaction.response.send_message(lang.chess.layout_user_rendered(interaction.user.name, layoutFEN), file=f)
             try:
                 os.remove(imgpath)
             except PermissionError:
@@ -1024,15 +1025,15 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
             await interaction.response.send_message(lang.chess.layout_no_layouts, ephemeral=True)
         return 0
     
-@tree.command(name="chess-designs", description="Informazioni sui design delle scachiere")
+@tree.command(name="chess-designs", description=lang.slash.chess_designs)
 @app_commands.choices(sub_command=[
-        app_commands.Choice(name="Info", value="0"),
-        app_commands.Choice(name="Render", value="1"),
-        app_commands.Choice(name="Add", value="2"),
-        app_commands.Choice(name="Edit", value="3"),
-        app_commands.Choice(name="Remove", value="4"),
+        app_commands.Choice(name=lang.choices.info, value="0"),
+        app_commands.Choice(name=lang.choices.render, value="1"),
+        app_commands.Choice(name=lang.choices.add, value="2"),
+        app_commands.Choice(name=lang.choices.edit, value="3"),
+        app_commands.Choice(name=lang.choices.remove, value="4"),
 ])
-@app_commands.describe(sub_command="choose a subcommand")
+@app_commands.describe(sub_command=lang.choices.description)
 async def chess_design(interaction : discord.Interaction, sub_command: app_commands.Choice[str]): #, name:str=None, fen:str = None
     mPrint('CMDS', f'called /chess-designs: {sub_command.name}')
     guildID = int(interaction.guild.id)
@@ -1064,7 +1065,7 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
 
     if response == 0: #show board designs
         embed = discord.Embed(
-            title = 'Design disponibili: ',
+            title = lang.chess.design_available,
             colour = col.orange
         )
 
@@ -1073,14 +1074,14 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
         for b in range(len(globalDesigns)):
             value += f"{globalDesigns[b]}\n"
 
-        embed.add_field(name = 'Design disponibili:', value=value, inline=False)
+        embed.add_field(name =lang.chess.design_available, value=value, inline=False)
 
         #iii. if guild data has designs, append them to the embed
         if settings[guildID]['chessGame']['designs'] != {}:
             guildDesigns = ''
             for b in settings[guildID]['chessGame']['designs']:
                 guildDesigns += f"**{b}**: {settings[guildID]['chessGame']['designs'][b]}\n"
-            embed.add_field(name = f'Design di {interaction.guild.name}:', value=guildDesigns, inline=False)
+            embed.add_field(name = f'Design ({interaction.guild.name}):', value=guildDesigns, inline=False)
         
         #iv. send the embed
         await interaction.response.send_message(embed=embed)
@@ -1139,7 +1140,7 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
                     #parse colors
                     colors = parseHEX(col1, col2)
                     if colors == '0':
-                        await interaction.response.send_message(f"Invalid hex {col1} {col2}", ephemeral=True)
+                        await interaction.response.send_message(lang.chess.design_HEX_invalid(col1, col2), ephemeral=True)
                         return -2
                     settings[guildID]['chessGame']['designs'][name] = colors
                     await interaction.response.send_message(lang.chess.design_add_done(name, colors))
@@ -1172,7 +1173,7 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
                     col1,col2 = str(self.c1), str(self.c2)
                     colors = parseHEX(col1, col2)
                     if colors == '0':
-                        await interaction.response.send_message(f"Invalid hex {col1} {col2}", ephemeral=True)
+                        await interaction.response.send_message(lang.chess.design_HEX_invalid(col1, col2), ephemeral=True)
                         return -2
                     #else
                     settings[guildID]['chessGame']['designs'][designName] = [col1, col2]
@@ -1210,12 +1211,12 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
             await interaction.response.send_message(lang.chess.design_no_designs, ephemeral=True)
         return 0
 
-@tree.command(name="playlist", description="Gestisci le playlist salvate")
+@tree.command(name="playlist", description=lang.slash.playlist)
 @app_commands.choices(sub_command=[
-        app_commands.Choice(name="Info", value="0"),
-        app_commands.Choice(name="Add", value="1"),
-        app_commands.Choice(name="Edit", value="2"),
-        app_commands.Choice(name="Remove", value="3"),
+        app_commands.Choice(name=lang.choices.info, value="0"),
+        app_commands.Choice(name=lang.choices.add, value="1"),
+        app_commands.Choice(name=lang.choices.edit, value="2"),
+        app_commands.Choice(name=lang.choices.remove, value="3"),
 ])
 async def playlists(interaction : discord.Interaction, sub_command: app_commands.Choice[str]):
     mPrint('CMDS', f'called /playlist: ')
@@ -1227,8 +1228,8 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
     if response == 0: #send the playlist list list to user
         
         embed = discord.Embed(
-            title=f"Saved playlists for {interaction.guild.name}",
-            description="Puoi salvare più link in una playlist in modo da non dover rifare gli stessi comandi più volte!",
+            title = lang.music.embedTitle_playlist_saved(interaction.guild.name),
+            description = lang.music.embedDesc_playlist_saved,
             color=col.green
         )
         for plist in settings[guildID]["musicbot"]["saved_playlists"]:
@@ -1240,7 +1241,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
         return    
 
     elif response == 1:  #add a new playlist
-        class NewPlaylist(discord.ui.Modal, title='Crea una nuova playlist'):
+        class NewPlaylist(discord.ui.Modal, title = lang.music.playlist_create_title):
             name = discord.ui.TextInput(label='Nome', placeholder="", style=discord.TextStyle.short, required=True)
             links = discord.ui.TextInput(label='Tracce', placeholder="Inserisci i link o i nomi delle canzoni uno per riga (spotify/youtube, anche playlist)", style=discord.TextStyle.paragraph, required=True)
 
@@ -1256,7 +1257,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                     isUrlValid = musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'])
 
                     if isUrlValid == False:
-                        errors += f"Error: Could not find song/playlist {x}\n"
+                        errors += lang.music.playlist_create_404(x)
 
                     else:
                         if "open.spotify.com" not in x and "youtube.com" not in x:
@@ -1324,7 +1325,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                         isUrlValid = musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'])
 
                         if isUrlValid == False:
-                            errors += f"Error: Could not find song/playlist {x}\n"
+                            errors += lang.music.playlist_create_404(x)
 
                         else:
                             if "open.spotify.com" not in x and "youtube.com" not in x:
@@ -1340,7 +1341,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                         )
 
                         if tracks == []:
-                            await interaction.response.send_message('Error: every song/playlist failed', ephemeral=True)
+                            await interaction.response.send_message(lang.music.playlist_create_failed, ephemeral=True)
                             return
 
                     trackList = ''
@@ -1396,12 +1397,11 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
 
     return
 
-
-@tree.command(name="player-settings", description="Regola le impostazioni del player")
+@tree.command(name="player-settings", description=lang.slash.player_settings)
 @app_commands.choices(setting=[
-        app_commands.Choice(name="Info", value="0"),
-        app_commands.Choice(name="Shuffle", value="1"),
-        app_commands.Choice(name="Precision", value="2"),
+        app_commands.Choice(name=lang.choices.info, value="0"),
+        app_commands.Choice(name=lang.choices.shuffle, value="1"),
+        app_commands.Choice(name=lang.choices.precision, value="2"),
 ])
 async def playerSettings(interaction : discord.Interaction, setting : app_commands.Choice[str], value : int = None):
     """
@@ -1413,7 +1413,7 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
 
     if response == 0: #print settings
         embed = discord.Embed(
-            title="MusicBot Settings",
+            title=lang.music.settings_embed_title,
             description="/player-settings",
             color=col.green
         )
@@ -1443,46 +1443,46 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
 
     elif response == 2: #precision
         if value == None:
-            await interaction.response.send_message("Per questa impostazione devi specificare un valore nel comando", ephemeral=True)
+            await interaction.response.send_message(lang.music.settings_arg_needed, ephemeral=True)
             return
         warnmsg = ''
         newPrec = value
         if newPrec > config.timeline_max:
             newPrec = config.timeline_max
-            warnmsg = f"\nTimeline max precision is {config.timeline_max}"
+            warnmsg = lang.music.settings_timeline_max(config.timeline_max)
 
         if newPrec < 0:
             newPrec = 0
-            warnmsg = "\nTimeline min precision is 0"
+            warnmsg = lang.music.settings_timeline_min
         
         settings[guildID]['musicbot']["timeline_precision"] = newPrec
         dumpSettings()
-        await interaction.response.send_message(f"La nuova precisione è {newPrec}{warnmsg}", ephemeral=True)
+        await interaction.response.send_message(lang.music.settings_new_precision(f"{newPrec}{warnmsg}"), ephemeral=True)
 
     return
     
-@tree.command(name="play", description="Riproduci qualcosa! (Youtube & Spotify)")
+@tree.command(name="play", description=lang.slash.play)
 @app_commands.describe(tracks="URL / Title / saved playlist (/playlist)")
 async def playSong(interaction : discord.Interaction, tracks : str):
     guildID = int(interaction.guild.id)
     await interaction.response.defer(ephemeral=True)
 
     if interaction.channel.id in settings[guildID]['musicbot']['disabled_channels']:
-        await interaction.followup.send("This module is not enabled in this channel.", ephemeral=True)
+        await interaction.followup.send(lang.module_not_enabled, ephemeral=True)
         return
 
     try:
         userVC = bot.get_channel(interaction.user.voice.channel.id)
     except AttributeError:
-        await interaction.followup.send('Devi essere in un canale vocale per usare questo comando', ephemeral=True)
+        await interaction.followup.send(lang.music.play_user_not_in_vc, ephemeral=True)
         return
 
     voice_client : discord.VoiceClient = get(bot.voice_clients, guild=interaction.guild)
     if voice_client != None and voice_client.is_connected():
         if userVC!=None and voice_client.channel.id == userVC.id:
-            await interaction.followup.send('Usa /add_song per aggiungere una nuova traccia', ephemeral=True)
+            await interaction.followup.send(lang.music.play_wrong_command, ephemeral=True)
         else:
-            await interaction.followup.send('Sono già connesso in un altro canale vocale', ephemeral=True)
+            await interaction.followup.send(lang.music.play_already_connected, ephemeral=True)
         return
 
     overwrite = settings[guildID]['musicbot']['youtube_search_overwrite']
@@ -1506,7 +1506,7 @@ async def playSong(interaction : discord.Interaction, tracks : str):
         mPrint('MUSIC', f'Searching for user requested song: ({tracks})')
         trackURL = musicBridge.youtubeParser.searchYTurl(tracks, overwrite)
         if trackURL == None:
-            interaction.followup.send("Unsupported video.")
+            interaction.followup.send(lang.music.play_error_404)
             return
         mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
         playListURL = [trackURL]
@@ -1537,10 +1537,10 @@ async def playSong(interaction : discord.Interaction, tracks : str):
         await musicBridge.play(playListURL, interaction, bot, tree, shuffle, precision, overwrite, bot.dev)
         mPrint('IMPORTANT', 'musicBridge.play() returned')
     except Exception:
-        await interaction.followup.send("C'è stato un errore.", ephemeral=True)
+        await interaction.followup.send(lang.music.player.generic_error, ephemeral=True)
         mPrint('ERROR', traceback.format_exc())
 
-@tree.command(name="ping", description="ping del bot")
+@tree.command(name="ping", description="Ping the bot")
 async def ping(interaction : discord.Interaction):
     mPrint('CMDS', f'called /ping')
 
@@ -1548,7 +1548,7 @@ async def ping(interaction : discord.Interaction):
     await interaction.response.send_message(f'Pong! {pingms}ms')
     mPrint('INFO', f'ping detected: {pingms} ms')
 
-@tree.command(name="module-info", description="Mostra lo stato dei moduli")
+@tree.command(name="module-info", description=lang.slash.module_info)
 @app_commands.default_permissions()
 async def module_info(interaction : discord.Interaction):
     guildID = int(interaction.guild.id)
@@ -1556,7 +1556,7 @@ async def module_info(interaction : discord.Interaction):
 
     embed=discord.Embed(
         title=f"CuloBot modules for {interaction.guild.name}",
-        description="You can change this data using the command /module <module> [#channel] [enable]",
+        description=lang.commands.module_info_embedDesc,
         color=col.orange
     )
 
@@ -1566,27 +1566,25 @@ async def module_info(interaction : discord.Interaction):
     allChannels:list[discord.TextChannel] = [x for x in allChannels if x.type == discord.ChannelType.text]
     allChannelsID:list[int] = [x.id for x in allChannels if x.type == discord.ChannelType.text]
 
-    #well this is not confusing at all -.-
-
     responseChannels = ""
-    #foreach ch in [guild disabled channels]
-    for ch in settings[guildID]['responseSettings']['disabled_channels']:
-        #if ch is present in the guild channel
+    #foreach disabled channel (id)
+    for channelID in settings[guildID]['responseSettings']['disabled_channels']:
+        #if channel id is present in the guild
         for guildCh in allChannels:
-            if ch == guildCh.id:
+            if channelID == guildCh.id:
                 responseChannels = responseChannels + f"{guildCh.mention}\n"
                 break
         #clean guildsData from no-longer existing channels:
-        if ch not in allChannelsID:
+        if channelID not in allChannelsID:
             mPrint('DEBUG', f'found removed channel {ch}')
             settings[guildID]['responseSettings']['disabled_channels'].remove(ch)
     #Add N/A if string
-    responseChannels = "No whitelisted channels" if responseChannels == "" else responseChannels
+    responseChannels = lang.commands.module_info_no_blacklisted if responseChannels == "" else responseChannels
 
     chessChannels = ""
-    #foreach ch in [guild disabled channels]
+    #foreach disabled channel (id)
     for ch in settings[guildID]['chessGame']['disabled_channels']:
-        #if ch is present in the guild channel
+        #if channel id is present in the guild
         for guildCh in allChannels:
             if ch == guildCh.id:
                 chessChannels = chessChannels + f"{guildCh.mention}\n"
@@ -1596,12 +1594,12 @@ async def module_info(interaction : discord.Interaction):
             mPrint('DEBUG', f'found removed channel {ch}')
             settings[guildID]['chessGame']['disabled_channels'].remove(ch)
     #Add N/A if string
-    chessChannels = "No whitelisted channels" if chessChannels == "" else chessChannels
+    chessChannels = lang.commands.module_info_no_blacklisted if chessChannels == "" else chessChannels
 
     musicChannels = ""
-    #foreach ch in [guild enabled channels]
+    #foreach disabled channel (id)
     for ch in settings[guildID]['musicbot']['disabled_channels']:
-        #if ch is present in the guild channel
+        #if channel id is present in the guild
         for guildCh in allChannels:
             if ch == guildCh.id:
                 musicChannels = musicChannels + f"{guildCh.mention}\n"
@@ -1611,7 +1609,7 @@ async def module_info(interaction : discord.Interaction):
             mPrint('DEBUG', f'found removed channel {ch}')
             settings[guildID]['musicbot']['disabled_channels'].remove(ch)
     #Add N/A if string
-    musicChannels = "No whitelisted channels" if musicChannels == "" else musicChannels
+    musicChannels = lang.commands.module_info_no_blacklisted if musicChannels == "" else musicChannels
 
 
     embed.add_field(name="**Chat replies:**", value=responseChannels, inline=False)
@@ -1620,12 +1618,12 @@ async def module_info(interaction : discord.Interaction):
     
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-@tree.command(name="module", description="Attiva/Disattiva funzioni del bot")
+@tree.command(name="module", description=lang.slash.module)
 @app_commands.choices(modules=[
-        app_commands.Choice(name="All Modules", value="0"),
-        app_commands.Choice(name="Message Reply", value="1"),
-        app_commands.Choice(name="Chess", value="2"),
-        app_commands.Choice(name="Music", value="3"),
+        app_commands.Choice(name=lang.choices.all, value="0"),
+        app_commands.Choice(name=lang.choices.reply, value="1"),
+        app_commands.Choice(name=lang.choices.chess, value="2"),
+        app_commands.Choice(name=lang.choices.music, value="3"),
 ])
 @app_commands.default_permissions()
 async def module_settings(interaction : discord.Interaction, modules:app_commands.Choice[str], channel:discord.TextChannel=None, enable:bool=None):
@@ -1654,7 +1652,7 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
     if len(wantedModules) == 1:
         module = wantedModules[0]
         if enable == None: #send info about the module
-            resp = f"Module {modules.name} is disabled for:\n"
+            resp = lang.commands.module_disabled_in_channel(modules.name) 
             for ch in settings[guildID][module]['disabled_channels']:
                 channel = await bot.fetch_channel(ch)
                 resp = resp + f"{channel.mention}\n"
@@ -1668,31 +1666,31 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
                     if c.type == discord.ChannelType.text:
                         settings[guildID][module]['disabled_channels'].append(c.id)
                 dumpSettings()
-                await interaction.followup.send(f"Module {modules.name} was disabled for every channel", ephemeral=True)
+                await interaction.followup.send(lang.commands.module_disabled_all_channels(modules.name), ephemeral=True)
             else: #user wants to enable setting in every channel
                 settings[guildID][module]['disabled_channels'] = []
                 dumpSettings()
-                await interaction.followup.send(f"Module {modules.name} was enabled for every channel", ephemeral=True)
+                await interaction.followup.send(lang.commands.module_enabled_all_channels(modules.name), ephemeral=True)
         else: #change setting for specific channel
             if channel.id in settings[guildID][module]['disabled_channels']: #channel was already disabled
                 if enable == False:
-                    await interaction.followup.send(f"Module {modules.name} was already disabled for {channel.mention}", ephemeral=True)
+                    await interaction.followup.send(lang.commands.module_already_disabled(modules.name, channel.mention), ephemeral=True)
                     pass #channel was already enabled
                 else:
                     settings[guildID][module]['disabled_channels'].remove(channel.id)
                     dumpSettings()
-                    await interaction.followup.send(f"Module {modules.name} is now enabled for {channel.mention}", ephemeral=True)
+                    await interaction.followup.send(lang.commands.module_now_enabled(modules.name, channel.mention), ephemeral=True)
             else: #channel was enabled
                 if enable == False:
                     settings[guildID][module]['disabled_channels'].append(channel.id)
                     dumpSettings()
-                    await interaction.followup.send(f"Module {modules.name} is now disabled for {channel.mention}", ephemeral=True)
+                    await interaction.followup.send(lang.commands.module_now_disabled(modules.name, channel.mention), ephemeral=True)
                 else:
-                    await interaction.followup.send(f"Module {modules.name} was already enabled for {channel.mention}", ephemeral=True)
+                    await interaction.followup.send(lang.commands.module_already_enabled(modules.name, channel.mention), ephemeral=True)
                     pass #channel was already disabled
     else:
         if enable == None:
-            await interaction.followup.send('You have to select a value for the "enable" variable when enabling/disabling every module at once.\nIf you want infos about the modules use /module-info', ephemeral=True)
+            await interaction.followup.send(lang.commands.module_arg_missing, ephemeral=True)
             return
         try:
             allChannels = await interaction.guild.fetch_channels()
@@ -1720,25 +1718,12 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
                         else:
                             pass #channel was already disabled
             dumpSettings()
-            await interaction.followup.send("Done, use /module-info if you want to see the changes\n")
+            await interaction.followup.send(lang.commands.module_done)
         except Exception:
             mPrint('ERROR', f'0x1000\n{traceback.format_exc()}')
-            await interaction.followup.send("There was an unknown error, please report this issue 0x1000", ephemeral=True)
+            await interaction.followup.send(lang.commands.module_error, ephemeral=True)
 
-@tree.command(name="help", description="Help")
-@app_commands.choices(command=[
-        app_commands.Choice(name="WIP", value="-1"),
-        app_commands.Choice(name="Music", value="0"),
-])
-async def help(interaction : discord.Interaction, command:app_commands.Choice[str]=None):
-    if command == "0":
-        await interaction.response.send_message("You can see music commands here https://culobot.notlatif.com", ephemeral=True)
-        return
-
-    await interaction.response.send_message("Sorry, this section is under construction, a quick startup is using the command `/module` to enable the bot in specific chats.", ephemeral=True)
-
-
-@tree.command(name="feedback", description="Send a message to the developer!")
+@tree.command(name="feedback", description=lang.slash.feedback)
 @app_commands.choices(category=[
         app_commands.Choice(name="Bug report", value="0"),
         app_commands.Choice(name="Feature request", value="1"),

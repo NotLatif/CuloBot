@@ -1,3 +1,6 @@
+# This file contains global configs (which affect every guild) and configs about the script.
+# Modifications are effective only after a bot restart
+
 # Terminal
 logLevel = 2 #determines what tags the script prints in the terminal
 printLevel = 0 #determines what tags the script prints in the "bot.log" file
@@ -11,8 +14,10 @@ timeInTerminal = True
 # 2 - WARN, GAMEErr                     < WARN and ERROR
 # 3 - ERROR, FATAL, SONGERROR           < only ERROR
 
-#MUSIC PLAYER
+# BOT
+language = "IT" #This does currently nothing as it's just a placeholder for future implementation.
 
+#MUSIC PLAYER
 timeline_chars = ('▂', '▅')
 # Default: ('▂', '▅') -> The character shown in the timeline (tuple[str:str], the first str is the base, the second is the current progress)
 
@@ -21,7 +26,9 @@ timeline_max = 14
 # WARNING: a value too high could get you rate limited by the discord API
 
 max_alone_time = 60 * 5
-#Default: 300 -> (max=300) The maximum time (in seconds) the bot can play music while no one is connected to the voice channel
+# Default: 300 -> (max=300) The maximum time (in seconds) the bot can play music while no one is connected to the voice channel
+no_music_timeout = -1
+# Default: 60 The time (in seconds) the bot will stay in VC after the queue ends (0 for not time) (-1 for infinite time)
 
 class Colors:
     error = 0xff0000

@@ -212,13 +212,26 @@ class Queue:
             #repeating queue returns the first song
             else: 
                 self.alreadyPlayed = []
-                self.queueOrder = [x for x in range(len(self))]
+                self.queueOrder = [x for x in range(len(self.queue))]
                 if self.isShuffle:
                     self.shuffleQueue()
         
         t = self.queue[self.queueOrder[0]]
         self.alreadyPlayed.append(self.queueOrder.pop(0))
         return t
+    
+    def hasNext(self) -> bool:
+        if self.__loop == ONE: return True
+        #  ( no more songs to play ) or (      all songs were already played     )
+        if len(self.queueOrder) == 0 or len(self.alreadyPlayed) == len(self.queue):
+            if self.__loop == NO:
+                return False
+
+            else: # repeating playlist
+                return True
+        
+        if len(self.queueOrder) != 0:
+            return True
     
     def skipMultiple(self, times) -> None:
         """Skip multiple tracks at once (call getNext to return the next one)"""

@@ -1,17 +1,63 @@
 # mark variables with lambda functions e.g.:  test = lamda a, b: f"This is a test {a} {b}"
 # you can now call test("one", "two") which will return "This is a test one two"
 # giving meaningful variable names can also help you if your IDE shows you the variable names when calling the function
+
+# In python classes are rappresented internally as dicts so this should not be an heavy implementation but I'll probably revisit it later
 class it:
     source_code = "https://github.com/NotLatif/CuloBot"
     issues = "https://github.com/NotLatif/CuloBot/issues"
     nothing_changed = "Non è cambiato niente."
     done = "Fatto"
+    module_not_enabled = "Questo modulo non è abilitato in questo canale"
+
+    class slash: #slash command descriptions
+        join_msg = "Cambia il messaggio di benvenuto"
+        leave_msg = "Cambia il messaggio di addio"
+        respond_perc = "Imposta la percentuale di risposta del bot (0-100)"
+        respond_to_bots = "Decidi se culobot può rispondere ad altri bot"
+        respond_to_bots_perc = "Imposta la percentuale di probabilità di rispondere ad un bot (0-100)"
+        dictionary = "Mostra le parole conosciute dal bot"
+        dictionary_add = "Aggiunge una parola al dizionario"
+        dictionary_edit = "Modifica una parola del dizionario"
+        dictionary_del = "Elimina una parola dal dizionario"
+        dictionary_use_global = "Attiva/Disattiva il dizionario globale"
+        chess = "Fai una partita di scacchi!"
+        chess_layout = "Informazioni sui layout (FEN) delle scachiere"
+        chess_designs = "Informazioni sui design delle scachiere"
+        playlist = "Gestisci le playlist salvate"
+        player_settings = "Regola le impostazioni del player"
+        play = "Riproduci qualcosa! (Youtube & Spotify)"
+        module_info = "Mostra lo stato dei moduli"
+        module = "Attiva/Disattiva funzioni del bot"
+        feedback = "Send a message to the developer!"
+    
+    class choices:
+        description = "Choose a subcommand"
+        info = "Info"
+        add = "Add"
+        edit = "Edit"
+        remove = "Remove"
+        render = "Render"
+        shuffle = "Shuffle"
+        precision = "Precision"
+        all = "All Modules"
+        reply = "Message Reply"
+        chess = "Chess"
+        music = "Music"
 
     class commands:
+        join_msg_embed_title = "Messaggio di benvenuto"
+        join_msg_embed_desc = lambda isEnabled, msg: f"Enabled: {isEnabled}\nMessage: {msg}"
+
+        leave_msg_embed_title = "Messaggio di benvenuto"
+        leave_msg_embed_desc = lambda isEnabled, msg: f"Enabled: {isEnabled}\nMessage: {msg}"
+
         resp_info = lambda percent: f"Rispondo il {percent}% delle volte"
         resp_to_bots_info = lambda isEnabled, percent : f"Risposta ai bot: {isEnabled}\nRispondo il {percent}% delle volte"
         resp_to_bots_edit = lambda percent: f"ok, risponderò il {percent}% delle volte ai bot"
         resp_newperc = lambda percent: f"ok, risponderò il {percent}% delle volte"
+        resp_resp_to_bots_affirmative = "Ok, risponderò ai bot!"
+        resp_resp_to_bots_negative = "Ok, non risponderò ai bot!"
 
         words_id_not_found = "Id parola non trovato, `!words` per la lista di parole"
         words_learned = "Nuova parola imparata!"
@@ -20,6 +66,20 @@ class it:
         words_known_words = "Ecco le parole che conosco: "
         words_bot_words = "Prole del bot:"
         words_guild_words = lambda guildName: f"Prole di {guildName}:"
+
+        module_info_embedDesc = "You can change this data using the command /module <module> [#channel] [enable]"
+        module_info_no_blacklisted = "No blacklisted channels"
+
+        module_disabled_in_channel = lambda moduleName: f"Il modulo {moduleName} è disabilitato per:\n"
+        module_disabled_all_channels = lambda moduleName: f"Module {moduleName} was disabled for every channel"
+        module_enabled_all_channels = lambda moduleName: f"Module {moduleName} was enabled for every channel"
+        module_already_disabled = lambda moduleName, channel: f"Module {moduleName} was already disabled for {channel}"
+        module_already_enabled = lambda moduleName, channel: f"Module {moduleName} was already enabled for {channel}"
+        module_now_disabled = lambda moduleName, channel: f"Module {moduleName} is now disabled for {channel}"
+        module_now_enabled = lambda moduleName, channel: f"Module {moduleName} is now enabled for {channel}"
+        module_arg_missing = "You have to select a value for the 'enable' variable when enabling/disabling every module at once.\nIf you want infos about the modules use /module-info"
+        module_done = "Done, use /module-info if you want to see the changes\n"
+        module_error = "There was an unknown error, please report this issue 0x1000"
 
     class chess:
         layout_description = "Scacchiere disponibili:"
@@ -36,7 +96,9 @@ class it:
         layout_delete_ok = lambda name, fen: f"Ho eliminato {name}, {fen}"
         layout_delete_select = "Scegli il layout da eliminare"
         layout_no_layouts = "Non esiste nessun layout del server"
+        layout_user_rendered = lambda userName, fen: f"{userName} ha renderizzato il layout {fen}"
         
+        design_available = "Design disponibili: "
         design_generated = lambda username, design: f"{username} ha generato il design {design}"
         design_404 = "Design non trovato, usa `!chess design` per vedere i design disponibili"
         design_render_select = "Seleziona il design"
@@ -48,10 +110,34 @@ class it:
         design_edit_select = "Scegli il design da modificare"
         design_delete_select = "Scegli il design da eliminare"
         design_delete_ok = lambda name, colors: f"Ho eliminato {name}, {colors}"
+        design_HEX_invalid = lambda col1, col2: f"HEX non valido: {col1} {col2}"
+
+        embedTitle_fen_king_missing = "Problema con il FEN: manca il Re!"
+        embedDesc_fen_king_missing = lambda black, white: f"Re mancante: {black} {white}"
 
     class music:
+        embedTitle_playlist_saved = lambda guildName: f"Saved playlists for {guildName}"
+        embedDesc_playlist_saved = "Puoi salvare più link in una playlist in modo da non dover rifare gli stessi comandi più volte!"
         playlist_edit_select = "Scegli la playlist da modificare"
         playlist_edit_title = lambda playlistName: f"Cambia i link di {playlistName}"
         playlist_delete_ok = lambda playlistName, links: f"Ho eliminato {playlistName}, {links}"
         playlist_delete_select = "Scegli la playlist da eliminare"
-        playlist_404 = "Non esiste nessun design del server"
+        playlist_404 = "Non esiste nessuna playlist del server"
+
+        playlist_create_title = "Crea una nuova playlist"
+        playlist_create_404 = lambda playlistName: f"Error: Could not find song/playlist {playlistName}\n"
+        playlist_create_failed = "Error: every song/playlist failed"
+
+        settings_embed_title = "Impostazioni del musicbot"
+        settings_arg_needed = "Per questa impostazione devi specificare un valore nel comando"
+        settings_timeline_max = lambda val: f"\nIl valore massimo di precisione della timeline è: {val}"
+        settings_timeline_min = f"\nIl valore minimo di precisione della timeline è: 0"
+        settings_new_precision = lambda val: f"La precisione della timeline è stata impostata a {val}"
+
+        play_user_not_in_vc = f"Devi essere in un canale vocale per usare questo comando"
+        play_wrong_command = "Usa /add_song per aggiungere una nuova traccia"
+        play_already_connected = "Sono già connesso in un altro canale vocale"
+        play_error_404 = "C'è stato un errore nella ricerca della traccia"
+
+        class player:
+            generic_error = "C'è stato un errore"

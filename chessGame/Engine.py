@@ -835,11 +835,7 @@ class Move():
 		return self.colsToFiles[c] + self.rowsToRanks[r]
 
 
-
-
 """
-
-
 Rank = row 
 File = column
 
