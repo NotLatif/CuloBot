@@ -17,6 +17,8 @@ from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'musicBridge', text)
 
+def getTracks(any, overwritten) -> Union[list[musicObjects.Track], None]:
+    pass
 
 def getTracksFromURL(url, overwritten) -> Union[list[musicObjects.Track], None]:
     """return a list of track objects found from an url, if the song is only 1, returns a list of one element"""
@@ -62,7 +64,8 @@ async def play(
         shuffle : bool, 
         precision : int, 
         overwritten : tuple[str,str],
-        devUser : discord.User
+        devUser : discord.User,
+        playlists : dict[str, list[str]]
     ):
     embedChannel = interaction.channel
 
@@ -324,7 +327,7 @@ async def play(
                             json.dump(overwriteData, f, indent=2)
 
                     try:
-                        await devUser.send(message)
+                        await bot.dev.send(message)
                     except Exception:
                         mPrint('ERROR', traceback.format_exc())
 

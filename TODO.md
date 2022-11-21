@@ -1,3 +1,5 @@
+🟦 check if bot.dev.send in musicBridge works
+
 # Culobot features
 🟦 option to save playlist name internally when using a playlist link
 

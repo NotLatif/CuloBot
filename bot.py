@@ -1488,6 +1488,9 @@ async def playSong(interaction : discord.Interaction, tracks : str):
     overwrite = settings[guildID]['musicbot']['youtube_search_overwrite']
     shuffle   = settings[guildID]['musicbot']["player_shuffle"]
     precision = settings[guildID]['musicbot']["timeline_precision"]
+    playlists = settings[guildID]['musicbot']['saved_playlists']
+
+    #musicBridge.getTracks()
 
     #user searched a link
     playListURL : list[str]
@@ -1496,7 +1499,7 @@ async def playSong(interaction : discord.Interaction, tracks : str):
         playListURL = [tracks]
 
     #user wants a saved playlist
-    elif tracks in settings[guildID]["musicbot"]["saved_playlists"]:
+    elif tracks in playlists:
         trackURL_list : list[str] = settings[guildID]["musicbot"]["saved_playlists"][tracks]
         mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL_list}')
         playListURL = trackURL_list
@@ -1534,7 +1537,7 @@ async def playSong(interaction : discord.Interaction, tracks : str):
     #Start music module
     try:
         mPrint('TEST', f'--- playing queue --- \n{playListURL}')
-        await musicBridge.play(playListURL, interaction, bot, tree, shuffle, precision, overwrite, bot.dev)
+        await musicBridge.play(playListURL, interaction, bot, tree, shuffle, precision, overwrite, bot.dev, playlists)
         mPrint('IMPORTANT', 'musicBridge.play() returned')
     except Exception:
         await interaction.followup.send(lang.music.player.generic_error, ephemeral=True)

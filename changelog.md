@@ -1,4 +1,4 @@
-# v1.0.4-beta2 (Big rewrite of the musicbot module)
+# v1.0.4-beta3 (Big rewrite of the musicbot module)
 
 # beta 2
 - file bot.py now supports the lang.py file (TODO: easy language change in config.py)
