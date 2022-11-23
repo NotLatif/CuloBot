@@ -1,4 +1,7 @@
-# v1.0.4-beta3 (Big rewrite of the musicbot module)
+# v1.0.4 (Big rewrite of the musicbot module)
+
+# release 1
+seems to be working
 
 # beta 3
 - Fixed automatic update rate of getEmbed()
