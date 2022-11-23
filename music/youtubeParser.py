@@ -41,9 +41,9 @@ def getTracks(url : str) -> list[Track]:
         #replacing the strings gets the same link in youtube video form
         url = url.replace("music.youtube.com", "www.youtube.com", 1)
 
-    elif "www.youtube.com" not in url:
+    elif "www.youtube.com" not in url and "youtu.be" not in url: #Avoid other links
         for x in ['http://', 'https://', 'www.']:
-            if x in url: #not the best but should work for most cases
+            if x in url: 
                 mPrint('DEBUG', 'Link is not a valid URL')
                 return None
             

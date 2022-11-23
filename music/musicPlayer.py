@@ -248,7 +248,7 @@ class MessageHandler():
 
         self.didInformWaiting = False
 
-        self.disconnectedCheck =  2 # When this value gets to 0 the embed loop stops 
+        self.disconnectedCheck = 3 # When this value gets to 0 the embed loop stops
 
         self.spotifyBtn = discord.ui.Button(label="Listen on Spotify", url="https://culobot.notlatif.com", row=3, disabled=True)
         self.lastThumbnail = None
@@ -306,11 +306,12 @@ class MessageHandler():
             currentStep = 1
             mPrint('DEBUG', f"[MessageHandler] Step duration: {stepSeconds} sec.")
             timeDeltaError = 0
+            await self.updateEmbed()
             self.timeStart = time.time()
             while True:
                 await asyncio.sleep(0.5)
-                if not self.player.voiceClient.is_connected(): self.disconnectedCheck -= 1
-                else: self.disconnectedCheck = 2
+                if not self.player.voiceClient.is_connected(): self.disconnectedCheck -= 1 #checked every .5 seconds
+                else: self.disconnectedCheck = 3
 
                 if self.disconnectedCheck <= 0: self.player.isConnected = False
 
@@ -328,11 +329,9 @@ class MessageHandler():
                             return
                 else:
                     if self.isAloneInVC:
-                        mPrint('WARN', 'Not alone anymore!')
+                        mPrint('INFO', 'Not alone anymore!')
                         self.isAloneInVC == False
                         self.aloneTimeStart = 0
-
-                await self.updateEmbed()
 
                 if self.player.isPaused: #pause started
                     if self.player.pauseEnd == 0: continue
@@ -346,7 +345,7 @@ class MessageHandler():
                     mPrint('DEBUG', f'[MessageHandler] paused = {self.player.isPaused}')
 
                 timePassed = time.time() - initialTime + self.pauseDiff
-                if self.player.isPaused == False and timePassed >= stepSeconds:
+                if self.player.isPaused == False and timePassed >= stepSeconds: # Triggered every time a new step is completed
                     timeDeltaError = timePassed - stepSeconds
                     initialTime = time.time() - timeDeltaError #idk, I think it's good now?
 
@@ -387,15 +386,18 @@ class MessageHandler():
                         return
                     else:
                         mPrint("WARN", "[MessageHandler] Bot was probably moved to another voice channel")
-                
+
     def getEmbed(self, stop = False, move = False, pnext = False, leftAlone = False) -> discord.Embed:
+        # mPrint('FUNC', "getEmbed()")
         self.currentTrack = self.player.currentTrack
+        if self.currentTrack == None and not stop and not leftAlone:
+            return None
 
         # Create queue title, get the next 6 Tracks in queue, add them in the last5 variable (one per line)
         last5 = f'__**0-** {self.currentTrack}__\n'
         queue : list[str] = [str(track) for track in self.queue.getQueue(limit=6)]
         for i in range(len(queue)):
-            if pnext and i == 0: # add arrow emoji if song was added
+            if pnext != False and pnext == i+1: # add arrow emoji if song was added
                 last5 += '➡ '
             last5 += f'**{i+1}-** {queue[i]}\n'
         last5 = last5[:-1] # remove last \n
@@ -413,6 +415,7 @@ class MessageHandler():
             title = f'Queue: {len(self.queue)} songs. {"⏸" * int(self.player.isPaused)} {"🔂" * int(self.queue.isLoopOne())} {"🔁" * int(self.queue.isLoopQueue())} {"🔀" * int(self.queue.isShuffle)}',
             description = desc,
             color = col.orange if self.ready else col.red
+            # url = "culobot.notlatif.com/api/{guildId}/{queueID}"
         )
 
         # Define artists and add them to the embed
@@ -431,6 +434,8 @@ class MessageHandler():
 
         if not move:
             # Add songs in queue
+            while len(last5) > 1024: # Having more than 1024 chars can return a 400 Bad Request response
+                last5 = "\n".join(last5.split('\n')[:-1]) # remove one line at a time starting from last until the lenght is acceptable
             embed.add_field(name='Next in queue:', value=last5, inline=False)
         else:
             # If /queue was used, inform the user with a message in the embed
@@ -487,7 +492,10 @@ class MessageHandler():
             if self.currentTrack.title in self.spotifyBtn.label: return
 
             clearRow3BTNs()
-            self.spotifyBtn.label = f"Ascolta {self.currentTrack.title} su Spotify"
+            btnlabel = f"Ascolta {self.currentTrack.title} su Spotify"
+            if len(btnlabel) > 80:
+                btnlabel = "Ascoltala su spotify"
+            self.spotifyBtn.label = btnlabel
             self.spotifyBtn.url = self.currentTrack.getOriginalURL()
             self.spotifyBtn.disabled = False
             self.view.add_item(self.spotifyBtn)
@@ -507,7 +515,12 @@ class MessageHandler():
                     self.updateButtons()
                 except AttributeError:
                     mPrint('WARN', f"There was a problem updating Buttons, you can probably ignore this\n{traceback.format_exc()}")
-                await self.embedMSG.edit(embed=self.getEmbed(pnext=pnext), view=self.view)
+                
+                embed = self.getEmbed(pnext=pnext)
+                if embed != None:
+                    await self.embedMSG.edit(embed=embed, view=self.view)
+                else:
+                    mPrint('WARN', 'Trying to get a new Embed but got None instead.')
 
         except discord.errors.HTTPException:
             mPrint('ERROR', f"DISCORD ERROR (probably embed had blank value)\n{traceback.format_exc()}")

@@ -72,7 +72,8 @@ def getSongsFromPlaylist(URL, overwritten:dict[str, str]) -> list[Track]:
                         trackData['name'],
                         artists,
                         trackData['duration_ms']/1000,
-                        yt_url
+                        yt_url,
+                        explicit = trackData['explicit']
                     ))
                 else:
                     #For non local tracks the bot will try to get the youtube query when needed
@@ -118,7 +119,8 @@ def getSongsFromAlbum(URL, overwritten:dict[str, str]) -> list[Track]:
                 trackData['name'],
                 artists,
                 trackData['duration_ms']/1000,
-                yt_url
+                yt_url,
+                explicit = trackData['explicit']
             ))
 
     return tracks
@@ -143,5 +145,6 @@ def getSongFromTrack(URL, overwritten) -> list[Track]:
         resData['name'],
         artists,
         resData['duration_ms']/1000,
-        yt_url
+        yt_url,
+        explicit = resData['explicit']
     )]

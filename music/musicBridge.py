@@ -17,8 +17,37 @@ from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'musicBridge', text)
 
-def getTracks(any, overwritten) -> Union[list[musicObjects.Track], None]:
-    pass
+def getTracksURL(userQuery:str, overwritten, playlists) -> Union[list[str], None]:
+    """Parses user input and retuns a list of URLs"""
+    #user searched a link
+    if ',' in userQuery: #multiple search items
+        links = userQuery.replace(" ", "").split(',')
+    else: #one search item
+        links = [userQuery]
+
+    toReturn = []
+    for search in links:
+        mPrint('DEBUG', f"{search=}")
+        if "spotify.com" in search or "youtube.com" in search or "youtu.be" in search:
+            mPrint('INFO', f'FOUND SUPPORTED URL: {search}')
+            toReturn.append(search)
+        
+        #user wants a saved playlist (playlists can have multiple tracks)
+        elif search in playlists:
+            mPrint('INFO', f'FOUND SAVED PLAYLIST: {playlists[search]}')
+            for track in playlists[search]:
+                toReturn.append(track)
+        
+        #user submitted a youtube query
+        else:
+            mPrint('MUSIC', f'Searching for user requested song: ({search})')
+            trackURL = youtubeParser.searchYTurl(search, overwritten)
+            if trackURL == None:
+                return 404
+            mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
+            toReturn.append(trackURL)
+
+    return toReturn
 
 def getTracksFromURL(url, overwritten) -> Union[list[musicObjects.Track], None]:
     """return a list of track objects found from an url, if the song is only 1, returns a list of one element"""
@@ -48,7 +77,6 @@ def getTracksFromURL(url, overwritten) -> Union[list[musicObjects.Track], None]:
 
     return tracks
 
-
 def evalUrl(url, ow) -> bool:
     """Returns ture if the url is valid, else false"""
     resp = getTracksFromURL(url, ow)
@@ -63,9 +91,8 @@ async def play(
         tree : app_commands.CommandTree, 
         shuffle : bool, 
         precision : int, 
-        overwritten : tuple[str,str],
-        devUser : discord.User,
-        playlists : dict[str, list[str]]
+        guildOverwritten : tuple[str,str],
+        guildPlaylists : dict[str, list[str]]
     ):
     embedChannel = interaction.channel
 
@@ -76,7 +103,7 @@ async def play(
     if type(urlList) == list:
         for url in urlList:
             #foreach urls find the songs it links to
-            tracks = getTracksFromURL(url, overwritten)
+            tracks = getTracksFromURL(url, guildOverwritten)
             if tracks == None:
                 #console logs were processed earlier, no need to print more
                 #alert user
@@ -165,6 +192,8 @@ async def play(
     # Make Button constructor
     class EmbedButtons(discord.ui.Button):
         def __init__(self, *, style: discord.ButtonStyle = discord.ButtonStyle.secondary, label: Optional[str] = None, disabled: bool = False, custom_id: Optional[str] = None, url: Optional[str] = None, emoji: Optional[Union[str, discord.Emoji, discord.PartialEmoji]] = None, row: Optional[int] = None, command:str):
+            if len(label) > 80:
+                label = label[:80]
             super().__init__(style=style, label=label, disabled=disabled, custom_id=custom_id, url=url, emoji=emoji, row=row)
             self.command = command
         
@@ -294,8 +323,14 @@ async def play(
             url = arg1
             index = 0 if arg2 == None else arg2
 
-            tracks = getTracksFromURL(url, overwritten)
-            if tracks == None:
+            tracks : list[musicObjects.Track] = []
+            for url in getTracksURL(url, guildOverwritten, guildPlaylists):
+                t = getTracksFromURL(url, guildOverwritten)
+                if t != None:
+                    for track in t:
+                        tracks.append(track)
+
+            if tracks == []:
                 return None
 
             if player.shuffle: queueshuffle(tracks)
@@ -305,38 +340,42 @@ async def play(
                 player.queue.addTrack(t, index)
                 index += 1
             
-            await messageHandler.updateEmbed()
+            await messageHandler.updateEmbed(pnext=index)
             return tracks
         
         elif action == Commands.report:
             interaction :discord.Interaction = arg1
+            reportedTrack = player.currentTrack
             class Feedback(discord.ui.Modal, title='Grazie per la segnalazione!'):
                 input = discord.ui.TextInput(label="Se vuoi puoi dare un link come suggerimento", style=discord.TextStyle.short, required=False, placeholder='https://www.youtube.com/')
-        
+                
                 async def on_submit(self, interaction: discord.Interaction):
                     message = f"({interaction.id}) (guild:{interaction.guild.id})\nUser reported song discrepancy\nurl:{player.currentTrack.getVideoUrl()}\nSuggestion: {str(self.input.value)}\n"
                     if self.input.value != None:
                         suggestion = self.input.value
 
                         with open('botFiles/guildsData.json', 'r') as f:
-                            ow = json.load(f)
-                            overwriteData = ow[str(interaction.guild.id)]['musicbot']['youtube_search_overwrite']
+                            overwriteData = json.load(f)[str(interaction.guild.id)]['musicbot']['youtube_search_overwrite']
                         
-                        overwriteData[player.currentTrack.getQuery()] = suggestion #Do not dump on guildsData to avoid conflicts
-                        with open(f'botFiles/suggestions/{str(interaction.guild.id)}.json', 'w') as f:
+                        overwriteData[player.currentTrack.getQuery()] = suggestion
+                        with open(f'music/suggestions/{str(interaction.guild.id)}.json', 'w') as f:
                             json.dump(overwriteData, f, indent=2)
+                        
+                        if getTracksURL(self.input.value, guildOverwritten, guildPlaylists) != None:
+                            await actions(Commands.add_song, self.input.value, 0)
+                            if reportedTrack == player.currentTrack:
+                                await actions(Commands.skip)
 
+                    ## add spotify url to data in the message
                     try:
                         await bot.dev.send(message)
                     except Exception:
                         mPrint('ERROR', traceback.format_exc())
 
                     mPrint('INFO', f"User reported discrepancy for song {player.currentTrack.getQuery()}")
-                    with open(f'botFiles/suggestions/{interaction.guild.name}.log', 'a') as f:
-                        f.writelines(message)
- 
-            await interaction.response.send_modal(Feedback())
+                    await interaction.response.send_message("Thanks for your suggestion!", ephemeral=True)
 
+            await interaction.response.send_modal(Feedback())
 
     # SLASH COMMANDS
     def checkAuthor(interaction:discord.Interaction):
@@ -414,11 +453,16 @@ async def play(
         """
         :param position: Usa 'END' per aggiungere una traccia alla fine (default: 0)
         """
-        if position.lower == 'end': position = len(player.queue)
+        if 'end' in position.lower():
+            position = len(player.queue)
+        
+        if type(position) == str and not position.isnumeric():
+            mPrint('WARN', f'User used unsupported value for addsong {position} defaulting to 0')
+            position = 0
 
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
-            resp = await actions(Commands.add_song, url, int(position)-1)
+            resp = await actions(Commands.add_song, url, int(position))
 
             if resp == None:
                 await interaction.followup.send(f"C'è stato un errore durante la ricerca della traccia {url}", ephemeral=True)

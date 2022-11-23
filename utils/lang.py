@@ -123,6 +123,7 @@ class it:
         playlist_delete_ok = lambda playlistName, links: f"Ho eliminato {playlistName}, {links}"
         playlist_delete_select = "Scegli la playlist da eliminare"
         playlist_404 = "Non esiste nessuna playlist del server"
+        loading_error = "There was an error looking for tracks"
 
         playlist_create_title = "Crea una nuova playlist"
         playlist_create_404 = lambda playlistName: f"Error: Could not find song/playlist {playlistName}\n"

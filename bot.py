@@ -37,7 +37,6 @@ except ModuleNotFoundError:
     MM = False
 
 TOKEN = getevn.getenv('DISCORD_TOKEN', True)
-GENIOUS = getevn.getenv('GENIOUS_SECRET')
 OWNER_ID = int(getevn.getenv('OWNER_ID')) #(optional) needed for the bot to send you feedback when users use /feedback command
                                           # you will still see user-submitted feedback in the feedback.log file (will be createt automatically if not present)
 
@@ -1262,7 +1261,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                     else:
                         if "open.spotify.com" not in x and "youtube.com" not in x:
                             mPrint('MUSIC', f'Searching for user requested song: ({x})')
-                            x = musicBridge.youtubeParser.searchYTurl(x)
+                            x = musicBridge.youtubeParser.searchYTurl(x, settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'])
                         tracks.append(x)
 
                 if errors != '':
@@ -1462,7 +1461,7 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
     return
     
 @tree.command(name="play", description=lang.slash.play)
-@app_commands.describe(tracks="URL / Title / saved playlist (/playlist)")
+@app_commands.describe(tracks="URL / Title / saved playlist (/playlist); use , for mutiple items")
 async def playSong(interaction : discord.Interaction, tracks : str):
     guildID = int(interaction.guild.id)
     await interaction.response.defer(ephemeral=True)
@@ -1470,6 +1469,12 @@ async def playSong(interaction : discord.Interaction, tracks : str):
     if interaction.channel.id in settings[guildID]['musicbot']['disabled_channels']:
         await interaction.followup.send(lang.module_not_enabled, ephemeral=True)
         return
+    
+    # Load useful variables
+    overwrite = settings[guildID]['musicbot']['youtube_search_overwrite']
+    shuffle   = settings[guildID]['musicbot']["player_shuffle"]
+    precision = settings[guildID]['musicbot']["timeline_precision"]
+    playlists = settings[guildID]['musicbot']['saved_playlists']
 
     try:
         userVC = bot.get_channel(interaction.user.voice.channel.id)
@@ -1485,59 +1490,45 @@ async def playSong(interaction : discord.Interaction, tracks : str):
             await interaction.followup.send(lang.music.play_already_connected, ephemeral=True)
         return
 
-    overwrite = settings[guildID]['musicbot']['youtube_search_overwrite']
-    shuffle   = settings[guildID]['musicbot']["player_shuffle"]
-    precision = settings[guildID]['musicbot']["timeline_precision"]
-    playlists = settings[guildID]['musicbot']['saved_playlists']
-
-    #musicBridge.getTracks()
-
-    #user searched a link
-    playListURL : list[str]
-    if "spotify.com" in tracks or "youtube.com" in tracks or "youtu.be" in tracks:
-        mPrint('INFO', f'FOUND SUPPORTED URL: {tracks}')
-        playListURL = [tracks]
-
-    #user wants a saved playlist
-    elif tracks in playlists:
-        trackURL_list : list[str] = settings[guildID]["musicbot"]["saved_playlists"][tracks]
-        mPrint('INFO', f'FOUND SAVED PLAYLIST: {trackURL_list}')
-        playListURL = trackURL_list
-    
-    #user wants to search for a song title
-    else:
-        mPrint('MUSIC', f'Searching for user requested song: ({tracks})')
-        trackURL = musicBridge.youtubeParser.searchYTurl(tracks, overwrite)
-        if trackURL == None:
-            interaction.followup.send(lang.music.play_error_404)
-            return
-        mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
-        playListURL = [trackURL]
-
-    # Check that guidsData[overwritten tracks] are the same of botFiles/suggestion/guildID[overwritten tracks]
+    # Check that guidsData[overwritten tracks] are the same of music/suggestions/guildID[overwritten tracks]
     try:
-        with open(f'botFiles/suggestions/{str(interaction.guild.id)}.json', 'r') as f:
+        if not os.path.exists("music/suggestions"):
+            os.mkdir('music/suggestions')
+        with open(f'music/suggestions/{str(interaction.guild.id)}.json', 'r') as f:
             owTracks = json.load(f)
         for query in owTracks:
             if query not in settings[interaction.guild.id]['musicbot']['youtube_search_overwrite']:
-                settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'][query] = owTracks[query]
+                overwrite[query] = owTracks[query]
                 dumpSettings()
     except json.decoder.JSONDecodeError:
-        mPrint('INFO', 'Could not decode reported overwrites as the file is probably empty')
+        pass #File is probably empty
+    except FileNotFoundError:
+        pass #File does not exist
     except Exception:
         mPrint('WARN', traceback.format_exc())
 
+    # Get the links
+    playlistURLs = musicBridge.getTracksURL(tracks, overwrite, playlists)
+
+    if playlistURLs == None:
+        await interaction.followup.send(lang.music.loading_error)
+        return -1
+    elif playlistURLs == 404:
+        await interaction.followup.send(lang.music.play_error_404)
+        return -1
+    
+    #Remove musicbot slash commands if they exist
     cmds = tree.get_commands(guild=interaction.guild)
     if len(cmds) != 0:
         tree.clear_commands(guild=interaction.guild)
         mPrint('TEST', f'Syncing tree')
         await tree.sync(guild=interaction.guild)
-        print(tree.get_commands(guild=interaction.guild))
+        #print(tree.get_commands(guild=interaction.guild))
 
     #Start music module
     try:
-        mPrint('TEST', f'--- playing queue --- \n{playListURL}')
-        await musicBridge.play(playListURL, interaction, bot, tree, shuffle, precision, overwrite, bot.dev, playlists)
+        mPrint('TEST', f'--- playing queue --- \n{playlistURLs}')
+        await musicBridge.play(playlistURLs, interaction, bot, tree, shuffle, precision, overwrite, playlists)
         mPrint('IMPORTANT', 'musicBridge.play() returned')
     except Exception:
         await interaction.followup.send(lang.music.player.generic_error, ephemeral=True)

@@ -28,7 +28,7 @@ else:
     }
 
 class Track:
-    def __init__(self, url, title, artists, durationSeconds, youtubeURL= None, thumbnailURL = None) -> None:
+    def __init__(self, url, title, artists, durationSeconds, youtubeURL= None, thumbnailURL = None, explicit = None) -> None:
         self.url = url
         self.title = title
         self.artists = artists
@@ -36,6 +36,7 @@ class Track:
  
         self.youtubeURL = youtubeURL
         self.thumbnailURL = thumbnailURL
+        self.explicit = explicit
 
     def getSource(self) -> Union[Literal['spotify', 'youtube', 'soundcloud'], None]: #soundcloud should be coming soon
         if self.url == None:
@@ -113,7 +114,7 @@ class Track:
         """Returns a youtube search query for the Track"""
         if self.artists == ['']:
             return self.title
-        return f"{self.title} {self.artists[0]}"
+        return f"{self.title} {self.artists[0]}{' (Explicit)' if self.explicit else ''}"
     
     def __str__(self) -> str:
         artistString = ""

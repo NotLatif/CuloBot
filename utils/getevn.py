@@ -1,9 +1,10 @@
 # Sensitive data is stored in a ".env" file
 # Since I had problems getting getenv to work on linux for some reason,
 # I'm writing my own function in case someone else has the same problems
-
 import os
 import sys
+import traceback
+from typing import Union
 from mPrint import mPrint as mp
 def mPrint(tag, value):mp(tag, 'env', value)
 
@@ -26,18 +27,26 @@ def missing(severity, message):
     elif severity == 0:
         mPrint('WARN', message)
 
-def getenv(var : str, required=False) -> str:
-    with open('.env', 'r') as env:
-        lines = env.readlines()
-        for l in lines:
-            if '#' in l: #remove comments
-                l = l.split('#')[0]
-            if var in l:
-                token = l.strip(var)[2:-2]
-                if token != "":
-                    return token
-                else:
-                    break
+def getenv(varName : str, required=False) -> Union[str, int]:
+    try:
+        with open('.env', 'r') as env:
+            for line in env.readlines():
+                line = line.strip('\n')
+                line = line.split('#')[0]
+                line = line.replace(' ', '')
+                if line == '': continue
+                name, var = line.split('={')
+                var = var.removesuffix('}')
+                if name == varName: 
+                    return var
+    except Exception:
+        if required:
+            mPrint("FATAL", f"Problem parsing .env file\n{traceback.format_exc()}")
+            input("Press enter to exit...")
+            sys.exit()
+        mPrint("ERROR", f"Problem parsing .env file\n{traceback.format_exc()}")
+        return -1
+
     #token not found
     missing(required, f"TOKEN {var} was not found, insert it in the .env file")
-    return 0
+    return -1
