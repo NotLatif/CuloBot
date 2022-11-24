@@ -120,7 +120,7 @@ class Track:
         artistString = ""
         for a in self.artists:
             artistString += f'{a} '
-        return f'{self.title} [By: {artistString}]'
+        return f'{self.title} [By: {artistString[:-1]}]' #:-1 to remove the last whitespace
 
     def __len__(self) -> int:
         return self.durationSeconds
