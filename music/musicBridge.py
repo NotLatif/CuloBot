@@ -321,6 +321,7 @@ async def play(
 
         elif action == Commands.add_song:
             url = arg1
+            shuffle = arg2
             index = 0 if arg2 == None else arg2
 
             tracks : list[musicObjects.Track] = []
@@ -330,10 +331,13 @@ async def play(
                     for track in t:
                         tracks.append(track)
 
-            if tracks == []:
-                return None
+            # Search did not find any track
+            if tracks == []: return None
 
-            if player.shuffle: queueshuffle(tracks)
+            #if shuffle is not passed and playershuffle is enabled: shuffle
+            #elif player requested shuffle: shuffle; else: don't shuffle (implied)
+            if shuffle == None and player.shuffle: queueshuffle(tracks)
+            elif shuffle: queueshuffle(tracks)
 
             for t in tracks:
                 mPrint('TEST', f'Adding track: {t.title}@{index}')
@@ -449,7 +453,7 @@ async def play(
             await interaction.followup.send(f"Ho scambiato {traccia1} con {traccia2}", ephemeral=True)
 
     @tree.command(name="add_song", description="Aggiungi canzone in queue", guild=interaction.guild)
-    async def add_song(interaction : discord.Interaction, url:str, position:str = '0'):
+    async def add_song(interaction : discord.Interaction, url:str, position:str = '0', shuffle:bool = None):
         """
         :param position: Usa 'END' per aggiungere una traccia alla fine (default: 0)
         """
@@ -462,7 +466,7 @@ async def play(
 
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
-            resp = await actions(Commands.add_song, url, int(position))
+            resp = await actions(Commands.add_song, url, int(position), shuffle)
 
             if resp == None:
                 await interaction.followup.send(f"C'è stato un errore durante la ricerca della traccia {url}", ephemeral=True)
@@ -482,6 +486,11 @@ async def play(
 
     mPrint('INFO', 'syncing commands')
     asyncio.create_task(tree.sync(guild=interaction.guild))
+
+    # @bot.event
+    # async def on_interaction(interaction : discord.Interaction):
+    #     mPrint('TEST', f"{interaction.id=}")
+
 
     val = player.playQueue()
     mPrint('IMPORTANT', f"player.playQueue() returned with code {val}")

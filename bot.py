@@ -1462,7 +1462,7 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
     
 @tree.command(name="play", description=lang.slash.play)
 @app_commands.describe(tracks="URL / Title / saved playlist (/playlist); use , for mutiple items")
-async def playSong(interaction : discord.Interaction, tracks : str):
+async def playSong(interaction : discord.Interaction, tracks : str, shuffle:bool = None):
     guildID = int(interaction.guild.id)
     await interaction.response.defer(ephemeral=True)
 
@@ -1472,7 +1472,8 @@ async def playSong(interaction : discord.Interaction, tracks : str):
     
     # Load useful variables
     overwrite = settings[guildID]['musicbot']['youtube_search_overwrite']
-    shuffle   = settings[guildID]['musicbot']["player_shuffle"]
+    if shuffle == None: shuffle = settings[guildID]['musicbot']["player_shuffle"]
+    # else -> shuffle = shuffle
     precision = settings[guildID]['musicbot']["timeline_precision"]
     playlists = settings[guildID]['musicbot']['saved_playlists']
 
