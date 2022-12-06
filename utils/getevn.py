@@ -48,5 +48,5 @@ def getenv(varName : str, required=False) -> Union[str, int]:
         return -1
 
     #token not found
-    missing(required, f"TOKEN {var} was not found, insert it in the .env file")
+    missing(required, f"TOKEN {varName} was not found, insert it in the .env file")
     return -1
