@@ -96,8 +96,7 @@ async def play(
         shuffle : bool, 
         precision : int, 
         guildOverwritten : tuple[str,str],
-        guildPlaylists : dict[str, list[str]],
-        enableDataBase : bool
+        guildPlaylists : dict[str, list[str]]
     ):
     embedChannel = interaction.channel
 
