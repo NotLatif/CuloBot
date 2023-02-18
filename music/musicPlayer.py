@@ -23,7 +23,7 @@ YDL_OPTIONS = {
     #     'preferredquality': '192',
     # }],
     'outtmpl': '%(title)s.%(etx)s',
-    # 'quiet': True,
+    'quiet': True,
     # 'verbose': True
 }
 

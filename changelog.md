@@ -1,6 +1,6 @@
 # v1.0.4 (Big rewrite of the musicbot module)
 
-# UPDATE 18/02/2023
+# UPDATE 18/FEB/2023
 - Now version changelog titles will have a date for more chronological clarity
 - switched from youtube_dl to yt-dlp
 - music player buttons are now persistent

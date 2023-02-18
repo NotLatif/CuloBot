@@ -1,5 +1,7 @@
 # v 1.0.4
 
+🟦 Check rate limits
+
 🟧 **[CRITICAL]** Calling spotify many times can hang the program and stops heartbeat (seems to not be happening anymore)
 
 ✅ When user suggests a song restart with the new song
