@@ -20,6 +20,7 @@ sys.path.insert(0, 'chessGame/')
 #utils
 import config
 import getevn
+import constants
 from config import Colors as col
 from mPrint import mPrint as mp
 from lang import it as lang # Change it with your language, currently supported: it
@@ -43,7 +44,7 @@ global settings
 settings = {}
 with open(settingsFile, 'a'): pass #make guild setting file if it does not exist
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"disabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"disabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"musicbot":{"player_shuffle": True,"enable_database":False,"disabled_channels":[],"saved_playlists":{},"youtube_search_overwrite":{},"timeline_precision": 14}}}
+SETTINGS_TEMPLATE = constants.SETTINGS_TEMPLATE
 
 #Useful funtions
 def dumpSettings(): #only use this function to save data to guildData.json (This should avoid conflicts with coroutines idk)
@@ -263,7 +264,7 @@ class MyBot(discord.Client):
 
         msg = message.content.split() #trasforma messaggio in lista
         
-        for i in range(len(msg) // 2): #culifico al massimo metà delle parole
+        for i in range(len(msg) // 3): #culifico al massimo un terzo delle parole
             scelta = random.randrange(1, len(msg)) #scegli una parola
 
             # se la parola scelta è un articolo (e non è l'ultima parola), cambio la prossima parola
