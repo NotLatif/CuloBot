@@ -1,7 +1,7 @@
 import json
 import os
 import traceback
-import youtube_dl
+import yt_dlp
 from typing import Literal, Union
 from random import shuffle, randrange
 
@@ -9,7 +9,7 @@ from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'musicObjects', text)
 
-youtubeDomain = 'https://www.youtube.com/watch?v='
+youtubeDomain = '' #LEAVE BLANK (switch from youtube_dl to yt_dlp)
 download = False
 if not os.path.isfile("music/.yt_cookies.txt"):
     mPrint('WARN', 'file `music/.yt_cookies.txt` is missing, age restricted video will not get played')
@@ -28,7 +28,7 @@ else:
     }
 
 class Track:
-    def __init__(self, url, title, artists, durationSeconds, youtubeURL= None, thumbnailURL = None, explicit = None) -> None:
+    def __init__(self, url, title, artists, durationSeconds, youtubeURL= None, thumbnailURL = None, explicit = None, spotifyThumbnail = None) -> None:
         self.url = url
         self.title = title
         self.artists = artists
@@ -37,6 +37,7 @@ class Track:
         self.youtubeURL = youtubeURL
         self.thumbnailURL = thumbnailURL
         self.explicit = explicit
+        self.spotifyThumbnail = spotifyThumbnail
 
     def getSource(self) -> Union[Literal['spotify', 'youtube', 'soundcloud'], None]: #soundcloud should be coming soon
         if self.url == None:
@@ -59,12 +60,24 @@ class Track:
             artists += f"{a}, "
         return artists[:-2] #remove last ", " before returning
 
-    def getVideoUrl(self) -> Union[str, None]:
+    def getOriginalURL(self, search = True):
+        if self.url == None:
+            if self.youtubeURL == None:
+                if search:
+                    return self.getVideoUrl()
+                else:
+                    return None
+        else:
+            return self.url
+
+    def getVideoUrl(self, search = True) -> Union[str, None]:
         if self.youtubeURL != None:
             return self.youtubeURL
+        
+        if search == False: return None
 
         # we don't know the url but we can search it
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             mPrint('DEBUG', f'Searching URL for {self.getQuery()}')
             try:
                 r_result = ydl.extract_info(f"ytsearch:{self.getQuery()}", download=False)
@@ -96,19 +109,16 @@ class Track:
             mPrint('WARN', 'getVideoUrl() returned None')
             return None
 
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             mPrint('DEBUG', f'Searching thumbnail for {videoUrl}')
             try:
                 result = ydl.extract_info(videoUrl, download)
                 self.thumbnailURL = result['thumbnail']
                 # mPrint('TEST', f'getThumbnail() -> found |{result["thumbnail"]}|')
                 return result['thumbnail']
-            except youtube_dl.utils.DownloadError:
+            except yt_dlp.utils.DownloadError:
                 mPrint('ERROR', 'youtube_dl.utils.DownloadError: (Probably) Age restricted video')
                 return None
-        
-    def getOriginalURL(self):
-        return self.url
     
     def getQuery(self) -> str:
         """Returns a youtube search query for the Track"""
@@ -116,6 +126,21 @@ class Track:
             return self.title
         return f"{self.title} {self.artists[0]}{' (Explicit)' if self.explicit else ''}"
     
+    def toDict(self, search = False) -> dict:
+        if self.artists == ['']: artists = None
+        else: artists = self.artists
+
+        return {
+            "title": self.title,
+            "artists": artists,
+            "url": self.getOriginalURL(search),
+            "youtube_url": self.getVideoUrl(search),
+            "search_query": self.getQuery(),
+            "duration_seconds": self.durationSeconds,
+            "spotify_image": self.spotifyThumbnail,
+            "explicit": self.explicit
+        }
+
     def __str__(self) -> str:
         artistString = ""
         for a in self.artists:
@@ -137,8 +162,12 @@ class Queue:
         self.isShuffle = False
         self.__loop = NO
 
+        self.queue_changed = False # var used by updater.py to sync data
+        self.modifier_changes = False # wether modifiers like 'shuffle' get enabled/disabled
+
     def addTrack(self, track:Track, index:int = None) -> None:
         self.queue.append(track)
+        self.queue_changed = True
         if index == None:
             self.queueOrder.append(len(self.queue)-1)
         else:
@@ -147,11 +176,13 @@ class Queue:
 
     def shuffleQueue(self) -> None:
         mPrint('MUSIC', 'Shuffling queue')
+        self.queue_changed = True
         self.isShuffle = True
         shuffle(self.queueOrder)
 
     def unshuffleQueue(self) -> None:
         mPrint('MUSIC', 'Unshuffling queue')
+        self.queue_changed = True
         self.isShuffle = False
         self.queueOrder.sort()
 
@@ -178,7 +209,6 @@ class Queue:
         else:
             mPrint('ERROR', f'Value for setRepeat() [{value}] is invalid')
 
-
     def isLooped(self) -> int:
         return self.__loop
 
@@ -187,15 +217,16 @@ class Queue:
         if len(self.alreadyPlayed) == 0:
             mPrint('WARN', 'Called Queue.previous() but there are no previous songs.')
             return
-        
+            
+        self.queue_changed = True
         if self.__loop == ONE: return
 
         self.queueOrder.insert(0, self.alreadyPlayed.pop())
-
         try:
             self.queueOrder.insert(0, self.alreadyPlayed.pop())
         except IndexError:
             pass
+        
 
     def getNext(self) -> Union[Track, None]:
         """Returns the current track object and increments the index"""
@@ -240,6 +271,7 @@ class Queue:
             self.alreadyPlayed.append(self.queueOrder.pop(0))
 
     def clear(self) -> None:
+        self.queue_changed = True
         self.queue:list[Track] = []
         self.queueOrder:list[int] = []
         self.alreadyPlayed:list[int] = []
@@ -259,8 +291,12 @@ class Queue:
         except IndexError:
             return None
 
+    def getQueueDict(self, limit = 100) -> list[dict]:
+        """Returns the queue in playing order as a list of dictionaries"""
+        return [ t.toDict() for t in self.getQueue(limit)]
+
     def getQueue(self, limit = 5) -> list[Track]:
-        # Returns the Tracks in playing order starting from next one playing
+        """Returns the Tracks in playing order starting from next one playing"""
         tracks = []
         if limit > len(self):
             limit = len(self)
@@ -273,6 +309,7 @@ class Queue:
         return tracks
 
     def move(self, arg1, arg2) -> None:
+        self.queue_changed = True
         self.queueOrder.insert(arg2-1, self.queueOrder.pop(arg1-1))
     
     def isLoopOne(self) -> bool:

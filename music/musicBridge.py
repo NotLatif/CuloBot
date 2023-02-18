@@ -17,11 +17,11 @@ from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'musicBridge', text)
 
-def getTracksURL(userQuery:str, overwritten, playlists) -> Union[list[str], None]:
+def getTracksURL(userQuery:str, overwritten, playlists : dict[str, list[str]]) -> Union[list[str], None]:
     """Parses user input and retuns a list of URLs"""
     #user searched a link
     if ',' in userQuery: #multiple search items
-        links = userQuery.replace(" ", "").split(',')
+        links = userQuery.replace(" ", "").split(',') # NOTE: this also removes spaces between words eg."myplaylist"
     else: #one search item
         links = [userQuery]
 
@@ -33,9 +33,13 @@ def getTracksURL(userQuery:str, overwritten, playlists) -> Union[list[str], None
             toReturn.append(search)
         
         #user wants a saved playlist (playlists can have multiple tracks)
-        elif search in playlists:
-            mPrint('INFO', f'FOUND SAVED PLAYLIST: {playlists[search]}')
-            for track in playlists[search]:
+        elif search in [key.replace(" ", "") for key in playlists]:
+            for k in playlists:
+                if k.replace(" ", "") == userQuery:
+                    key = k
+                    break
+            mPrint('INFO', f'FOUND SAVED PLAYLIST: {playlists[key]}')
+            for track in playlists[key]:
                 toReturn.append(track)
         
         #user submitted a youtube query
@@ -92,7 +96,8 @@ async def play(
         shuffle : bool, 
         precision : int, 
         guildOverwritten : tuple[str,str],
-        guildPlaylists : dict[str, list[str]]
+        guildPlaylists : dict[str, list[str]],
+        enableDataBase : bool
     ):
     embedChannel = interaction.channel
 
@@ -160,7 +165,7 @@ async def play(
         return
     
     #Define commands enum
-    class Commands:
+    class Commands: # ALL IDs MUST BE UNIQUE
         previous = 0,
         play_pause = 1,
         skip = 2,
@@ -175,18 +180,20 @@ async def play(
         move = 11,
         add_song = 12,
         loop = 13
+        pause = 14
+        resume = 15
 
     #Define buttons
-    buttonsCommands = {
+    buttonsCommands: dict[int, tuple[str, int, discord.ButtonStyle | None]] = {
         #cmd  : [emoji, row, optional(style)]
-        Commands.previous:   ["⏮", 1],
-        Commands.play_pause: ["⏯", 1],
-        Commands.skip:       ["⏭", 1],
-        Commands.stop:       ["⏹", 1, discord.ButtonStyle.red],
-        Commands.shuffle:    ["🔀", 2],
-        Commands.loop_one:   ["🔂", 2],
-        Commands.loop_queue: ["🔁", 2],
-        Commands.report:     ["⁉", 2],
+        Commands.previous:   ("⏮", 1),
+        Commands.play_pause: ("⏯", 1),
+        Commands.skip:       ("⏭", 1),
+        Commands.stop:       ("⏹", 1, discord.ButtonStyle.red),
+        Commands.shuffle:    ("🔀", 2),
+        Commands.loop_one:   ("🔂", 2),
+        Commands.loop_queue: ("🔁", 2),
+        Commands.report:     ("⁉", 2),
     }
 
     # Make Button constructor
@@ -214,7 +221,7 @@ async def play(
                 pass
             
     # Create discord view
-    view = discord.ui.View()
+    view = discord.ui.View(timeout=None)
 
     # Add buttons to view
     # buttons : list[discord.ui.Button] = []
@@ -224,7 +231,7 @@ async def play(
         except IndexError:
             style = discord.ButtonStyle.secondary
 
-        btn = EmbedButtons(label="", style=style, emoji=buttonsCommands[b][0], row=buttonsCommands[b][1], command=b)
+        btn = EmbedButtons(label="", style=style, emoji=buttonsCommands[b][0], row=buttonsCommands[b][1], custom_id=f"{interaction.id}:playerbuttons:{b}", command=b)
         # buttons.append(btn)
         view.add_item(btn)
 
@@ -245,7 +252,7 @@ async def play(
         return
 
     # Define actions
-    async def actions(action:Commands, arg1 = None, arg2 = None):
+    async def actions(action:Commands, arg1 = None, arg2 = None, arg3 = None):
         mPrint('DEBUG', f"Requested action: {action=} {arg1=} {arg2=}")
         if action == Commands.previous:
             mPrint('USER', 'Skipping to previous song')
@@ -267,6 +274,14 @@ async def play(
 
         elif action == Commands.play_pause:
             player.play_pause()
+            await messageHandler.updateEmbed()
+
+        elif action == Commands.pause:
+            player.pause()
+            await messageHandler.updateEmbed()
+
+        elif action == Commands.resume:
+            player.resume()
             await messageHandler.updateEmbed()
 
         elif action == Commands.stop:
@@ -321,8 +336,8 @@ async def play(
 
         elif action == Commands.add_song:
             url = arg1
-            shuffle = arg2
             index = 0 if arg2 == None else arg2
+            shuffle = arg3
 
             tracks : list[musicObjects.Track] = []
             for url in getTracksURL(url, guildOverwritten, guildPlaylists):
@@ -336,7 +351,7 @@ async def play(
 
             #if shuffle is not passed and playershuffle is enabled: shuffle
             #elif player requested shuffle: shuffle; else: don't shuffle (implied)
-            if shuffle == None and player.shuffle: queueshuffle(tracks)
+            if shuffle == None and queue.isShuffle: queueshuffle(tracks)
             elif shuffle: queueshuffle(tracks)
 
             for t in tracks:
@@ -420,6 +435,20 @@ async def play(
             await actions(Commands.play_pause)
             await interaction.followup.send("Paused" if player.isPaused else "Resumed", ephemeral=True)   
 
+    @tree.command(name="pause", guild=interaction.guild)
+    async def pause(interaction : discord.Interaction):
+        if checkAuthor(interaction):
+            await interaction.response.defer(ephemeral=True)
+            await actions(Commands.pause)
+            await interaction.followup.send("Paused", ephemeral=True)  
+
+    @tree.command(name="resume", guild=interaction.guild)
+    async def resume(interaction : discord.Interaction):
+        if checkAuthor(interaction):
+            await interaction.response.defer(ephemeral=True)
+            await actions(Commands.resume)
+            await interaction.followup.send("Resumed", ephemeral=True)  
+
     @tree.command(name="stop", description="Cancella la playlist e ferma la riproduzione", guild=interaction.guild)
     async def stop(interaction : discord.Interaction):
         if checkAuthor(interaction):
@@ -493,7 +522,7 @@ async def play(
 
 
     val = player.playQueue()
-    mPrint('IMPORTANT', f"player.playQueue() returned with code {val}")
+    mPrint('TEST', f"player.playQueue() returned with code {val}")
     messageHandler.ready = True
 
     #while player.isplaying: continue

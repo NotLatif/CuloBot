@@ -3,7 +3,7 @@ import traceback
 import discord
 import asyncio
 import time
-from youtube_dl import YoutubeDL, utils
+from yt_dlp import YoutubeDL, utils
 
 from musicObjects import Track, Queue
 
@@ -17,13 +17,14 @@ max_precision = config.timeline_max
 
 YDL_OPTIONS = {
     'format': 'bestaudio/best',
-    'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
-    }],
+    # 'postprocessors': [{
+    #     'key': 'FFmpegExtractAudio',
+    #     'preferredcodec': 'mp3',
+    #     'preferredquality': '192',
+    # }],
     'outtmpl': '%(title)s.%(etx)s',
-    'quiet': True
+    # 'quiet': True,
+    # 'verbose': True
 }
 
 if os.path.isfile("music/.yt_cookies.txt"):
@@ -144,6 +145,7 @@ class Player():
             
             mPrint('MUSIC', f'Now Playing: ({self.currentTrack.title}) URL = {self.currentTrack.getVideoUrl()}')
 
+            info = 0
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 try:
                     info = ydl.extract_info(song_url, download=False)
@@ -153,7 +155,7 @@ class Player():
                     return
 
             # get and play audio data
-            format_url = info['formats'][0]['url']
+            format_url = info['url']
             source = discord.FFmpegPCMAudio(format_url, **FFMPEG_OPTIONS)
             self.songStarted = True
             self.songStartTime = time.time()
@@ -248,7 +250,7 @@ class MessageHandler():
 
         self.didInformWaiting = False
 
-        self.disconnectedCheck = 3 # When this value gets to 0 the embed loop stops
+        self.disconnectedCheck = 6 # When this value gets to 0 the embed loop stops (6 = 3 seconds)
 
         self.spotifyBtn = discord.ui.Button(label="Listen on Spotify", url="https://culobot.notlatif.com", row=3, disabled=True)
         self.lastThumbnail = None
@@ -260,7 +262,9 @@ class MessageHandler():
 
     async def start(self):
         await self.embedLoop()
+        # when done stop the player
         await self.player.voiceClient.disconnect()
+        self.player.isConnected=False
         mPrint('IMPORTANT', '[MessageHandler] Queue done, returning.')
         return
 
@@ -482,16 +486,18 @@ class MessageHandler():
         return embed
     
     def updateButtons(self) -> None:
-        def clearRow3BTNs():
+        def clearSourceLinkButtons(): # buttons in row 3
             row3btns = [btn for btn in self.view.children if btn.row == 3]
             for btn in row3btns:
                 self.view.remove_item(btn)
+
+        if self.currentTrack == None: return
 
         if self.currentTrack.getSource() == 'spotify':
             #do not update the buttons if there is nothing to change
             if self.currentTrack.title in self.spotifyBtn.label: return
 
-            clearRow3BTNs()
+            clearSourceLinkButtons()
             btnlabel = f"Ascolta {self.currentTrack.title} su Spotify"
             if len(btnlabel) > 80:
                 btnlabel = "Ascoltala su spotify"
@@ -500,7 +506,7 @@ class MessageHandler():
             self.spotifyBtn.disabled = False
             self.view.add_item(self.spotifyBtn)
         else:
-            clearRow3BTNs()
+            clearSourceLinkButtons()
             self.spotifyBtn.disabled = True
 
     async def updateEmbed(self, stop = False, pnext = False, leftAlone = False):

@@ -64,7 +64,7 @@ add default permissions
 
 # Culobot bugs
 
-🟥 willfix in the next version
+✅ willfix in the next version
 Button interactions don't respond after some time passed 
 
 🟥 The error is not appearing anymore

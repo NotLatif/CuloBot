@@ -73,7 +73,8 @@ def getSongsFromPlaylist(URL, overwritten:dict[str, str]) -> list[Track]:
                         artists,
                         trackData['duration_ms']/1000,
                         yt_url,
-                        explicit = trackData['explicit']
+                        explicit = trackData['explicit'],
+                        spotifyThumbnail = trackData['album']['images'][-1]['url']
                     ))
                 else:
                     #For non local tracks the bot will try to get the youtube query when needed
@@ -81,9 +82,7 @@ def getSongsFromPlaylist(URL, overwritten:dict[str, str]) -> list[Track]:
                         None,
                         trackData["name"],
                         artists,
-                        trackData['duration_ms']/1000,
-                        None,
-                        None
+                        trackData['duration_ms']/1000
                     ))
             except:
                 mPrint('ERROR', f'Track \ntitle: {trackData["name"]}; {artists=}')
@@ -120,7 +119,8 @@ def getSongsFromAlbum(URL, overwritten:dict[str, str]) -> list[Track]:
                 artists,
                 trackData['duration_ms']/1000,
                 yt_url,
-                explicit = trackData['explicit']
+                explicit = trackData['explicit'],
+                spotifyThumbnail = None # Album search does not give image data :(
             ))
 
     return tracks
@@ -146,5 +146,6 @@ def getSongFromTrack(URL, overwritten) -> list[Track]:
         artists,
         resData['duration_ms']/1000,
         yt_url,
-        explicit = resData['explicit']
+        explicit = resData['explicit'],
+        spotifyThumbnail = resData['album']['images'][-1]['url']
     )]

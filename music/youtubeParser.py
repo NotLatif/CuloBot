@@ -1,5 +1,5 @@
 # import json #used for testing
-import youtube_dl
+import yt_dlp
 from musicObjects import Track, ydl_opts, youtubeDomain, download
 
 from mPrint import mPrint as mp
@@ -15,7 +15,7 @@ def searchYTurl(query, overwrite) -> str:
         mPrint('DEBUG', f"Found overwritten track ({query})")
         return overwrite[query]
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         result = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
         try:
             int(result['duration'])
@@ -48,7 +48,7 @@ def getTracks(url : str) -> list[Track]:
                 return None
             
         mPrint("DEBUG", "Link is not a youtube link, using query")
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             try:
                 r_result = ydl.extract_info(f"ytsearch:{url}", download=False)
                 result = r_result['entries'][0]
@@ -70,11 +70,11 @@ def getTracks(url : str) -> list[Track]:
             index = int(u.strip('index='))
 
     #Extract data from the url NB: videos and playlists have a different structure
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             result = ydl.extract_info(url, download)
-        except youtube_dl.utils.DownloadError:
-            mPrint('ERROR', 'youtube_dl.utils.DownloadError: (Probably) Age restricted video')
+        except yt_dlp.utils.DownloadError:
+            mPrint('ERROR', 'yt_dlp.utils.DownloadError: (Probably) Age restricted video')
             return None
 
     # Playlist link only returns one song

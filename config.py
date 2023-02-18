@@ -27,7 +27,7 @@ timeline_max = 14
 
 max_alone_time = 60 * 5
 # Default: 300 -> (max=300) The maximum time (in seconds) the bot can play music while no one is connected to the voice channel
-no_music_timeout = -1
+no_music_timeout = 60
 # Default: 60 The time (in seconds) the bot will stay in VC after the queue ends (0 for not time) (-1 for infinite time)
 
 class Colors:
@@ -35,6 +35,7 @@ class Colors:
     red = 0xd32c41
     orange = 0xf39641
     blu = 0x0a7ace
+    blue = 0x0a7ace
     aqua = 0x7cdcfe
     green = 0x27E039
     black = 0x030303

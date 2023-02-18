@@ -17,24 +17,23 @@ from typing import Union
 sys.path.insert(0, 'utils/')
 sys.path.insert(0, 'music/')
 sys.path.insert(0, 'chessGame/')
+#utils
 import config
 import getevn
 from config import Colors as col
 from mPrint import mPrint as mp
 from lang import it as lang # Change it with your language, currently supported: it
-
-#sys.path.insert(0, 'chessGame/') # for future implementation of the bridge files outside the root folder
+#music and chessGame
 import chessBridge
-#sys.path.insert(0, 'music/')
 import musicBridge
 
 def mPrint(tag, value):mp(tag, 'bot', value)
 
-try: #This is specific to my own server, if you want to delete this also delete the other myServer lines in on_message()
+try: #This is specific to my own server, if you want to delete it search for the string "ZXCV"
     import NotLatif
-    MM = True
+    CUSTOM_MODULES = True
 except ModuleNotFoundError:
-    MM = False
+    CUSTOM_MODULES = False
 
 TOKEN = getevn.getenv('DISCORD_TOKEN', True)
 OWNER_ID = int(getevn.getenv('OWNER_ID')) #(optional) needed for the bot to send you feedback when users use /feedback command
@@ -50,7 +49,7 @@ global settings
 settings = {}
 with open(settingsFile, 'a'): pass #make guild setting file if it does not exist
 
-SETTINGS_TEMPLATE = {"id":{"responseSettings":{"disabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"disabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"musicbot":{"disabled_channels":[],"saved_playlists":{},"youtube_search_overwrite":{},"player_shuffle": True,"timeline_precision": 14}}}
+SETTINGS_TEMPLATE = {"id":{"responseSettings":{"disabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"disabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"musicbot":{"player_shuffle": True,"enable_database":False,"disabled_channels":[],"saved_playlists":{},"youtube_search_overwrite":{},"timeline_precision": 14}}}
 
 
 #Useful funtions
@@ -170,6 +169,7 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
 class MyBot(discord.Client):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.isReady = False
 
     async def on_error(self, *args, **kwargs):
         mPrint('ERROR', f"DISCORDPY on_error:\n{traceback.format_exc()}")
@@ -223,14 +223,18 @@ class MyBot(discord.Client):
                 mPrint('DEBUG', f'settings for are present.')
 
             checkSettingsIntegrity(int(guild.id))
+        
+        if not self.isReady:
+            # Ensure that on_ready will only run 1 time
+            self.isReady = True
 
     async def on_member_join(self, member : discord.Member):
         if settings[int(member.guild.id)]['responseSettings']['send_join_msg']:
             joinString:str = settings[int(member.guild.id)]['responseSettings']['join_message']
             joinString = joinString.replace('%name%', member.name)
             await member.guild.system_channel.send(joinString)
-#--------------------------------- This is specific to my server---# 
-        if MM and member.guild.id == 694106741436186665:          #  There is another block like this 
+#--------------------------------- This is specific to my server---# ZXCV
+        if CUSTOM_MODULES and member.guild.id == 694106741436186665:          #  There is another block like this 
             await NotLatif.joinImageSend(member, member.guild)     #    a little below this one
 #--------------------------------- you can safely delete this------# 
 
@@ -240,6 +244,9 @@ class MyBot(discord.Client):
             leaveString= leaveString.replace('%name%', member.name)
             await member.guild.system_channel.send(leaveString)
     
+    async def on_guild_available(self, guild : discord.Guild):
+        pass
+
     async def on_message(self, message : discord.Message):
         if len(message.content.split())==0: return
         global settings
@@ -249,8 +256,8 @@ class MyBot(discord.Client):
         except AttributeError:
             return #this gets triggered with ephemeral messages
 
-#--------------------------------- This is specific to my server---#
-        if MM and message.content[0] == '!' and  message.author.id == 348199387543109654:
+#--------------------------------- This is specific to my server---# ZXCV
+        if CUSTOM_MODULES and message.content[0] == '!' and  message.author.id == 348199387543109654:
             await NotLatif.parseCmd(message, settings)
             return
 #--------------------------------- you can safely delete this------# 
@@ -302,6 +309,7 @@ class MyBot(discord.Client):
 
 bot = MyBot(intents = intents)
 tree = app_commands.CommandTree(bot)
+
 
 
 #           -----           DISCORD BOT SLASH COMMANDS           -----       #
@@ -1530,7 +1538,7 @@ async def playSong(interaction : discord.Interaction, tracks : str, shuffle:bool
     try:
         mPrint('TEST', f'--- playing queue --- \n{playlistURLs}')
         await musicBridge.play(playlistURLs, interaction, bot, tree, shuffle, precision, overwrite, playlists)
-        mPrint('IMPORTANT', 'musicBridge.play() returned')
+        mPrint('TEST', 'musicBridge.play() returned')
     except Exception:
         await interaction.followup.send(lang.music.player.generic_error, ephemeral=True)
         mPrint('ERROR', traceback.format_exc())
