@@ -29,12 +29,6 @@ import musicBridge
 
 def mPrint(tag, value):mp(tag, 'bot', value)
 
-try: #This is specific to my own server, if you want to delete it search for the string "ZXCV"
-    import NotLatif
-    CUSTOM_MODULES = True
-except ModuleNotFoundError:
-    CUSTOM_MODULES = False
-
 TOKEN = getevn.getenv('DISCORD_TOKEN', True)
 OWNER_ID = int(getevn.getenv('OWNER_ID')) #(optional) needed for the bot to send you feedback when users use /feedback command
                                           # you will still see user-submitted feedback in the feedback.log file (will be createt automatically if not present)
@@ -50,7 +44,6 @@ settings = {}
 with open(settingsFile, 'a'): pass #make guild setting file if it does not exist
 
 SETTINGS_TEMPLATE = {"id":{"responseSettings":{"disabled_channels":[],"join_message":"%name% likes butt!","leave_message":"Bye %name%, never come back","send_join_msg":False,"send_leave_msg":False,"response_perc":35,"other_response":9,"response_to_bots_perc":35,"will_respond_to_bots":False,"use_global_words":False,"custom_words":["butt"]},"chessGame":{"disabled_channels":[],"default_board":"default","boards":{},"default_design":"default","designs":{}},"musicbot":{"player_shuffle": True,"enable_database":False,"disabled_channels":[],"saved_playlists":{},"youtube_search_overwrite":{},"timeline_precision": 14}}}
-
 
 #Useful funtions
 def dumpSettings(): #only use this function to save data to guildData.json (This should avoid conflicts with coroutines idk)
@@ -233,10 +226,6 @@ class MyBot(discord.Client):
             joinString:str = settings[int(member.guild.id)]['responseSettings']['join_message']
             joinString = joinString.replace('%name%', member.name)
             await member.guild.system_channel.send(joinString)
-#--------------------------------- This is specific to my server---# ZXCV
-        if CUSTOM_MODULES and member.guild.id == 694106741436186665:          #  There is another block like this 
-            await NotLatif.joinImageSend(member, member.guild)     #    a little below this one
-#--------------------------------- you can safely delete this------# 
 
     async def on_member_remove(self, member : discord.Member):
         if settings[int(member.guild.id)]['responseSettings']['send_leave_msg']:
@@ -255,12 +244,6 @@ class MyBot(discord.Client):
             respSettings = settings[int(message.guild.id)]["responseSettings"]
         except AttributeError:
             return #this gets triggered with ephemeral messages
-
-#--------------------------------- This is specific to my server---# ZXCV
-        if CUSTOM_MODULES and message.content[0] == '!' and  message.author.id == 348199387543109654:
-            await NotLatif.parseCmd(message, settings)
-            return
-#--------------------------------- you can safely delete this------# 
 
         if message.channel.id in settings[message.guild.id]['responseSettings']['disabled_channels']:
             return #module is in blacklist for this channel
