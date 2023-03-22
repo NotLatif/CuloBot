@@ -83,8 +83,18 @@ class Track:
                 r_result = ydl.extract_info(f"ytsearch:{self.getQuery()}", download=False)
                 result = r_result['entries'][0]
             except TypeError:
-                mPrint('WARN', 'Query result is null (?)')
+                mPrint('ERROR', 'Query result is null (?)')
+                mPrint('DEBUG', f"result: {r_result}")
                 return None
+            except IndexError:
+                mPrint('ERROR', 'Query result is empty (?)')
+                mPrint('DEBUG', f"result: {r_result}")
+                return None
+            except Exception:
+                mPrint('ERROR', 'Exception in getVideoUrl')
+                mPrint('DEBUG', f"result: {r_result}")
+                return None
+
 
             try:
                 int(result['duration'])

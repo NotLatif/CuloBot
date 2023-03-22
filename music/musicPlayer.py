@@ -143,7 +143,7 @@ class Player():
                 mPrint('ERROR', 'musicbot was already playing, stopping song.')
                 self.voiceClient.stop()
             
-            mPrint('MUSIC', f'Now Playing: ({self.currentTrack.title}) URL = {self.currentTrack.getVideoUrl()}')
+            mPrint('MUSIC', f'Now Playing: ({self.currentTrack.title}) URL = {song_url}')
 
             info = 0
             with YoutubeDL(YDL_OPTIONS) as ydl:

@@ -1607,10 +1607,10 @@ async def module_info(interaction : discord.Interaction):
 
 @tree.command(name="module", description=lang.slash.module)
 @app_commands.choices(modules=[
-        app_commands.Choice(name=lang.choices.all, value="0"),
-        app_commands.Choice(name=lang.choices.reply, value="1"),
-        app_commands.Choice(name=lang.choices.chess, value="2"),
-        app_commands.Choice(name=lang.choices.music, value="3"),
+    app_commands.Choice(name=lang.choices.all, value="0"),
+    app_commands.Choice(name=lang.choices.reply, value="1"),
+    app_commands.Choice(name=lang.choices.chess, value="2"),
+    app_commands.Choice(name=lang.choices.music, value="3"),
 ])
 @app_commands.default_permissions()
 async def module_settings(interaction : discord.Interaction, modules:app_commands.Choice[str], channel:discord.TextChannel=None, enable:bool=None):
@@ -1743,6 +1743,7 @@ async def feedback(interaction : discord.Interaction, category:app_commands.Choi
 
     return
 
+#           -----           BOT RUN SCRIPT           -----       #
 
 loadSettings()
 try:
@@ -1751,4 +1752,4 @@ except:
     mPrint('FATAL', f'Discord key absent or wrong. Unauthorized\n{traceback.format_exc()}')
 
 
-#Birthday: 07/May/2022
+# Birthday: 07/May/2022 🥳
