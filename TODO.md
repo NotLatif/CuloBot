@@ -2,7 +2,7 @@
 
 🟦 Check rate limits
 
-🟦 transform the musicPlayer embedhandler from polling to observer pattern
+🟦 transform the musicPlayer embedhandler from polling to observer pattern (or combination of both)
 
 # Culobot features
 🟥 willdo in the next version

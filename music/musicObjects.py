@@ -182,6 +182,7 @@ class Queue:
             self.queueOrder.append(len(self.queue)-1)
         else:
             self.queueOrder.insert(index, len(self.queue)-1)
+        # mPrint('TEST', f"ADDED {track.title} @ {index}")
         return
 
     def shuffleQueue(self) -> None:

@@ -1,5 +1,6 @@
 import os
 import traceback
+from typing import Callable
 import discord
 import asyncio
 import time
@@ -73,6 +74,21 @@ class Player():
         self.songStarted = False
         self.pauseStart = 0
         self.pauseEnd = 0
+
+        # for future observer pattern implementation
+        self.observers: list[Callable[[str], None]] = []
+
+    # Observer pattern
+    def notify(self, message):
+        if (message in ["play_pause", "resume", "pause", "loop", "shuffle"]):
+            pass #examples
+
+        for o in self.observers:
+            try: o(message)
+            except: mPrint('ERROR', f"Error notifying observer\n{o}({message=})\n{traceback.format_exc()}")
+
+    def subscribe(self, callable: Callable[[dict], None]):
+        self.observers.append(callable)
 
     async def waitAfterQueueEnd(self) -> bool:
         self.isWaiting = True
