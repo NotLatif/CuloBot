@@ -9,6 +9,9 @@ class it:
     nothing_changed = "Non è cambiato niente."
     done = "Fatto"
     module_not_enabled = "Questo modulo non è abilitato in questo canale"
+    confirm = "Conferma"
+    cancel = "Annulla"
+
 
     class slash: #slash command descriptions
         join_msg = "Cambia il messaggio di benvenuto"
@@ -67,6 +70,7 @@ class it:
         words_bot_words = "Prole del bot:"
         words_guild_words = lambda guildName: f"Prole di {guildName}:"
 
+        module_info_embedTitle = lambda guildName: f"CuloBot modules for {guildName}"
         module_info_embedDesc = "You can change this data using the command /module <module> [#channel] [enable]"
         module_info_no_blacklisted = "No blacklisted channels"
 
@@ -111,9 +115,28 @@ class it:
         design_delete_select = "Scegli il design da eliminare"
         design_delete_ok = lambda name, colors: f"Ho eliminato {name}, {colors}"
         design_HEX_invalid = lambda col1, col2: f"HEX non valido: {col1} {col2}"
+        design_btn_confirm_response = "You have to choose a design and layout"
 
         embedTitle_fen_king_missing = "Problema con il FEN: manca il Re!"
         embedDesc_fen_king_missing = lambda black, white: f"Re mancante: {black} {white}"
+
+        challenge_e1t = lambda challengeName, userName: f"{challengeName}, sei stato sfidato da {userName}!\nUsate una reazione per unirti ad un team (max 1 per squadra)"
+        challenge_e2t = lambda challengeName, userName: f"{challengeName}, siete stati sfidati da {userName}!\nUno di voi può unirsi alla partita!"
+        challenge_e3t = "Cerco giocatori per una partita di scacchi! ♟,\nUsa una reazione per unirti ad un team (max 1 per squadra)"
+        challenge_ed = lambda gameFEN, designName: f"Scacchiera: {gameFEN}, design: {designName}"
+        challenge_f = lambda userName: f"Partita richiesta da {userName}"
+        challenge_s = lambda userName, userMention: f"{userName} Ha sfidato {userMention} a scacchi!"
+
+        stop_title = "Ricerca Annullata"
+
+        p_join = lambda player, rx: f"\n{player} si è unito a {rx}!"
+        p2_join = lambda player, rx: f"\n{player} si è unito a {rx}!\nGenero la partita ..."
+
+        not_enough_players = "Non ci sono abbastanza giocatori."
+        found_players_t = lambda r1, p1, p2, r2: f"Giocatori trovati\n{r1} {p1} :vs: {p2} {r2}"
+        found_players_d = lambda gameFEN, gameDesign: f"Impostazioni:\n- Scacchiera: {gameFEN}, Design: {gameDesign}"
+
+        insert_design = "Inserisci un nuovo designo"
 
     class music:
         embedTitle_playlist_saved = lambda guildName: f"Saved playlists for {guildName}"
@@ -123,6 +146,7 @@ class it:
         playlist_delete_ok = lambda playlistName, links: f"Ho eliminato {playlistName}, {links}"
         playlist_delete_select = "Scegli la playlist da eliminare"
         playlist_404 = "Non esiste nessuna playlist del server"
+        newplaylist_tp = "Inserisci i link o i nomi delle canzoni uno per riga (spotify/youtube, anche playlist)"
         loading_error = "There was an error looking for tracks"
 
         playlist_create_title = "Crea una nuova playlist"
@@ -142,3 +166,6 @@ class it:
 
         class player:
             generic_error = "C'è stato un errore"
+
+class en:
+    pass

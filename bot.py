@@ -23,7 +23,10 @@ import getevn
 import constants
 from config import Colors as col
 from mPrint import mPrint as mp
-from lang import it as lang # Change it with your language, currently supported: it
+if config.language == "IT":
+    from lang import it as lang
+elif config.language == "EN":
+    from lang import en as lang
 #music and chessGame
 import chessBridge
 import musicBridge
@@ -622,13 +625,13 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
             await interaction.channel.typing()
             await startGame(interaction, gameData.selectedLayout, gameData.selectedDesign)
         else:
-            await interaction.response.send_message("You have to choose a design and layout", ephemeral=True)
+            await interaction.response.send_message(lang.chess.design_btn_confirm_response, ephemeral=True)
         return
 
-    confirm = discord.ui.Button(label="Conferma", style = discord.ButtonStyle.primary)
+    confirm = discord.ui.Button(label=lang.confirm, style = discord.ButtonStyle.primary)
     confirm.callback = btn_confirm
 
-    cancel = discord.ui.Button(label="Annulla", style=discord.ButtonStyle.danger)
+    cancel = discord.ui.Button(label=lang.cancel, style=discord.ButtonStyle.danger)
     cancel.callback = btn_cancel
 
     view = discord.ui.View()
@@ -678,8 +681,8 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
             authorJoined = False #Needed when type = 1
 
         if challengeData.type == 2: 
-            embed = discord.Embed(title = f'{challenge.name}, sei stato sfidato da {interaction.user.name}!\nUsate una reazione per unirti ad un team (max 1 per squadra)',
-                description=f'Scacchiera: {gameFEN}, design: {designName}',
+            embed = discord.Embed(title = lang.chess.challenge_e1t(challenge.name, interaction.user.name),
+                description= lang.chess.challenge_ed(gameFEN, designName),
                 color = col.blu
             )
             
@@ -692,13 +695,13 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
 
         #3C. Challenge everyone
         else:
-            embed = discord.Embed(title = f'Cerco giocatori per una partita di scacchi! ♟,\nUsa una reazione per unirti ad un team (max 1 per squadra)',
-                description=f'Scacchiera: {gameFEN}, design: {designName}',
-                color = col.blu).set_footer(text=f'Partita richiesta da {interaction.user.name}')
+            embed = discord.Embed(title = lang.chess.challenge_e3t,
+                description= lang.chess.challenge_ed(gameFEN, designName),
+                color = col.blu).set_footer(text=lang.chess.challenge_f(interaction.user.name))
                         
         #3D. SEND THE EMBED FINALLY
         if challengeData.type != 0:
-            await interaction.channel.send(f'{interaction.user} Ha sfidato {challenge.mention} a scacchi!')
+            await interaction.channel.send(lang.chess.challenge_s(interaction.user, challenge.mention))
         playerFetchMsg = await interaction.channel.send(embed=embed)
 
     #4. Await player joins
@@ -781,7 +784,7 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
 
         #4B. await user joins (with reactions)
         async def stopsearch():
-            embed.title = "Ricerca annullata"
+            embed.title = lang.chess.stop_title
             embed.description = ""
             embed.color = col.red
 
@@ -797,7 +800,7 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
             if str(r1.emoji) == "❌": 
                 await stopsearch()
                 return -2
-            embed.description += f'\n{players[0]} si è unito a {r1}!'
+            embed.description += lang.chess.p_join(players[0], r1)
             await playerFetchMsg.edit(embed=embed)
             
 
@@ -806,8 +809,8 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
             if str(r2.emoji) == "❌": 
                 await stopsearch()
                 return -2
-            embed.description += f'\n{players[1]} si è unito a {r2}!\nGenerating game please wait...'
-            embed.set_footer(text = 'tutti i caricamenti sono ovviamente falsissimi.')
+            embed.description += lang.chess.p2_join(players[0], r1)
+            embed.set_footer(text = 'fake loading screen lets goooo')
             
             embed.color = col.green
             await playerFetchMsg.edit(embed=embed)
@@ -816,7 +819,7 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
 
         except asyncio.TimeoutError: #players did not join in time
             embed = discord.Embed(
-                title = 'Non ci sono abbastanza giocatori.',
+                title = lang.chess.not_enough_players,
                 colour = col.red
             )
             await interaction.channel.send(embed=embed)
@@ -835,14 +838,14 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
 
             #iv. Send an embed with the details of the game
             embed = discord.Embed(
-                title = f'Giocatori trovati\n{r1} {player1} :vs: {player2} {r2}',
-                description=f"Impostazioni:\n- Scacchiera: {gameFEN}, Design: {gameDesign}",
+                title = lang.chess.found_players_t(r1, player1, player2, r2),
+                description = lang.chess.found_players_d(gameFEN, gameDesign),
                 colour = col.green
             )
             
             #v. start a thread where the game will be disputed, join the players in there
             thread = await interaction.channel.send(embed=embed)
-            gameThread = await thread.create_thread(name=(f'{str(player1)[:-5]} -VS- {str(player2)[:-5]}'), auto_archive_duration=60, reason='Scacchi')
+            gameThread = await thread.create_thread(name=(f'{str(player1)[:-5]} -VS- {str(player2)[:-5]}'), auto_archive_duration=60, reason='Chess')
             await gameThread.add_user(player1)
             await gameThread.add_user(player2)
             await playerFetchMsg.delete()
@@ -1115,10 +1118,10 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
         return 0
 
     elif response == 2: # adds a design in guildsData
-        class NewDesignData(discord.ui.Modal, title='Inserisci un nuovo Design'):
-            name = discord.ui.TextInput(label='Nome', placeholder="", style=discord.TextStyle.short, required=True)
-            hex1 = discord.ui.TextInput(label='Principale', placeholder="#aabbcc | #abc", style=discord.TextStyle.short, required=True, max_length=7)
-            hex2 = discord.ui.TextInput(label='Secondario', placeholder="#11dd33 | #1d3", style=discord.TextStyle.short, required=True, max_length=7)
+        class NewDesignData(discord.ui.Modal, title=lang.chess.insert_design):
+            name = discord.ui.TextInput(label='Name', placeholder="", style=discord.TextStyle.short, required=True)
+            hex1 = discord.ui.TextInput(label='Primary', placeholder="#aabbcc | #abc", style=discord.TextStyle.short, required=True, max_length=7)
+            hex2 = discord.ui.TextInput(label='Secondary', placeholder="#11dd33 | #1d3", style=discord.TextStyle.short, required=True, max_length=7)
 
             async def on_submit(self, interaction: discord.Interaction):
                 name = str(self.name)
@@ -1234,7 +1237,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
     elif response == 1:  #add a new playlist
         class NewPlaylist(discord.ui.Modal, title = lang.music.playlist_create_title):
             name = discord.ui.TextInput(label='Nome', placeholder="", style=discord.TextStyle.short, required=True)
-            links = discord.ui.TextInput(label='Tracce', placeholder="Inserisci i link o i nomi delle canzoni uno per riga (spotify/youtube, anche playlist)", style=discord.TextStyle.paragraph, required=True)
+            links = discord.ui.TextInput(label='Tracks ', placeholder=lang.music.newplaylist_tp, style=discord.TextStyle.paragraph, required=True)
 
             async def on_submit(self, interaction: discord.Interaction):
                 name = str(self.name)
@@ -1302,7 +1305,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
             mPrint('TEST', f'playlist name: {playlistName}')
             class EditPlaylistData(discord.ui.Modal, title=lang.music.playlist_edit_title(playlistName)):
                 plists = '\n'.join(savedPlaylists[playlistName])
-                links = discord.ui.TextInput(label='Tracce', placeholder="Inserisci i link o i nomi delle canzoni uno per riga (spotify/youtube, anche playlist)", default=plists, style=discord.TextStyle.paragraph, required=True)
+                links = discord.ui.TextInput(label='Tracks ', placeholder=lang.music.newplaylist_tp, style=discord.TextStyle.paragraph, required=True)
 
                 async def on_submit(self, interaction: discord.Interaction): #this triggers when user submits the modal with the new data
                     links = str(self.links).split('\n')
@@ -1542,7 +1545,7 @@ async def module_info(interaction : discord.Interaction):
     await interaction.response.defer(ephemeral=True)
 
     embed=discord.Embed(
-        title=f"CuloBot modules for {interaction.guild.name}",
+        title=lang.commands.module_info_embedTitle,
         description=lang.commands.module_info_embedDesc,
         color=col.orange
     )
