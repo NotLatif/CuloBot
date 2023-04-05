@@ -6,15 +6,12 @@ from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'youtubeParser', text)
 
+SOURCE = "youtube"
 
-def searchYTurl(query, overwrite) -> str:
+def searchYTurl(query) -> str:
     """
     gets the url of the first song in queue (the one to play)
     """
-    if query in overwrite:
-        mPrint('DEBUG', f"Found overwritten track ({query})")
-        return overwrite[query]
-
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         result = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
         try:
@@ -35,9 +32,9 @@ def stampToSec(str : str) -> int:
         seconds += int(str[2]) * 60
     return seconds
 
-def getTracks(url : str) -> list[Track]:
-    # if url is youtube music link
-    if "music.youtube.com" in url:
+def fetchTracks(url: str) -> list[Track]:
+    # mPrint('FUNC', f"youtubeParser.fetchTracks({url=})")
+    if "music.youtube.com" in url: #target is youtube music URL
         #replacing the strings gets the same link in youtube video form
         url = url.replace("music.youtube.com", "www.youtube.com", 1)
 
@@ -92,6 +89,7 @@ def getTracks(url : str) -> list[Track]:
                 return -1
 
             tracks.append(Track(
+                SOURCE,
                 f"{youtubeDomain}{videoData['url']}",
                 videoData["title"],
                 [videoData["uploader"]],
@@ -109,6 +107,7 @@ def getTracks(url : str) -> list[Track]:
             
     else: #link is a video
         tracks.append(Track(
+            SOURCE,
             result['webpage_url'],
             result['title'],
             [result['uploader']],

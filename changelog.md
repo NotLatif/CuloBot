@@ -1,5 +1,12 @@
 # v1.0.4 (Big rewrite of the musicbot module)
 
+# 5/APR/2023 Dev branch
+- `youtube_search_overwrite` (now `urlsync`) was completely rewritten and seems to be working now
+- added `/remove` command for musicbot
+- fixed parser `getTracksURL` (now `parseUserInput`) in `musicBridge`
+- removed unused code
+- other fixes
+
 # UPDATE 18/FEB/2023
 - Now version changelog titles will have a date for more chronological clarity
 - switched from youtube_dl to yt-dlp

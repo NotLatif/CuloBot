@@ -11,6 +11,7 @@ botFiles/join_data/
 Marsupio/
 python-venv/
 NotLatif.py
+review/
 
 # https://github.com/github/gitignore/blob/main/Python.gitignore
 # Byte-compiled / optimized / DLL files

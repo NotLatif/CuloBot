@@ -147,7 +147,7 @@ class it:
         playlist_delete_select = "Scegli la playlist da eliminare"
         playlist_404 = "Non esiste nessuna playlist del server"
         newplaylist_tp = "Inserisci i link o i nomi delle canzoni uno per riga (spotify/youtube, anche playlist)"
-        loading_error = "There was an error looking for tracks"
+        input_error = "C'è stato un errore con il tuo input"
 
         playlist_create_title = "Crea una nuova playlist"
         playlist_create_404 = lambda playlistName: f"Error: Could not find song/playlist {playlistName}\n"

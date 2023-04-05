@@ -97,7 +97,7 @@ def checkSettingsIntegrity(id : int):
             mPrint('DEBUG', f'Deleting: {key}')
 
         if(type(settingsToCheck[key]) == dict):
-            #if(key in ["saved_playlists", "youtube_search_overwrite"]): continue #whitelist
+            #if(key in ["saved_playlists", "urlsync"]): continue #whitelist
             for subkey in settingsToCheck[key]:
                 if(subkey not in SETTINGS_TEMPLATE["id"][key]): #check if there is a subkey that should not be there (avoid useless data)
                     del settings[id][key][subkey]
@@ -199,7 +199,7 @@ class MyBot(discord.Client):
             self.dev = await bot.fetch_user(OWNER_ID)
         except discord.errors.NotFound:
             self.dev = None
-        await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="/help"))
+        await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="/play"))
         await tree.sync()
 
         mPrint("DEBUG", "Called on_ready")
@@ -1248,15 +1248,15 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                 errors = ''
                 tracks = []
                 for x in links:
-                    isUrlValid = musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'])
+                    isUrlValid = await musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['urlsync'])
 
                     if isUrlValid == False:
                         errors += lang.music.playlist_create_404(x)
 
-                    else:
-                        if "open.spotify.com" not in x and "youtube.com" not in x:
+                    else: #Search youtube query
+                        if "spotify.com" not in x and "youtube.com" not in x:
                             mPrint('MUSIC', f'Searching for user requested song: ({x})')
-                            x = musicBridge.youtubeParser.searchYTurl(x, settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'])
+                            x = musicBridge.youtubeParser.searchYTurl(x)
                         tracks.append(x)
 
                 if errors != '':
@@ -1316,7 +1316,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                     errors = ''
                     tracks = []
                     for x in links:
-                        isUrlValid = musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['youtube_search_overwrite'])
+                        isUrlValid = await musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['urlsync'])
 
                         if isUrlValid == False:
                             errors += lang.music.playlist_create_404(x)
@@ -1466,7 +1466,7 @@ async def playSong(interaction : discord.Interaction, tracks : str, shuffle:bool
         return
     
     # Load useful variables
-    overwrite = settings[guildID]['musicbot']['youtube_search_overwrite']
+    urlsync = settings[guildID]['musicbot']['urlsync'] # [{query: str, spotify_url: str, youtube_url: str, soundcloud_url?: str}]
     if shuffle == None: shuffle = settings[guildID]['musicbot']["player_shuffle"]
     # else -> shuffle = shuffle
     precision = settings[guildID]['musicbot']["timeline_precision"]
@@ -1486,45 +1486,53 @@ async def playSong(interaction : discord.Interaction, tracks : str, shuffle:bool
             await interaction.followup.send(lang.music.play_already_connected, ephemeral=True)
         return
 
-    # Check that guidsData[overwritten tracks] are the same of music/suggestions/guildID[overwritten tracks]
+    # Merge music/suggestions/guildID[overwritten tracks] with guidsData[urlsync]
     try:
         if not os.path.exists("music/suggestions"):
             os.mkdir('music/suggestions')
         with open(f'music/suggestions/{str(interaction.guild.id)}.json', 'r') as f:
-            owTracks = json.load(f)
-        for query in owTracks:
-            if query not in settings[interaction.guild.id]['musicbot']['youtube_search_overwrite']:
-                overwrite[query] = owTracks[query]
-                dumpSettings()
+            new_urlsync = json.load(f)
+        os.remove(f'music/suggestions/{str(interaction.guild.id)}.json')
+
+        tmp_merge = {}
+        for d in urlsync + new_urlsync:
+            tmp_merge.setdefault(d['youtube_url'], {}).update(d)
+        urlsync = [tmp_merge[d] for d in tmp_merge]
+
+        settings[guildID]['musicbot']['urlsync'] = urlsync
+        dumpSettings()
+
+        mPrint('DEBUG', "synced urlsync suggestions with urlsync")
+
     except json.decoder.JSONDecodeError:
-        pass #File is probably empty
+        #File is probably empty, still delete it in case it's corrupted
+        os.remove(f'music/suggestions/{str(interaction.guild.id)}.json')
     except FileNotFoundError:
         pass #File does not exist
     except Exception:
         mPrint('WARN', traceback.format_exc())
 
     # Get the links
-    playlistURLs = musicBridge.getTracksURL(tracks, overwrite, playlists)
-
+    playlistURLs = musicBridge.parseUserInput(tracks, playlists)
     if playlistURLs == None:
-        await interaction.followup.send(lang.music.loading_error)
+        await interaction.followup.send(lang.music.input_error)
         return -1
     elif playlistURLs == 404:
         await interaction.followup.send(lang.music.play_error_404)
         return -1
     
-    #Remove musicbot slash commands if they exist
+    #Remove musicbot slash commands if they exist (will regenerate them later)
     cmds = tree.get_commands(guild=interaction.guild)
     if len(cmds) != 0:
         tree.clear_commands(guild=interaction.guild)
-        mPrint('TEST', f'Syncing tree')
+        mPrint('TEST', f'Syncing musicbot tree for guild')
         await tree.sync(guild=interaction.guild)
-        #print(tree.get_commands(guild=interaction.guild))
+        #mPrint("TEST", tree.get_commands(guild=interaction.guild))
 
     #Start music module
     try:
         mPrint('TEST', f'--- playing queue --- \n{playlistURLs}')
-        await musicBridge.play(playlistURLs, interaction, bot, tree, shuffle, precision, overwrite, playlists)
+        await musicBridge.play(playlistURLs, interaction, bot, tree, shuffle, precision, urlsync, playlists)
         mPrint('TEST', 'musicBridge.play() returned')
     except Exception:
         await interaction.followup.send(lang.music.player.generic_error, ephemeral=True)

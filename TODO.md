@@ -1,4 +1,10 @@
-# v 1.0.4
+# v 1.0.5
+
+🟦 **CRITICAL** separate guildsData guild into different files to reduce possibibility of conflicts
+
+🟦 `spotify_url` in urlsync is not enforced to be unique (this can cause spotify_url duplicates in urlsync)
+
+🟦 suggesting a link after it already finished won't delete the old track which will be accessible using `previous`
 
 🟦 Check rate limits
 
@@ -33,3 +39,11 @@ Error writing trailer of pipe:1: Broken pipe
 🟧 Test needed
 🟦 TO DO/CHECK
 🟥 wontdo (for now)
+
+
+
+[30/03/23 12:39:33][INFO](musicPlayer) - ---------------- PLAYNEXT ----------------
+[30/03/23 12:39:33][DEBUG](musicObjects) - Searching URL for Last Man Standing Nitro (Explicit)
+[30/03/23 12:39:35][DEBUG](musicPlayer) - URL: https://www.youtube.com/watch?v=ZgTjZWbFlf0
+[30/03/23 12:39:35][MUSIC](musicPlayer) - Now Playing: (Last Man Standing) URL = https://www.youtube.com/watch?v=ZgTjZWbFlf0
+[youtube] Extracting URL: https://www.youtube.com/watch?v=ZgTjZWbFlf0
