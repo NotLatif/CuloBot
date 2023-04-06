@@ -31,9 +31,7 @@ def parseUserInput(userQuery:str, playlists : dict[str, list[str]]) -> Union[lis
 
     toReturn = []
     for search in links:
-        mPrint('DEBUG', f"{search=}")
         if "spotify.com" in search or "youtube.com" in search or "youtu.be" in search:
-            mPrint('INFO', f'FOUND SUPPORTED URL: {search}')
             toReturn.append(search)
         
         #user wants a saved playlist (playlists can have multiple tracks)

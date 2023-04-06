@@ -51,7 +51,7 @@ class Track:
         return artists[:-2] #remove last ", " before returning
 
     def getVideoUrl(self, search = True, urlsync = None) -> Union[str, None]:
-        mPrint('TEST', f"getVideoUrl \n{self.spotifyURL=}\n{urlsync=}")
+        # mPrint('TEST', f"getVideoUrl \n{self.spotifyURL=}\n{urlsync=}")
         if urlsync and self.spotifyURL:
             for d in urlsync:
                 if d['spotify_url'] == self.spotifyURL:
@@ -97,7 +97,7 @@ class Track:
             return f'{youtubeDomain}{result["url"]}'
     
     def getVideoThumbnailUrl(self) -> Union[str, None]:
-        mPrint('FUNC', "Track.getVideoThumbnailUrl()")
+        # mPrint('FUNC', "Track.getVideoThumbnailUrl()")
         if self.thumbnailURL != None: 
             return self.thumbnailURL
 

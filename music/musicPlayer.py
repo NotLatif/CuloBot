@@ -149,7 +149,7 @@ class Player():
         if self.isPaused: self.resume()
 
         try:
-            mPrint('TEST', f"{self.urlsync=}")
+            # mPrint('TEST', f"{self.urlsync=}")
             song_url = self.currentTrack.getVideoUrl(urlsync=self.urlsync)
             mPrint('DEBUG', f'URL: {song_url}')
             if song_url == None:
@@ -554,6 +554,6 @@ class MessageHandler():
             mPrint('ERROR', f"DISCORD ERROR (probably embed had blank value)\n{traceback.format_exc()}")
         except AttributeError:
             mPrint('WARN', f"There was an error while creating the Embed, skipping. {stop=} {pnext=} {leftAlone=}")
-            mPrint('WARN', traceback.print_exc())
+            mPrint('WARN', traceback.format_exc())
         except Exception:
-            mPrint('ERROR', traceback.format_exc())
+            mPrint('ERROR', f"Exception: \n{traceback.format_exc()}")

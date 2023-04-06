@@ -66,7 +66,7 @@ def getTracksFromPlaylist(URL, urlsync: list[dict]) -> list[Track]:
             yt_url = None
             for d in urlsync:
                 if d['spotify_url'] == trackData["external_urls"]["spotify"]:
-                    mPrint('DEBUG', f"urlsync match {trackData['external_urls']['spotify']} >({trackData['name']} {artists[0]}):\n\t{d['youtube_url']}")
+                    mPrint('DEBUG', f"urlsync match {trackData['external_urls']['spotify']}")
                     yt_url = d['youtube_url']
                     break
 
@@ -119,7 +119,7 @@ def getTracksFromAlbum(URL, urlsync) -> list[Track]:
             yt_url = None
             for d in urlsync:
                 if d['spotify_url'] == trackData["external_urls"]["spotify"]:
-                    mPrint('DEBUG', f"urlsync match {trackData['external_urls']['spotify']} >({trackData['name']} {artists[0]}):\n\t{d['youtube_url']}")
+                    mPrint('DEBUG', f"urlsync match {trackData['external_urls']['spotify']}")
                     yt_url = d['youtube_url']
                     break
             
@@ -149,7 +149,7 @@ def getTracksFromTrack(URL, urlsync) -> list[Track]:
     yt_url = None
     for d in urlsync:
         if d['spotify_url'] == resData["external_urls"]["spotify"]:
-            mPrint('DEBUG', f"urlsync match {resData['external_urls']['spotify']} >({resData['name']} {artists[0]}):\n\t{d['youtube_url']}")
+            mPrint('DEBUG', f"urlsync match {resData['external_urls']['spotify']}")
             yt_url = d['youtube_url']
             break
 
