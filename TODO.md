@@ -1,35 +1,10 @@
-# v 1.0.4
+# In Development
+**CRITICAL** separate guildsData guild into different files to reduce possibibility of conflicts
 
-🟦 Check rate limits
+`spotify_url` in urlsync is not enforced to be unique (this can cause spotify_url duplicates in urlsync)
 
-🟦 transform the musicPlayer embedhandler from polling to observer pattern
+improve spotify parser to remove HTTP queries for urlsync matching
 
-# Culobot features
-🟥 willdo in the next version
-option to save playlist name internally when using a playlist link
+Check rate limits
 
-🟥 not doing this as this feature is useless for now
-Bot does not know when the player finished playing, possible solution:
-    Leverage the EmbedHandler coroutine (when it returns the player is usually done)
-    https://stackoverflow.com/questions/44345139/python-asyncio-add-done-callback-with-async-def
-
-🟥 willdo in the future
-add default permissions
-
-# Culobot bugs
-
-🟥 The error is not appearing anymore
-av_interleaved_write_fram(): Broken pipe
-./bot-start: line 2: 1298 Killed
-Error writing trailer of pipe:1: Broken pipe
-./bot-start: line 3: n3.9: command not found
-
-# Code things
-
-🟥 Make settings a local variable under MyBot class
-
------legenda-----
-✅ Done/Fixed (resets with every release)
-🟧 Test needed
-🟦 TO DO/CHECK
-🟥 wontdo (for now)
+transform the musicPlayer embedhandler from polling to observer pattern (or combination of both)

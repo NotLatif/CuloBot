@@ -5,13 +5,15 @@ from spotipy.oauth2 import SpotifyClientCredentials
 from math import ceil
 
 from mPrint import mPrint as mp
-def mPrint(tag, value):mp(tag, 'bot', value)
+def mPrint(tag, value):mp(tag, 'spotifyParser', value)
 
 #Since I had problems getting getenv to work on linux for some reason I'm writing my own function in case someone else has the same problems
 import getevn
 
 CLIENT_ID = getevn.getenv('SPOTIFY_ID')
 CLIENT_SECRET = getevn.getenv('SPOTIFY_SECRET')
+
+SOURCE = "spotify"
 
 authenticated = False
 #Authentication
@@ -29,19 +31,21 @@ def spotifyUrlParser(URL:str) -> tuple[str, str]:
     type = URL.split("/")[-2]
     return (id, type)
 
-def getTracks(URL:str, overwritten:dict[str, str]) -> list[Track]:
+def fetchTracks(URL:str, urlsync:list[dict]) -> list[Track]:
     if not authenticated:
         return -1
     id, type = spotifyUrlParser(URL)
 
-    if type == "playlist": tracks = getSongsFromPlaylist(id, overwritten)
-    elif type == "album": tracks = getSongsFromAlbum(id, overwritten)
-    elif type == "track": tracks = getSongFromTrack(id, overwritten)
+    if type == "playlist": tracks = getTracksFromPlaylist(id, urlsync)
+    elif type == "album": tracks = getTracksFromAlbum(id, urlsync)
+    elif type == "track": tracks = getTracksFromTrack(id, urlsync)
     else: return -2
 
     return tracks
 
-def getSongsFromPlaylist(URL, overwritten:dict[str, str]) -> list[Track]:
+#"spsync": [], # {spotify_uri: {query: str, spotify_url: str, youtube_url: str, soundcloud_url?: str}}
+def getTracksFromPlaylist(URL, urlsync: list[dict]) -> list[Track]:
+    # mPrint('FUNC', f"spotifyParser.getTracksFromPlaylist({URL=}, urlsync)")
     #acquire playlist size and spotify GET limit
     trackNumber = sp.playlist_tracks(URL)["total"]
     trackLimit = sp.playlist_tracks(URL)["limit"]
@@ -59,26 +63,30 @@ def getSongsFromPlaylist(URL, overwritten:dict[str, str]) -> list[Track]:
             for a in trackData['artists']:
                 artists.append(a['name'])
             
-            if f"{trackData['name']} {artists[0]}" in overwritten:
-                mPrint('DEBUG', f"Found overwritten track ({trackData['name']} {artists[0]})")
-                yt_url = overwritten[f"{trackData['name']} {artists[0]}"]
-            else:
-                yt_url = None
+            yt_url = None
+            for d in urlsync:
+                if d['spotify_url'] == trackData["external_urls"]["spotify"]:
+                    mPrint('DEBUG', f"urlsync match {trackData['external_urls']['spotify']}")
+                    yt_url = d['youtube_url']
+                    break
 
             try:
                 if trackData['is_local'] == False:
                     tracks.append(Track(
+                        SOURCE,
                         trackData['external_urls']['spotify'],
                         trackData['name'],
                         artists,
                         trackData['duration_ms']/1000,
                         yt_url,
                         explicit = trackData['explicit'],
-                        spotifyThumbnail = trackData['album']['images'][-1]['url']
+                        spotifyThumbnail = trackData['album']['images'][-1]['url'],
+                        spotifyURL = trackData['external_urls']['spotify']
                     ))
                 else:
                     #For non local tracks the bot will try to get the youtube query when needed
                     tracks.append(Track(
+                        SOURCE,
                         None,
                         trackData["name"],
                         artists,
@@ -90,7 +98,8 @@ def getSongsFromPlaylist(URL, overwritten:dict[str, str]) -> list[Track]:
 
     return tracks
 
-def getSongsFromAlbum(URL, overwritten:dict[str, str]) -> list[Track]:
+def getTracksFromAlbum(URL, urlsync) -> list[Track]:
+    # mPrint('FUNC', f"spotifyParser.getTracksFromAlbum({URL=}, urlsync)")
     #acquire playlist size and spotify GET limit
     trackNumber = sp.album_tracks(URL)["total"]
     trackLimit = sp.album_tracks(URL)["limit"]
@@ -107,25 +116,29 @@ def getSongsFromAlbum(URL, overwritten:dict[str, str]) -> list[Track]:
             for a in trackData['artists']:
                 artists.append(a['name'])
             
-            if f"{trackData['name']} {artists[0]}" in overwritten:
-                mPrint('DEBUG', f"Found overwritten track ({trackData['name']} {artists[0]})")
-                yt_url = overwritten[f"{trackData['name']} {artists[0]}"]
-            else:
-                yt_url = None
+            yt_url = None
+            for d in urlsync:
+                if d['spotify_url'] == trackData["external_urls"]["spotify"]:
+                    mPrint('DEBUG', f"urlsync match {trackData['external_urls']['spotify']}")
+                    yt_url = d['youtube_url']
+                    break
             
             tracks.append(Track(
+                SOURCE,
                 trackData['external_urls']['spotify'],
                 trackData['name'],
                 artists,
                 trackData['duration_ms']/1000,
                 yt_url,
                 explicit = trackData['explicit'],
-                spotifyThumbnail = None # Album search does not give image data :(
+                spotifyThumbnail = None, # Album search does not give image data :(
+                spotifyURL = trackData["external_urls"]["spotify"]
             ))
 
     return tracks
 
-def getSongFromTrack(URL, overwritten) -> list[Track]:
+def getTracksFromTrack(URL, urlsync) -> list[Track]:
+    # mPrint('FUNC', f"spotifyParser.getTracksFromTrack({URL=}, urlsync)")
     resData:dict = sp.track(URL)
 
     #make a list of artist names
@@ -133,19 +146,22 @@ def getSongFromTrack(URL, overwritten) -> list[Track]:
     for a in resData['artists']:
         artists.append(a['name'])
 
-    if f"{resData['name']} {artists[0]}" in overwritten:
-        mPrint('DEBUG', f"Found overwritten track ({resData['name']} {artists[0]})")
-        yt_url = overwritten[f"{resData['name']} {artists[0]}"]
-    else:
-        yt_url = None
+    yt_url = None
+    for d in urlsync:
+        if d['spotify_url'] == resData["external_urls"]["spotify"]:
+            mPrint('DEBUG', f"urlsync match {resData['external_urls']['spotify']}")
+            yt_url = d['youtube_url']
+            break
 
     #return a single item list with the data
     return [Track(
+        SOURCE,
         resData["external_urls"]["spotify"],
         resData['name'],
         artists,
         resData['duration_ms']/1000,
         yt_url,
         explicit = resData['explicit'],
-        spotifyThumbnail = resData['album']['images'][-1]['url']
+        spotifyThumbnail = resData['album']['images'][-1]['url'],
+        spotifyURL = resData["external_urls"]["spotify"]
     )]

@@ -6,15 +6,12 @@ from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'youtubeParser', text)
 
+SOURCE = "youtube"
 
-def searchYTurl(query, overwrite) -> str:
+def searchYTurl(query) -> str:
     """
     gets the url of the first song in queue (the one to play)
     """
-    if query in overwrite:
-        mPrint('DEBUG', f"Found overwritten track ({query})")
-        return overwrite[query]
-
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         result = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
         try:
@@ -35,9 +32,9 @@ def stampToSec(str : str) -> int:
         seconds += int(str[2]) * 60
     return seconds
 
-def getTracks(url : str) -> list[Track]:
-    # if url is youtube music link
-    if "music.youtube.com" in url:
+def fetchTracks(url: str) -> list[Track]:
+    # mPrint('FUNC', f"youtubeParser.fetchTracks({url=})")
+    if "music.youtube.com" in url: #target is youtube music URL
         #replacing the strings gets the same link in youtube video form
         url = url.replace("music.youtube.com", "www.youtube.com", 1)
 
@@ -92,6 +89,7 @@ def getTracks(url : str) -> list[Track]:
                 return -1
 
             tracks.append(Track(
+                SOURCE,
                 f"{youtubeDomain}{videoData['url']}",
                 videoData["title"],
                 [videoData["uploader"]],
@@ -109,6 +107,7 @@ def getTracks(url : str) -> list[Track]:
             
     else: #link is a video
         tracks.append(Track(
+            SOURCE,
             result['webpage_url'],
             result['title'],
             [result['uploader']],
@@ -119,45 +118,3 @@ def getTracks(url : str) -> list[Track]:
 
     
     return tracks
-
-
-# User defined playlist
-#https://www.youtube.com/watch?v=yJg-Y5byMMw&list=PLW-S5oymMexXTgRyT3BWVt_y608nt85Uj&index=7
-#https://www.youtube.com/      domain
-# watch?v=yJg-Y5byMMw          current video
-# &list=PLW-S5oymMexXTgRyT3BWVt_y608nt85Uj      video playlist
-# &index=7                      current video index in playlist
-
-# Youtube Mix
-# https://www.youtube.com/watch?v=yJg-Y5byMMw&list=RDyJg-Y5byMMw&start_radio=1&rv=yJg-Y5byMMw&t=1
-# https://www.youtube.com/
-# watch?v=yJg-Y5byMMw
-# &list=RDyJg-Y5byMMw
-# &start_radio=1
-# &rv=yJg-Y5byMMw
-# &t=1
-
-
-
-
-
-
-
-
-# Example urls
-
-# url = 'https://www.youtube.com/watch?v=kt1KWL9NZzo'
-# url = 'https://www.youtube.com/watch?v=2XM1OF2_6_4&list=OLAK5uy_lxsKqDHchO8VpAxRCPoayWUCyCVWfeJNg'
-# url = "Unlike Pluto - Everything Black (feat. Mike Taylor)"
-# url = 'https://www.youtube.com/watch?v=jNQXAC9IVRw'
-# url = 'https://www.youtube.com/watch?v=56lkofpjOAs'
-# url = 'https://www.youtube.com/watch?v=Bv5bOJekegA&list=PLRrWCmzNJAWo0vKTtO5DpYMgxC1iHnycF'
-
-# url = 'https://music.youtube.com/watch?v=jH8Yox66CtQ&list=RDAMVMjH8Yox66CtQ'
-# url = 'https://music.youtube.com/playlist?list=OLAK5uy_kg7ISwHyM0ZuQ1jWshC74yrnPmPdNNRoY'
-# url = 'https://music.youtube.com/watch?v=J7p4bzqLvCw&list=RDAMVMJ7p4bzqLvCw'
-
-
-
-# https://youtube.com/playlist?list=OLAK5uy_lxsKqDHchO8VpAxRCPoayWUCyCVWfeJNg
-#https://www.youtube.com/watch?v=2XM1OF2_6_4&list=OLAK5uy_lxsKqDHchO8VpAxRCPoayWUCyCVWfeJNg

@@ -28,7 +28,8 @@ else:
     }
 
 class Track:
-    def __init__(self, url, title, artists, durationSeconds, youtubeURL= None, thumbnailURL = None, explicit = None, spotifyThumbnail = None) -> None:
+    def __init__(self, source, url, title, artists, durationSeconds, youtubeURL= None, thumbnailURL = None, explicit = None, spotifyThumbnail = None, spotifyURL = None) -> None:
+        self.source = source
         self.url = url
         self.title = title
         self.artists = artists
@@ -38,18 +39,7 @@ class Track:
         self.thumbnailURL = thumbnailURL
         self.explicit = explicit
         self.spotifyThumbnail = spotifyThumbnail
-
-    def getSource(self) -> Union[Literal['spotify', 'youtube', 'soundcloud'], None]: #soundcloud should be coming soon
-        if self.url == None:
-            return 'query'
-        if 'spotify' in self.url:
-            return 'spotify'
-        elif 'youtube' in self.url:
-            return 'youtube'
-        elif 'soundcloud' in self.url:
-            return 'soundcloud'
-        else:
-            return None
+        self.spotifyURL = spotifyURL
     
     def getArtists(self) -> str:
         if self.artists == ['']:
@@ -60,20 +50,17 @@ class Track:
             artists += f"{a}, "
         return artists[:-2] #remove last ", " before returning
 
-    def getOriginalURL(self, search = True):
-        if self.url == None:
-            if self.youtubeURL == None:
-                if search:
-                    return self.getVideoUrl()
-                else:
-                    return None
-        else:
-            return self.url
-
-    def getVideoUrl(self, search = True) -> Union[str, None]:
-        if self.youtubeURL != None:
+    def getVideoUrl(self, search = True, urlsync = None) -> Union[str, None]:
+        # mPrint('TEST', f"getVideoUrl \n{self.spotifyURL=}\n{urlsync=}")
+        if urlsync and self.spotifyURL:
+            for d in urlsync:
+                if d['spotify_url'] == self.spotifyURL:
+                    self.youtubeURL = d['youtube_url']
+                    return self.youtubeURL
+                
+        elif self.youtubeURL != None:
             return self.youtubeURL
-        
+                
         if search == False: return None
 
         # we don't know the url but we can search it
@@ -110,6 +97,7 @@ class Track:
             return f'{youtubeDomain}{result["url"]}'
     
     def getVideoThumbnailUrl(self) -> Union[str, None]:
+        # mPrint('FUNC', "Track.getVideoThumbnailUrl()")
         if self.thumbnailURL != None: 
             return self.thumbnailURL
 
@@ -137,14 +125,16 @@ class Track:
         return f"{self.title} {self.artists[0]}{' (Explicit)' if self.explicit else ''}"
     
     def toDict(self, search = False) -> dict:
+        mPrint('FUNC', "Track.toDict()")
         if self.artists == ['']: artists = None
         else: artists = self.artists
 
         return {
             "title": self.title,
             "artists": artists,
-            "url": self.getOriginalURL(search),
+            "url": self.url,
             "youtube_url": self.getVideoUrl(search),
+            "spotify_url": self.spotifyURL,
             "search_query": self.getQuery(),
             "duration_seconds": self.durationSeconds,
             "spotify_image": self.spotifyThumbnail,
@@ -182,6 +172,7 @@ class Queue:
             self.queueOrder.append(len(self.queue)-1)
         else:
             self.queueOrder.insert(index, len(self.queue)-1)
+        # mPrint('TEST', f"ADDED {track.title} @ {index}")
         return
 
     def shuffleQueue(self) -> None:
@@ -225,7 +216,7 @@ class Queue:
     def previous(self) -> None:
         """Goes back 1 song in queue without playing it"""
         if len(self.alreadyPlayed) == 0:
-            mPrint('WARN', 'Called Queue.previous() but there are no previous songs.')
+            mPrint('DEBUG', 'Called Queue.previous() but there are no previous songs.')
             return
             
         self.queue_changed = True
@@ -279,6 +270,15 @@ class Queue:
         """Skip multiple tracks at once (call getNext to return the next one)"""
         for x in range(times):
             self.alreadyPlayed.append(self.queueOrder.pop(0))
+
+    def removeAtIndex(self, index) -> None:
+        try:
+            if index == 0:
+                self.alreadyPlayed.pop() # current track's index is the last one in this list
+            else:
+                self.queueOrder.pop(index-1) # Next track's index is the first one in this list
+        except IndexError:
+            pass
 
     def clear(self) -> None:
         self.queue_changed = True

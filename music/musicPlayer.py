@@ -1,5 +1,6 @@
 import os
 import traceback
+from typing import Callable
 import discord
 import asyncio
 import time
@@ -55,7 +56,7 @@ def textToSeconds(text):
     return seconds
 
 class Player():
-    def __init__(self, vc : discord.VoiceClient, queue : Queue) -> None:
+    def __init__(self, vc : discord.VoiceClient, queue : Queue, urlsync: list[dict]) -> None:
         mPrint('DEBUG', 'called Player __init__')
         self.queue : Queue = queue
         self.currentTrack : Track = None
@@ -65,6 +66,8 @@ class Player():
         self.timeout = config.no_music_timeout
         self.isWaiting = False
 
+        self.urlsync = urlsync
+
         #flags needed to communicate with EmbedHandler
         self.wasReported = False
         self.skipped = False
@@ -73,6 +76,21 @@ class Player():
         self.songStarted = False
         self.pauseStart = 0
         self.pauseEnd = 0
+
+        # for future observer pattern implementation
+        self.observers: list[Callable[[str], None]] = []
+
+    # Observer pattern
+    def notify(self, message):
+        if (message in ["play_pause", "resume", "pause", "loop", "shuffle"]):
+            pass #examples
+
+        for o in self.observers:
+            try: o(message)
+            except: mPrint('ERROR', f"Error notifying observer\n{o}({message=})\n{traceback.format_exc()}")
+
+    def subscribe(self, callable: Callable[[dict], None]):
+        self.observers.append(callable)
 
     async def waitAfterQueueEnd(self) -> bool:
         self.isWaiting = True
@@ -131,7 +149,8 @@ class Player():
         if self.isPaused: self.resume()
 
         try:
-            song_url = self.currentTrack.getVideoUrl()
+            # mPrint('TEST', f"{self.urlsync=}")
+            song_url = self.currentTrack.getVideoUrl(urlsync=self.urlsync)
             mPrint('DEBUG', f'URL: {song_url}')
             if song_url == None:
                 # careful with recursion
@@ -208,6 +227,9 @@ class Player():
         self.voiceClient.resume()
         self.isPaused = False
         self.pauseStart = time.time()
+
+    def remove(self, index = 0):
+        self.queue.removeAtIndex(index)
 
     def clear(self): #kind of does not make sense this just seems like stop() but spicy
         self.queue.clear()
@@ -493,7 +515,7 @@ class MessageHandler():
 
         if self.currentTrack == None: return
 
-        if self.currentTrack.getSource() == 'spotify':
+        if self.currentTrack.source == 'spotify':
             #do not update the buttons if there is nothing to change
             if self.currentTrack.title in self.spotifyBtn.label: return
 
@@ -502,7 +524,7 @@ class MessageHandler():
             if len(btnlabel) > 80:
                 btnlabel = "Ascoltala su spotify"
             self.spotifyBtn.label = btnlabel
-            self.spotifyBtn.url = self.currentTrack.getOriginalURL()
+            self.spotifyBtn.url = self.currentTrack.spotifyURL
             self.spotifyBtn.disabled = False
             self.view.add_item(self.spotifyBtn)
         else:
@@ -532,6 +554,6 @@ class MessageHandler():
             mPrint('ERROR', f"DISCORD ERROR (probably embed had blank value)\n{traceback.format_exc()}")
         except AttributeError:
             mPrint('WARN', f"There was an error while creating the Embed, skipping. {stop=} {pnext=} {leftAlone=}")
-            mPrint('WARN', traceback.print_exc())
+            mPrint('WARN', traceback.format_exc())
         except Exception:
-            mPrint('ERROR', traceback.format_exc())
+            mPrint('ERROR', f"Exception: \n{traceback.format_exc()}")

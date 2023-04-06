@@ -1,7 +1,8 @@
+import os
 import traceback
 import asyncio
 import json
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 import discord
 import discord.ui
 from discord import app_commands
@@ -17,19 +18,20 @@ from mPrint import mPrint as mp
 def mPrint(tag, text):
     mp(tag, 'musicBridge', text)
 
-def getTracksURL(userQuery:str, overwritten, playlists : dict[str, list[str]]) -> Union[list[str], None]:
-    """Parses user input and retuns a list of URLs"""
-    #user searched a link
+def parseUserInput(userQuery:str, playlists : dict[str, list[str]]) -> Union[list[str], None, Literal[404]]:
+    """
+    Parses user input and retuns a list of URLs
+    :param userQuery: string containing URLs, playlist names or youtube searches (multiple items delimited by `,`)
+    """
+
     if ',' in userQuery: #multiple search items
-        links = userQuery.replace(" ", "").split(',') # NOTE: this also removes spaces between words eg."myplaylist"
+        links = [q.strip() for q in userQuery.split(',')] # " A, A A,AA" -> ["A", "A A", "AA"]
     else: #one search item
         links = [userQuery]
 
     toReturn = []
     for search in links:
-        mPrint('DEBUG', f"{search=}")
         if "spotify.com" in search or "youtube.com" in search or "youtu.be" in search:
-            mPrint('INFO', f'FOUND SUPPORTED URL: {search}')
             toReturn.append(search)
         
         #user wants a saved playlist (playlists can have multiple tracks)
@@ -42,10 +44,10 @@ def getTracksURL(userQuery:str, overwritten, playlists : dict[str, list[str]]) -
             for track in playlists[key]:
                 toReturn.append(track)
         
-        #user submitted a youtube query
+        #user submitted a youtube search query
         else:
             mPrint('MUSIC', f'Searching for user requested song: ({search})')
-            trackURL = youtubeParser.searchYTurl(search, overwritten)
+            trackURL = youtubeParser.searchYTurl(search)
             if trackURL == None:
                 return 404
             mPrint('INFO', f'SEARCHED SONG URL: {trackURL}')
@@ -53,12 +55,15 @@ def getTracksURL(userQuery:str, overwritten, playlists : dict[str, list[str]]) -
 
     return toReturn
 
-def getTracksFromURL(url, overwritten) -> Union[list[musicObjects.Track], None]:
-    """return a list of track objects found from an url, if the song is only 1, returns a list of one element"""
+async def fetchTracks(target: str, urlsync: list[dict]) -> Union[list[musicObjects.Track], None]:
+    """return a list of track objects found from an url or query, if the song is only 1, returns a list of one element"""
+
+    # mPrint('TEST', f"fetchTracks({target=}, urlsync)")
+
     #TODO check if url is a playlist
-    if 'spotify.com' in url:
+    if 'spotify.com' in target: # target is a spotify URL
         try:
-            tracks = spotifyParser.getTracks(url, overwritten)
+            tracks = spotifyParser.fetchTracks(target, urlsync)
             if tracks == -1:
                 mPrint('ERROR', "SPOTIFY AUTH FAILED, add your keys in the .env file if you want to enable spotify functionalities")
                 return None
@@ -67,23 +72,25 @@ def getTracksFromURL(url, overwritten) -> Union[list[musicObjects.Track], None]:
                 return None
 
         except Exception:
-            mPrint('ERROR', f"Spotify parser error:\nurl = {url}\n{traceback.format_exc()}")
+            mPrint('ERROR', f"Spotify parser error:\nurl = {target}\n{traceback.format_exc()}")
             return None
-    else:
+    elif 'soudcloud.com' in target:
+        pass
+    else: # target is either a youtube URL or a youtube search query
         try:
-            tracks = youtubeParser.getTracks(url)
+            tracks = youtubeParser.fetchTracks(target)
             if tracks == None:
-                mPrint('ERROR', f'Youtube parser error for: {url}')
+                mPrint('ERROR', f'Youtube parser error for: {target}')
                 return None
         except Exception:
-            mPrint('ERROR', f"Youtube parser error:\nurl = {url}\n{traceback.format_exc()}")
+            mPrint('ERROR', f"Youtube parser error:\nurl = {target}\n{traceback.format_exc()}")
             return None
 
     return tracks
 
-def evalUrl(url, ow) -> bool:
+async def evalUrl(url, spsync) -> bool:
     """Returns ture if the url is valid, else false"""
-    resp = getTracksFromURL(url, ow)
+    resp = await fetchTracks(url, spsync)
     if resp == None: 
         return False
     return True
@@ -95,7 +102,7 @@ async def play(
         tree : app_commands.CommandTree, 
         shuffle : bool, 
         precision : int, 
-        guildOverwritten : tuple[str,str],
+        urlsync : list[dict],
         guildPlaylists : dict[str, list[str]]
     ):
     embedChannel = interaction.channel
@@ -103,11 +110,10 @@ async def play(
     # initialize queue
     queue = musicObjects.Queue()
     queue.isShuffle = shuffle
-
     if type(urlList) == list:
-        for url in urlList:
+        for u in urlList:
             #foreach urls find the songs it links to
-            tracks = getTracksFromURL(url, guildOverwritten)
+            tracks = await fetchTracks(u, urlsync)
             if tracks == None:
                 #console logs were processed earlier, no need to print more
                 #alert user
@@ -122,13 +128,13 @@ async def play(
     else:
         #This should never get triggered
         await interaction.followup.send("Unsupported `track`")
-        mPrint("ERROR", f"Expected track of type list but got {type(urlList)} instead")
+        mPrint("ERROR", f"Expected track of type list but got {type(urlList)} instead:\n{urlList=}")
         return -1
 
     #check that queue is not empty; this is probably redundant
     if len(queue.queue) == 0:
         await interaction.followup.send(f"An error occurred while looking for song(s) please retry.", ephemeral=True)
-        mPrint("WARN", f"play function did not find the track requested {url}")
+        mPrint("WARN", f"play function did not find any requested track {urlList}")
         return
 
     mPrint('INFO',f"There are {len(queue)} songs in queue:")
@@ -175,7 +181,7 @@ async def play(
         report = 7,
         clear_queue = 8,
         resend_queue = 9,
-        #remove = 10,   #Currently not supported
+        remove = 10,   #Currently not supported
         move = 11,
         add_song = 12,
         loop = 13
@@ -239,7 +245,7 @@ async def play(
     embedMSG = await embedChannel.send(embed=embed, view=view)
 
     # Create Player and Embed handlers
-    player = musicPlayer.Player(voiceClient, queue)
+    player = musicPlayer.Player(voiceClient, queue, urlsync)
     messageHandler = musicPlayer.MessageHandler(player, embedMSG, queue, precision, view)
     
     try:
@@ -290,6 +296,12 @@ async def play(
             await voiceClient.disconnect()
             return 0
 
+        elif action == Commands.remove:
+            index = int(arg1)
+            player.remove(index)
+            player.skip()
+            await messageHandler.updateEmbed()
+
         elif action == Commands.clear_queue:
             player.clear()
             await messageHandler.updateEmbed()
@@ -334,16 +346,19 @@ async def play(
             await messageHandler.updateEmbed()
 
         elif action == Commands.add_song:
-            url = arg1
+            targets = arg1
             index = 0 if arg2 == None else arg2
             shuffle = arg3
 
             tracks : list[musicObjects.Track] = []
-            for url in getTracksURL(url, guildOverwritten, guildPlaylists):
-                t = getTracksFromURL(url, guildOverwritten)
-                if t != None:
-                    for track in t:
-                        tracks.append(track)
+            
+            targets = parseUserInput(targets, guildPlaylists)
+            # mPrint('TEST', f"add_song {targets=}, {index=}, {shuffle=}")
+            if targets == None or targets == 404: return None
+
+            for t in targets:
+                for track in await fetchTracks(t, player.urlsync):
+                    tracks.append(track)
 
             # Search did not find any track
             if tracks == []: return None
@@ -368,30 +383,63 @@ async def play(
                 input = discord.ui.TextInput(label="Se vuoi puoi dare un link come suggerimento", style=discord.TextStyle.short, required=False, placeholder='https://www.youtube.com/')
                 
                 async def on_submit(self, interaction: discord.Interaction):
-                    message = f"({interaction.id}) (guild:{interaction.guild.id})\nUser reported song discrepancy\nurl:{player.currentTrack.getVideoUrl()}\nSuggestion: {str(self.input.value)}\n"
-                    if self.input.value != None:
-                        suggestion = self.input.value
-
-                        with open('botFiles/guildsData.json', 'r') as f:
-                            overwriteData = json.load(f)[str(interaction.guild.id)]['musicbot']['youtube_search_overwrite']
-                        
-                        overwriteData[player.currentTrack.getQuery()] = suggestion
-                        with open(f'music/suggestions/{str(interaction.guild.id)}.json', 'w') as f:
-                            json.dump(overwriteData, f, indent=2)
-                        
-                        if getTracksURL(self.input.value, guildOverwritten, guildPlaylists) != None:
-                            await actions(Commands.add_song, self.input.value, 0)
-                            if reportedTrack == player.currentTrack:
-                                await actions(Commands.skip)
-
-                    ## add spotify url to data in the message
                     try:
-                        await bot.dev.send(message)
+                        suggested_url = self.input.value
+
+                        if suggested_url != None:
+                            if 'youtube.com' not in suggested_url:
+                                await interaction.response.send_message("Suggestions must be youtube links.", ephemeral=True)
+                                return
+                            
+                            # Create urlsync compatible object
+                            newSuggestion = [{ "youtube_url": suggested_url, "query": player.currentTrack.getQuery() }]
+                            if(player.currentTrack.spotifyURL): 
+                                newSuggestion[0]['spotify_url'] = player.currentTrack.spotifyURL
+                            
+                            # Create guild suggestions file if it does not exist and open it for read and write
+                            if not os.path.exists(f'music/suggestions/{str(interaction.guild.id)}.json'):
+                                with open(f'music/suggestions/{str(interaction.guild.id)}.json', 'w'): pass
+                            with open(f'music/suggestions/{str(interaction.guild.id)}.json', 'r+') as f:
+                                f.seek(0)
+                                alreadySuggested = []
+                                try: alreadySuggested = json.load(f) #read contents for already reported tracks
+                                except json.decoder.JSONDecodeError: 
+                                    mPrint('DEBUG', "json.decoder.JSONDecodeError")
+                                    pass # file is probably empty, it will be overwritten either way 
+
+                                mPrint('TEST', f"{alreadySuggested=}")
+
+                                # merge newSuggestion with already suggested tracks
+                                tmp_merge = {}
+                                for d in alreadySuggested + newSuggestion:
+                                    tmp_merge.setdefault(d['youtube_url'], {}).update(d)
+                                alreadySuggested = [tmp_merge[d] for d in tmp_merge]
+
+                                # merge newSuggestion with urlsync
+                                tmp_merge = {}
+                                for d in urlsync + newSuggestion:
+                                    tmp_merge.setdefault(d['youtube_url'], {}).update(d)
+                                player.urlsync = [tmp_merge[d] for d in tmp_merge]
+
+                                f.seek(0)
+                                json.dump(alreadySuggested, f, indent=2)
+                                f.truncate()
+                                mPrint('TEST', f"{alreadySuggested=}")
+                            
+                            # play suggested track and skip the (presumably) wrong track
+                            if parseUserInput(suggested_url, guildPlaylists) != None:
+                                await actions(Commands.add_song, suggested_url, 0)
+
+                                #delete (and skip) track if it didn't already finish
+                                if reportedTrack == player.currentTrack: 
+                                    await actions(Commands.remove, 0)
+
+                        mPrint('INFO', f"User reported discrepancy for song {player.currentTrack.getQuery()}")
+                        await interaction.response.send_message("Thanks for your suggestion!", ephemeral=True)
+
                     except Exception:
                         mPrint('ERROR', traceback.format_exc())
-
-                    mPrint('INFO', f"User reported discrepancy for song {player.currentTrack.getQuery()}")
-                    await interaction.response.send_message("Thanks for your suggestion!", ephemeral=True)
+                        await interaction.response.send_message("There was an error.", ephemeral=True)        
 
             await interaction.response.send_modal(Feedback())
 
@@ -404,14 +452,14 @@ async def play(
             return False
         
     @tree.command(name="prev", description="Vai alla traccia precedente", guild=interaction.guild)
-    async def prev(interaction : discord.Interaction):
+    async def prev(interaction: discord.Interaction):
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
             await actions(Commands.previous)
             await interaction.followup.send("Done")
 
     @tree.command(name="skip", description="Vai alla traccia successiva", guild=interaction.guild)
-    async def skip(interaction : discord.Interaction, times:int=1):
+    async def skip(interaction: discord.Interaction, times: int=1):
         """
         :param times: quante volte skippare
         """
@@ -421,42 +469,52 @@ async def play(
             await interaction.followup.send(f"Skipped {times} tracks", ephemeral=True)
 
     @tree.command(name="shuffle", description="Attiva/Disattiva lo shuffle", guild=interaction.guild)
-    async def queue_shuffle(interaction : discord.Interaction):
+    async def queue_shuffle(interaction: discord.Interaction):
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
             await actions(Commands.shuffle)
             await interaction.followup.send("Done")
 
     @tree.command(name="play_pause", guild=interaction.guild)
-    async def play_pause(interaction : discord.Interaction):
+    async def play_pause(interaction: discord.Interaction):
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
             await actions(Commands.play_pause)
             await interaction.followup.send("Paused" if player.isPaused else "Resumed", ephemeral=True)   
 
     @tree.command(name="pause", guild=interaction.guild)
-    async def pause(interaction : discord.Interaction):
+    async def pause(interaction: discord.Interaction):
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
             await actions(Commands.pause)
             await interaction.followup.send("Paused", ephemeral=True)  
 
     @tree.command(name="resume", guild=interaction.guild)
-    async def resume(interaction : discord.Interaction):
+    async def resume(interaction: discord.Interaction):
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
             await actions(Commands.resume)
             await interaction.followup.send("Resumed", ephemeral=True)  
 
     @tree.command(name="stop", description="Cancella la playlist e ferma la riproduzione", guild=interaction.guild)
-    async def stop(interaction : discord.Interaction):
+    async def stop(interaction: discord.Interaction):
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
             await actions(Commands.stop)
             await interaction.followup.send("Stopped queue.", ephemeral=True)
 
+    @tree.command(name="remove", description="Rimuovi una traccia", guild=interaction.guild)
+    async def remove(interaction: discord.Interaction, index: int = 0):
+        """
+        :param index: quale traccia eliminare
+        """
+        if checkAuthor(interaction):
+            await interaction.response.defer(ephemeral=True)
+            await actions(Commands.remove, index)
+            await interaction.followup.send(f"Rmoved track {index}.", ephemeral=True)
+
     @tree.command(name="clear_queue", description="Cancella la playlist", guild=interaction.guild)
-    async def clear(interaction : discord.Interaction):
+    async def clear(interaction: discord.Interaction):
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
             await actions(Commands.clear_queue)
@@ -467,21 +525,21 @@ async def play(
         app_commands.Choice(name="No", value="0"),
         app_commands.Choice(name="One song", value="1"),
         app_commands.Choice(name="Playlist", value="2"),])
-    async def loop(interaction : discord.Interaction, mode:str):
+    async def loop(interaction: discord.Interaction, mode: str):
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
             await actions(Commands.loop, int(mode))
             await interaction.followup.send(f"Ok")
 
     @tree.command(name="move", description="Scambia due tracce", guild=interaction.guild)
-    async def clear(interaction : discord.Interaction, traccia1:int, traccia2:int):
+    async def move(interaction: discord.Interaction, traccia1: int, traccia2: int):
         if checkAuthor(interaction):
             await interaction.response.defer(ephemeral=True)
             await actions(Commands.move, traccia1, traccia2)
             await interaction.followup.send(f"Ho scambiato {traccia1} con {traccia2}", ephemeral=True)
 
     @tree.command(name="add_song", description="Aggiungi canzone in queue", guild=interaction.guild)
-    async def add_song(interaction : discord.Interaction, url:str, position:str = '0', shuffle:bool = None):
+    async def add_song(interaction: discord.Interaction, url: str, position: str = '0', shuffle: bool = None):
         """
         :param position: Usa 'END' per aggiungere una traccia alla fine (default: 0)
         """
@@ -508,7 +566,7 @@ async def play(
                 await interaction.followup.send(message, ephemeral=True)
             
     @tree.command(name="report", description="Avvisa che la canzone trovata su youtube è sbagliata.", guild=interaction.guild)
-    async def report(interaction : discord.Interaction):
+    async def report(interaction: discord.Interaction):
         if checkAuthor(interaction):
             await actions(Commands.report, interaction)
 

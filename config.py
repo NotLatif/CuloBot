@@ -1,6 +1,8 @@
 # This file contains global configs (which affect every guild) and configs about the script.
 # Modifications are effective only after a bot restart
 
+language = "IT" # [IT, EN]
+
 # Terminal
 logLevel = 2 #determines what tags the script prints in the terminal
 printLevel = 0 #determines what tags the script prints in the "bot.log" file
@@ -15,7 +17,6 @@ timeInTerminal = True
 # 3 - ERROR, FATAL, SONGERROR           < only ERROR
 
 # BOT
-language = "IT" #This does currently nothing as it's just a placeholder for future implementation.
 
 #MUSIC PLAYER
 timeline_chars = ('▂', '▅')
