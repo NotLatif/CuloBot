@@ -74,6 +74,9 @@ def fetchTracks(url: str) -> list[Track]:
             mPrint('ERROR', 'yt_dlp.utils.DownloadError: (Probably) Age restricted video')
             return None
 
+    # Parse uploader data (assuming it's the song artist)
+    artist = [{"name": result["uploader"], "url": result["uploader_url"]}]
+
     # Playlist link only returns one song
     tracks : list[Track] = []
     
@@ -92,7 +95,7 @@ def fetchTracks(url: str) -> list[Track]:
                 SOURCE,
                 f"{youtubeDomain}{videoData['url']}",
                 videoData["title"],
-                [videoData["uploader"]],
+                artist,
                 duration,
                 f"{youtubeDomain}{videoData['url']}",
                 None
@@ -104,13 +107,13 @@ def fetchTracks(url: str) -> list[Track]:
             addTracks(i)
         for i in range(index-1):
             addTracks(i)
-            
+
     else: #link is a video
         tracks.append(Track(
             SOURCE,
             result['webpage_url'],
             result['title'],
-            [result['uploader']],
+            artist,
             int(result['duration']),
             result['webpage_url'],
             result['thumbnail']

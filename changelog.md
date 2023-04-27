@@ -1,6 +1,13 @@
-# v1.0.4 (Big rewrite of the musicbot module)
+# v1.0.5-beta1
 
-# 5/APR/2023 Dev branch
+# 27/APR/2023
+- fixed `on_ready()` to actually run once
+- added strings to langs file
+- improved spotifyParser logic
+- other fixes
+- removed unused code
+
+# 5/APR/2023
 - `youtube_search_overwrite` (now `urlsync`) was completely rewritten and seems to be working now
 - added `/remove` command for musicbot
 - fixed parser `getTracksURL` (now `parseUserInput`) in `musicBridge`

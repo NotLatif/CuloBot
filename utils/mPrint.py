@@ -10,9 +10,11 @@ logLevel = config.logLevel
 printLevel = config.printLevel
 timeInTerminal = config.timeInTerminal
 
-def mPrint(tag:Literal['ERROR', 'FATAL', 'IMPORTANT', 'SONGERROR', 'WARN', 'GAMErr',
+tagType = Literal['ERROR', 'FATAL', 'IMPORTANT', 'SONGERROR', 'WARN', 'GAMErr',
     'INFO', 'MUSIC', 'USER', 'GAME', 'DEBUG', 'VARS', 'TEST', 'FUNC', 
-    'CMDS'], source, text):
+    'CMDS']
+
+def mPrint(tag: tagType, source, text):
     """
     Custom print function to use colors
     """
@@ -28,7 +30,7 @@ def mPrint(tag:Literal['ERROR', 'FATAL', 'IMPORTANT', 'SONGERROR', 'WARN', 'GAME
     if printLevel <= 1: #INFO
         if tag in ['INFO', 'MUSIC', 'USER', 'GAME']: willPrint = True
     if printLevel <= 0: #DEBUG
-        if tag in ['DEBUG', 'VARS', 'TEST', 'FUNC', 'CMDS']: willPrint = True
+        if tag in ['DEBUG', 'VARS', 'TEST', 'FUNC', 'CMDS', 'DB']: willPrint = True
         
 
     if logLevel <= 3: #ERROR
@@ -38,7 +40,7 @@ def mPrint(tag:Literal['ERROR', 'FATAL', 'IMPORTANT', 'SONGERROR', 'WARN', 'GAME
     if logLevel <= 1: #INFO
         if tag in ['INFO', 'MUSIC', 'USER', 'GAME']: willLog = True
     if logLevel <= 0: #DEBUG
-        if tag in ['DEBUG', 'VARS', 'TEST', 'FUNC', 'CMDS']: willLog = True
+        if tag in ['DEBUG', 'VARS', 'TEST', 'FUNC', 'CMDS', 'DB']: willLog = True
         
     if willPrint == False: return
 
@@ -62,7 +64,7 @@ def mPrint(tag:Literal['ERROR', 'FATAL', 'IMPORTANT', 'SONGERROR', 'WARN', 'GAME
     elif tag == 'DEBUG':
         tag = f"{Fore.MAGENTA}[{tag}]"
 
-    elif tag in ['FUNC', 'CMDS']:
+    elif tag in ['FUNC', 'CMDS', 'DB']:
         tag = f"{Fore.LIGHTBLACK_EX}[{tag}]"
 
     elif tag == 'TEST':
