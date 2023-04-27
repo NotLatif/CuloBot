@@ -39,8 +39,11 @@ mPrint('WARN', "#  CULOBOT IS CURRENTLY IN BETA. BUGS ARE EXPECTED  #")
 mPrint('WARN', "# =-----------------------------------------------= #")
 
 TOKEN = getevn.getenv('DISCORD_TOKEN', True)
-OWNER_ID = int(getevn.getenv('OWNER_ID')) #(optional) needed for the bot to send you feedback when users use /feedback command
+try:
+    OWNER_ID = int(getevn.getenv('OWNER_ID')) #(optional) needed for the bot to send you feedback when users use /feedback command
                                         # you will still see user-submitted feedback in the feedback.log file (will be createt automatically if not present)
+except ValueError:
+    pass
 
 intents = discord.Intents.all()
 intents.members = True
@@ -206,6 +209,8 @@ class CuloBot(discord.Client):
             self.dev = await bot.fetch_user(OWNER_ID)
         except discord.errors.NotFound:
             self.dev = None
+        except NameError:
+            pass
         await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="/play"))
         await tree.sync()
 
