@@ -77,20 +77,31 @@ class Player():
         self.pauseStart = 0
         self.pauseEnd = 0
 
+        #flags for mongodb sync
+        self.modifiersChanged = False
+
         # for future observer pattern implementation
+        # self.asyncObservers: list[Callable[[str], None]] = []
         self.observers: list[Callable[[str], None]] = []
 
     # Observer pattern
     def notify(self, message):
         if (message in ["play_pause", "resume", "pause", "loop", "shuffle"]):
-            pass #examples
+            self.modifiersChanged = True
+        
+        # for o in self.asyncObservers:
+        #     try: asyncio.create_task(o(message))
+        #     except: mPrint('ERROR', f"Error notifying async observer\n{o}({message=})\n{traceback.format_exc()}")
 
         for o in self.observers:
             try: o(message)
             except: mPrint('ERROR', f"Error notifying observer\n{o}({message=})\n{traceback.format_exc()}")
 
-    def subscribe(self, callable: Callable[[dict], None]):
-        self.observers.append(callable)
+    def subscribe(self, callable: Callable[[dict], None], isasync = False):
+        if isasync:
+            self.asyncObservers.append(callable)
+        else:
+            self.observers.append(callable)
 
     async def waitAfterQueueEnd(self) -> bool:
         self.isWaiting = True
@@ -121,8 +132,11 @@ class Player():
                 return False
         self.isWaiting = False
         return False
-        
+
+    # Player functions
+
     def playQueue(self, error = None):
+        self.notify("queueNext")
         if error != None: mPrint('ERROR', f"{error}")
 
         # get current track and check that it exists
@@ -181,7 +195,8 @@ class Player():
             try:
                 self.voiceClient.play(source, after=self.playQueue)
             except discord.errors.ClientException:
-                mPrint("INFO", "bot was disconnected from vc")
+                mPrint('WARN', "bot was disconnected from vc with ClientException")
+                mPrint('WARN', traceback.format_exc())
                
         except discord.ClientException:
             #bot got disconnected
@@ -193,6 +208,10 @@ class Player():
             mPrint('FATAL', traceback.format_exc())
     
     def skip(self, times = 1):
+        if self.queue.isLooped() == 1:
+            self.queue.setLoop(0) # if looping one, remove loop
+            self.notify("loop")
+
         if times == 1:
             mPrint('MUSIC', f'Track skipped.')
         else:
@@ -201,38 +220,46 @@ class Player():
 
         self.voiceClient.stop()
         self.skipped = True
+        #self.notify("skip")
 
     def previous(self):
         self.queue.previous()
-        self.voiceClient.stop()
+        self.voiceClient.stop() #automatically starts next (previous) track
+        self.notify("previous")
     
     def shuffle(self):
         if self.queue.isShuffle:
             self.queue.unshuffleQueue()
         else:
             self.queue.shuffleQueue()
+        self.notify("shuffle")
 
     def play_pause(self):
         if self.isPaused: self.resume()
         else: self.pause()
+        self.notify("play_pause")
 
     def pause(self):
         mPrint('MUSIC', 'Pausing song')
         self.voiceClient.pause()
         self.isPaused = True
+        self.notify("pause")
         self.pauseStart = time.time()
 
     def resume(self):
         mPrint('MUSIC', 'Resuming song')
         self.voiceClient.resume()
         self.isPaused = False
+        self.notify("resume")
         self.pauseStart = time.time()
 
     def remove(self, index = 0):
         self.queue.removeAtIndex(index)
+        self.notify("queueEdit")
 
     def clear(self): #kind of does not make sense this just seems like stop() but spicy
         self.queue.clear()
+        self.notify("queueEdit")
 
     def stop(self):
         self.isWaiting = False
@@ -241,6 +268,17 @@ class Player():
         self.clear()
         return 0
 
+    def set_loop(self, loopMode):
+        self.queue.setLoop(loopMode)
+        self.notify("loop")
+
+    def move(self, fromIndex: int, toIndex: int):
+        self.queue.move(fromIndex, toIndex)
+        self.notify("queueEdit")
+
+    def add_track(self, track: Track, index: int):
+        self.queue.addTrack(track, index)
+        self.notify("queueNext")
 
 class MessageHandler():
     class MessageType:
@@ -313,7 +351,7 @@ class MessageHandler():
                 # mPrint("TEST", f"[MessageHandler] Song has not started yet, waiting... (duration: {self.player.currentSong['duration_sec']}, done after {self.timeDone - self.timeStart})")
                 await asyncio.sleep(0.3)
                 if not self.player.isConnected:
-                    mPrint("DEBUG", "[MessageHandler] Bot was disconnected from vc, stopping embedloop")
+                    mPrint("DEBUG", "[MessageHandler][1] Bot was disconnected from vc, stopping embedloop")
                     return
                 continue #don't do anything if player did not change song yet
 
@@ -408,7 +446,7 @@ class MessageHandler():
                 if not self.player.isConnected:
                     await asyncio.sleep(0.5)
                     if not self.player.isConnected:
-                        mPrint("WARN", "[MessageHandler] Bot was disconnected from vc, stopping embedloop")
+                        mPrint("WARN", "[MessageHandler][2] Bot was disconnected from vc, stopping embedloop")
                         return
                     else:
                         mPrint("WARN", "[MessageHandler] Bot was probably moved to another voice channel")
@@ -535,9 +573,9 @@ class MessageHandler():
         await asyncio.sleep(0.5)
         try:
             if stop or leftAlone:
+                mPrint('INFO', '[MessageHandler] Detected stop.')
                 self.view.clear_items()
                 await self.embedMSG.edit(embed=self.getEmbed(stop=stop, leftAlone=leftAlone), view=self.view)
-                mPrint('INFO', '[MessageHandler] Detected stop.')
             else:
                 try:
                     self.updateButtons()
@@ -556,4 +594,4 @@ class MessageHandler():
             mPrint('WARN', f"There was an error while creating the Embed, skipping. {stop=} {pnext=} {leftAlone=}")
             mPrint('WARN', traceback.format_exc())
         except Exception:
-            mPrint('ERROR', f"Exception: \n{traceback.format_exc()}")
+            mPrint('ERROR', f"Exception: {traceback.format_exc()}")

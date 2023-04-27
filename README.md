@@ -2,13 +2,15 @@
 
 # [CuloBot](https://culobot.notlatif.com)
 
+**CURRENTLY IN BETA**
+
 A discord bot that can play music, let's you play chess and do other things.
-**Please submit issues, thank you**
+**please submit issues, thank you**
 
 If you like the project and want to help, consider [buying me a coffee!](https://www.buymeacoffee.com/CuloBot)
 
 
-### [Join the Discord!](https://discord.com/invite/YTvn5Zwc5R)
+### [Join the Discord](https://discord.com/invite/YTvn5Zwc5R)
 
 
 
@@ -18,16 +20,11 @@ If you like the project and want to help, consider [buying me a coffee!](https:/
 
 Sorry for the poor documentation, I'll improve it later (maybe)
 
-N.B. there will come translations some time in the future, but for now it's a mix of english and italian. Sorry
-
 
 ## How to self-host the bot
-
-
 #### Prerequisites:
-
 - Python 3.9.2
-  
+
 - modules in `requirements.txt` file
 - A copy of [ffmpeg](https://ffmpeg.org) added to [path](https://www.thewindowsclub.com/how-to-install-ffmpeg-on-windows-10) (Only needed to use the musicbot module)
 
@@ -41,30 +38,35 @@ N.B. there will come translations some time in the future, but for now it's a mi
 
 1. clone repository in a folder `git clone https://github.com/NotLatif/CuloBot .`
 
-1. Start the `bot.py` file (if necessary install the modules in the `requirements.txt` file
+1. open the folder in a terminal and `cd` to the folder
 
-1. Edit the `.env` file adding your keys without quotes
+1. `python -m venv .venv` to create a python virtual environment (recommended)
+
+    - `.\.venv\Scripts\activate` to activate the virtual environment
+    - When needed use `deactivate` to deactivate the virtual environment
+
+1. `python -m pip install -r .\requirements.txt` to install the required modules
+
+1. run the `bot.py` file with python
+
+1. edit the `.env` file adding your keys without quotes
 
 1. on the Developer portal, enable intents under `Privileged gateway intents`
 
 1. click on `OAuth2` -> `Url generator`
 
-1. check `Bot` in the middle, administrator permissions should be good for your own server
+1. check `Bot` in the left and choose the permissions you want the bot to have
 
-1. Add the bot to your server
+1. add the bot to your server
 
-1. start `bot.py`
+1. run `bot.py`
 
-1. Everything should be good
+1. everything should be good
 
 #### Youtube age restricted videos
 
 To enable the download of age restricted videos
 
-1. Sign in to Youtube on your Web Browser, let's say Google Chrome.
-2. Install the following extension: [Get cookies](https://chrome.google.com/webstore/detail/get-cookiestxt/bgaddhkoddajcdgocldbbfleckgcbcid)
-3. While browsing youtube, click on the extension and export the cookies captured by the extension to `music/.yt_cookies.txt`
-
-## Discord commands
-
-You can find them [here](https://culobot.notlatif.com/#commands)
+1. Sign in to Youtube on your browser
+2. Save all the cookies using a cookie grabber extension
+3. While browsing youtube (or preferably watching an age restricted video), click on the extension and export the cookies captured by the extension to `music/.yt_cookies.txt`

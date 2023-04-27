@@ -11,7 +11,7 @@ def mPrint(tag, value):mp(tag, 'env', value)
 if not os.path.isfile(".env"):
     mPrint('FATAL', 'File not found')
     with open('.env', 'w') as f:
-        f.write("#required fields: DISCORD_TOKEN\nDISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nGENIOUS_SECRET={}\nOWNER_ID={}#This is optional and only needed for the /feedback command, the data will still be saved in the feedback.log file")
+        f.write("#required fields: DISCORD_TOKEN\nDISCORD_TOKEN={}\nSPOTIFY_ID={}\nSPOTIFY_SECRET={}\nOWNER_ID={}#This is optional and only needed for the /feedback command, the data will still be saved in the feedback.log file")
     mPrint('INFO', 'I created a file named ".env", insert your tokens there')
     input("Press enter to exit...")
     sys.exit()

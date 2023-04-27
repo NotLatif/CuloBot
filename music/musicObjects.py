@@ -28,7 +28,7 @@ else:
     }
 
 class Track:
-    def __init__(self, source, url, title, artists, durationSeconds, youtubeURL= None, thumbnailURL = None, explicit = None, spotifyThumbnail = None, spotifyURL = None) -> None:
+    def __init__(self, source, url, title, artists: list[dict[str, str]], durationSeconds, youtubeURL= None, thumbnailURL = None, explicit = None, spotifyThumbnail = None, spotifyURL = None) -> None:
         self.source = source
         self.url = url
         self.title = title
@@ -40,14 +40,31 @@ class Track:
         self.explicit = explicit
         self.spotifyThumbnail = spotifyThumbnail
         self.spotifyURL = spotifyURL
-    
+
+    def getSource(self) -> Union[Literal['spotify', 'youtube', 'soundcloud'], None]: #soundcloud should be coming soon
+        if self.url == None:
+            return 'query'
+        if 'spotify' in self.url:
+            return 'spotify'
+        elif 'youtube' in self.url:
+            return 'youtube'
+        elif 'soundcloud' in self.url:
+            return 'soundcloud'
+        else:
+            return None
+        
     def getArtists(self) -> str:
-        if self.artists == ['']:
+        if self.artists[0]['name'] == '': # [{name?: "name", url?: "url"}, ...]
             return "N/A"
 
         artists = ""
         for a in self.artists:
-            artists += f"{a}, "
+            try:
+                artists += f"{a['name']}, "
+            except KeyError: #tracks with not artist name?
+                mPrint("DEBUG", f"found track without artist name; artist object: {a}")
+                continue
+    
         return artists[:-2] #remove last ", " before returning
 
     def getVideoUrl(self, search = True, urlsync = None) -> Union[str, None]:
@@ -120,9 +137,9 @@ class Track:
     
     def getQuery(self) -> str:
         """Returns a youtube search query for the Track"""
-        if self.artists == ['']:
+        if self.artists[0]['name'] == '':
             return self.title
-        return f"{self.title} {self.artists[0]}{' (Explicit)' if self.explicit else ''}"
+        return f"{self.title} {self.artists[0]['name']}{' (Explicit)' if self.explicit else ''}"
     
     def toDict(self, search = False) -> dict:
         mPrint('FUNC', "Track.toDict()")
@@ -143,9 +160,12 @@ class Track:
 
     def __str__(self) -> str:
         artistString = ""
-        for a in self.artists:
-            artistString += f'{a} '
-        return f'{self.title} [By: {artistString[:-1]}]' #:-1 to remove the last whitespace
+        if self.artists[0]['name'] != '':
+            for a in self.artists:
+                artistString += f"{a['name']}, "
+            return f'{self.title} [{artistString[:-2]}]' #:-2 to remove the last ', '
+        else:
+            return self.title
 
     def __len__(self) -> int:
         return self.durationSeconds

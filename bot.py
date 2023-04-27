@@ -23,19 +23,27 @@ import getevn
 import constants
 from config import Colors as col
 from mPrint import mPrint as mp
+#music and chessGame
+import chessBridge
+import musicBridge
+import musicUrlParser
+
 if config.language == "IT":
     from lang import it as lang
 elif config.language == "EN":
     from lang import en as lang
-#music and chessGame
-import chessBridge
-import musicBridge
-
 def mPrint(tag, value):mp(tag, 'bot', value)
 
+mPrint('WARN', "# =-----------------------------------------------= #")
+mPrint('WARN', "#  CULOBOT IS CURRENTLY IN BETA. BUGS ARE EXPECTED  #")
+mPrint('WARN', "# =-----------------------------------------------= #")
+
 TOKEN = getevn.getenv('DISCORD_TOKEN', True)
-OWNER_ID = int(getevn.getenv('OWNER_ID')) #(optional) needed for the bot to send you feedback when users use /feedback command
-                                          # you will still see user-submitted feedback in the feedback.log file (will be createt automatically if not present)
+try:
+    OWNER_ID = int(getevn.getenv('OWNER_ID')) #(optional) needed for the bot to send you feedback when users use /feedback command
+                                        # you will still see user-submitted feedback in the feedback.log file (will be createt automatically if not present)
+except ValueError:
+    pass
 
 intents = discord.Intents.all()
 intents.members = True
@@ -162,8 +170,8 @@ def parseWord(message:str, i:int, words:str, articoli:list[str]) -> tuple[str, s
     return ('parsing error', 'parseWord(str, int, str, list[str]) -> tuple[str, str]')
 
 
-#           -----           DISCORD BOT            -----       #
-class MyBot(discord.Client):
+#           -----           CULOBOT            -----       #
+class CuloBot(discord.Client):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.isReady = False
@@ -195,10 +203,14 @@ class MyBot(discord.Client):
         pass
     
     async def on_ready(self):
+        if self.isReady: return # ensure that on_ready only runs one time
+        self.isReady = True
         try:
             self.dev = await bot.fetch_user(OWNER_ID)
         except discord.errors.NotFound:
             self.dev = None
+        except NameError:
+            pass
         await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="/play"))
         await tree.sync()
 
@@ -220,10 +232,6 @@ class MyBot(discord.Client):
                 mPrint('DEBUG', f'settings for are present.')
 
             checkSettingsIntegrity(int(guild.id))
-        
-        if not self.isReady:
-            # Ensure that on_ready will only run 1 time
-            self.isReady = True
 
     async def on_member_join(self, member : discord.Member):
         if settings[int(member.guild.id)]['responseSettings']['send_join_msg']:
@@ -294,12 +302,12 @@ class MyBot(discord.Client):
         mPrint('DEBUG', f'Ho risposto ad un messaggio.')
 
 
-bot = MyBot(intents = intents)
+bot = CuloBot(intents = intents)
 tree = app_commands.CommandTree(bot)
 
 
 
-#           -----           DISCORD BOT SLASH COMMANDS           -----       #
+#           -----           CULOBOT SLASH COMMANDS           -----       #
 
 @tree.command(name="join-msg", description=lang.slash.join_msg)
 async def joinmsg(interaction : discord.Interaction, message : str = None, enabled : bool = None):
@@ -688,8 +696,8 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
             
         #3B. Challenge one guild
         elif challengeData.type == 1:
-            embed = discord.Embed(title = f'{challenge.name}, siete stati sfidati da {interaction.user.name}!\nUno di voi può unirsi alla partita!',
-                description=f'Scacchiera: {gameFEN}, design: {designName}',
+            embed = discord.Embed(title = lang.chess.challenge_e2t(challenge.name, interaction.user.name),
+                description= lang.chess.challenge_ed(gameFEN, designName),
                 color = col.blu
             )
 
@@ -1248,15 +1256,15 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                 errors = ''
                 tracks = []
                 for x in links:
-                    isUrlValid = await musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['urlsync'])
+                    isUrlValid = musicUrlParser.evalUrl(x, settings[interaction.guild.id]['musicbot']['urlsync'])
 
                     if isUrlValid == False:
                         errors += lang.music.playlist_create_404(x)
 
-                    else: #Search youtube query
+                    else: # Search youtube query
                         if "spotify.com" not in x and "youtube.com" not in x:
                             mPrint('MUSIC', f'Searching for user requested song: ({x})')
-                            x = musicBridge.youtubeParser.searchYTurl(x)
+                            x = musicUrlParser.youtubeParser.searchYTurl(x)
                         tracks.append(x)
 
                 if errors != '':
@@ -1305,7 +1313,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
             mPrint('TEST', f'playlist name: {playlistName}')
             class EditPlaylistData(discord.ui.Modal, title=lang.music.playlist_edit_title(playlistName)):
                 plists = '\n'.join(savedPlaylists[playlistName])
-                links = discord.ui.TextInput(label='Tracks ', placeholder=lang.music.newplaylist_tp, style=discord.TextStyle.paragraph, required=True)
+                links = discord.ui.TextInput(label='Tracks', placeholder=lang.music.newplaylist_tp, default=plists, style=discord.TextStyle.paragraph, required=True)
 
                 async def on_submit(self, interaction: discord.Interaction): #this triggers when user submits the modal with the new data
                     links = str(self.links).split('\n')
@@ -1316,7 +1324,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                     errors = ''
                     tracks = []
                     for x in links:
-                        isUrlValid = await musicBridge.evalUrl(x, settings[interaction.guild.id]['musicbot']['urlsync'])
+                        isUrlValid = musicUrlParser.evalUrl(x, settings[interaction.guild.id]['musicbot']['urlsync'])
 
                         if isUrlValid == False:
                             errors += lang.music.playlist_create_404(x)
@@ -1324,7 +1332,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
                         else:
                             if "open.spotify.com" not in x and "youtube.com" not in x:
                                 mPrint('MUSIC', f'Searching for user requested song: ({x})')
-                                x = musicBridge.youtubeParser.searchYTurl(x)
+                                x = musicUrlParser.youtubeParser.searchYTurl(x)
                             tracks.append(x)
 
                     if errors != '':
@@ -1466,7 +1474,7 @@ async def playSong(interaction : discord.Interaction, tracks : str, shuffle:bool
         return
     
     # Load useful variables
-    urlsync = settings[guildID]['musicbot']['urlsync'] # [{query: str, spotify_url: str, youtube_url: str, soundcloud_url?: str}]
+    urlsync = settings[guildID]['musicbot']['urlsync']
     if shuffle == None: shuffle = settings[guildID]['musicbot']["player_shuffle"]
     # else -> shuffle = shuffle
     precision = settings[guildID]['musicbot']["timeline_precision"]
@@ -1521,17 +1529,16 @@ async def playSong(interaction : discord.Interaction, tracks : str, shuffle:bool
         await interaction.followup.send(lang.music.play_error_404)
         return -1
     
-    #Remove musicbot slash commands if they exist (will regenerate them later)
+    # Remove musicbot slash commands if they exist (will regenerate them later)
     cmds = tree.get_commands(guild=interaction.guild)
     if len(cmds) != 0:
         tree.clear_commands(guild=interaction.guild)
-        mPrint('TEST', f'Syncing musicbot tree for guild')
+        mPrint('DEBUG', f'Syncing musicbot tree for guild')
         await tree.sync(guild=interaction.guild)
-        #mPrint("TEST", tree.get_commands(guild=interaction.guild))
 
     #Start music module
     try:
-        mPrint('TEST', f'--- playing queue --- \n{playlistURLs}')
+        mPrint('TEST', f'playing input: {playlistURLs}')
         await musicBridge.play(playlistURLs, interaction, bot, tree, shuffle, precision, urlsync, playlists)
         mPrint('TEST', 'musicBridge.play() returned')
     except Exception:

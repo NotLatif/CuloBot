@@ -1,7 +1,7 @@
 # This file contains global configs (which affect every guild) and configs about the script.
 # Modifications are effective only after a bot restart
 
-language = "IT" # [IT, EN]
+language = "EN" # [IT, EN]
 
 # Terminal
 logLevel = 2 #determines what tags the script prints in the terminal

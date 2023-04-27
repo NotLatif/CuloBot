@@ -1,4 +1,5 @@
 import json
+import traceback
 import spotipy
 from musicObjects import Track
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -58,35 +59,56 @@ def getTracksFromPlaylist(URL, urlsync: list[dict]) -> list[Track]:
 
         for trackData in playlistDataRes:
             trackData = trackData['track']
+
+            trackSpotifyURL = ""
+            if ("spotify" in trackData["external_urls"]):
+                trackSpotifyURL = trackData["external_urls"]["spotify"]
+            else:
+                trackSpotifyURL = f"https://open.spotify.com/playlist/{URL}"
             
-            artists = []
+            artists : list[dict[str, str]] = [] # [{name: "John", url: "spotify.com/John"}, ...]
             for a in trackData['artists']:
-                artists.append(a['name'])
+                try:
+                    if (a['name'] != ''):
+                        artists.append({"name": a['name'], "url": a['external_urls']['spotify']})
+                    else:
+                        artists.append({"name": ''})
+                except KeyError:
+                    mPrint('ERROR', f'artists parsing error, artists object:')
+                    print(a)
+            if len(artists) == 0: artists = [{"name": "N/A", "url": "#"}]
             
-            yt_url = None
-            for d in urlsync:
-                if d['spotify_url'] == trackData["external_urls"]["spotify"]:
-                    mPrint('DEBUG', f"urlsync match {trackData['external_urls']['spotify']}")
-                    yt_url = d['youtube_url']
-                    break
+            fisrtArtist = artists[0]['name']
+            urlsyncQueries = [(i, x['query']) for i, x in enumerate(urlsync)] # (index, "query")
+            for q in urlsyncQueries:
+                if q[1] == f"{trackData['name']} {fisrtArtist}":
+                    try:
+                        yt_url = urlsync[q[0]]['spotify_url']
+                        mPrint('DEBUG', f"Found overwritten track ({trackData['name']} {fisrtArtist})")
+                    except KeyError:
+                        yt_url = None
+                    except Exception:
+                        mPrint('WARN', traceback.format_exc())
+            else:
+                yt_url = None
 
             try:
                 if trackData['is_local'] == False:
                     tracks.append(Track(
                         SOURCE,
-                        trackData['external_urls']['spotify'],
+                        trackSpotifyURL,
                         trackData['name'],
                         artists,
                         trackData['duration_ms']/1000,
                         yt_url,
                         explicit = trackData['explicit'],
                         spotifyThumbnail = trackData['album']['images'][-1]['url'],
-                        spotifyURL = trackData['external_urls']['spotify']
+                        spotifyURL = trackSpotifyURL
                     ))
                 else:
                     #For non local tracks the bot will try to get the youtube query when needed
                     tracks.append(Track(
-                        SOURCE,
+                        'youtube',
                         None,
                         trackData["name"],
                         artists,
@@ -112,56 +134,98 @@ def getTracksFromAlbum(URL, urlsync) -> list[Track]:
         albumDataRes = sp.album_tracks(URL, offset=i*trackLimit)["items"]
 
         for trackData in albumDataRes:
-            artists = []
+            trackSpotifyURL = ""
+            if ("spotify" in trackData["external_urls"]):
+                trackSpotifyURL = trackData["external_urls"]["spotify"]
+            else:
+                trackSpotifyURL = f"https://open.spotify.com/album/{URL}"
+
+            artists : list[dict[str, str]] = [] # [{name: "John", url: "spotify.com/John"}, ...]
             for a in trackData['artists']:
-                artists.append(a['name'])
+                try:
+                    if (a['name'] != ''):
+                        artists.append({"name": a['name'], "url": a['external_urls']['spotify']})
+                    else:
+                        artists.append({"name": ''})
+                except KeyError:
+                    mPrint('ERROR', f'artists parsing error, artists object:')
+                    print(a)
+            if len(artists) == 0: artists = [{"name": "N/A", "url": "#"}]
             
-            yt_url = None
-            for d in urlsync:
-                if d['spotify_url'] == trackData["external_urls"]["spotify"]:
-                    mPrint('DEBUG', f"urlsync match {trackData['external_urls']['spotify']}")
-                    yt_url = d['youtube_url']
-                    break
+            fisrtArtist = artists[0]['name']
+            urlsyncQueries = [(i, x['query']) for i, x in enumerate(urlsync)] # (index, "query")
+            for q in urlsyncQueries:
+                if q[1] == f"{trackData['name']} {fisrtArtist}":
+                    try:
+                        yt_url = urlsync[q[0]]['spotify_url']
+                        mPrint('DEBUG', f"Found overwritten track ({trackData['name']} {fisrtArtist})")
+                    except KeyError:
+                        yt_url = None
+                    except Exception:
+                        mPrint('WARN', traceback.format_exc())
+            else:
+                yt_url = None
             
             tracks.append(Track(
                 SOURCE,
-                trackData['external_urls']['spotify'],
+                trackSpotifyURL,
                 trackData['name'],
                 artists,
                 trackData['duration_ms']/1000,
                 yt_url,
                 explicit = trackData['explicit'],
                 spotifyThumbnail = None, # Album search does not give image data :(
-                spotifyURL = trackData["external_urls"]["spotify"]
+                spotifyURL = trackSpotifyURL
             ))
 
     return tracks
 
 def getTracksFromTrack(URL, urlsync) -> list[Track]:
     # mPrint('FUNC', f"spotifyParser.getTracksFromTrack({URL=}, urlsync)")
-    resData:dict = sp.track(URL)
+    trackData: dict = sp.track(URL)
+
+    trackSpotifyURL = ""
+    if ("spotify" in trackData["external_urls"]):
+        trackSpotifyURL = trackData["external_urls"]["spotify"]
+    else:
+        trackSpotifyURL = f"https://open.spotify.com/track/{URL}"
 
     #make a list of artist names
-    artists = []
-    for a in resData['artists']:
-        artists.append(a['name'])
+    artists : list[dict[str, str]] = [] # [{name: "John", url: "spotify.com/John"}, ...]
+    for a in trackData['artists']:
+        try:
+            if (a['name'] != ''):
+                artists.append({"name": a['name'], "url": a['external_urls']['spotify']})
+            else:
+                artists.append({"name": ''})
+        except KeyError:
+            mPrint('ERROR', f'artists parsing error, artists object:')
+            print(a)
+    if len(artists) == 0: artists = [{"name": "N/A", "url": "#"}]
 
-    yt_url = None
-    for d in urlsync:
-        if d['spotify_url'] == resData["external_urls"]["spotify"]:
-            mPrint('DEBUG', f"urlsync match {resData['external_urls']['spotify']}")
-            yt_url = d['youtube_url']
-            break
+    fisrtArtist = artists[0]['name']
+    urlsyncQueries = [(i, x['query']) for i, x in enumerate(urlsync)] # (index, "query")
+    for q in urlsyncQueries:
+        if q[1] == f"{trackData['name']} {fisrtArtist}":
+            try:
+                yt_url = urlsync[q[0]]['spotify_url']
+                mPrint('DEBUG', f"Found overwritten track ({trackData['name']} {fisrtArtist})")
+            except KeyError:
+                yt_url = None
+            except Exception:
+                mPrint('WARN', traceback.format_exc())
+    else:
+        yt_url = None
 
     #return a single item list with the data
     return [Track(
         SOURCE,
-        resData["external_urls"]["spotify"],
-        resData['name'],
+        trackSpotifyURL,
+        trackData['name'],
         artists,
-        resData['duration_ms']/1000,
+        trackData['duration_ms']/1000,
         yt_url,
-        explicit = resData['explicit'],
-        spotifyThumbnail = resData['album']['images'][-1]['url'],
-        spotifyURL = resData["external_urls"]["spotify"]
+        explicit = trackData['explicit'],
+        spotifyThumbnail = trackData['album']['images'][-1]['url'],
+        spotifyURL = trackSpotifyURL
     )]

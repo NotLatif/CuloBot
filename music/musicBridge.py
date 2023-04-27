@@ -8,6 +8,7 @@ import discord.ui
 from discord import app_commands
 from random import shuffle as queueshuffle
 
+from musicUrlParser import getTracksFromURL, getTracksURL
 import spotifyParser
 import youtubeParser
 import musicPlayer
@@ -88,21 +89,14 @@ async def fetchTracks(target: str, urlsync: list[dict]) -> Union[list[musicObjec
 
     return tracks
 
-async def evalUrl(url, spsync) -> bool:
-    """Returns ture if the url is valid, else false"""
-    resp = await fetchTracks(url, spsync)
-    if resp == None: 
-        return False
-    return True
-
 async def play(
         urlList : list[str], 
         interaction : discord.Interaction, 
-        bot : discord.Client,
+        bot : discord.Client, 
         tree : app_commands.CommandTree, 
         shuffle : bool, 
         precision : int, 
-        urlsync : list[dict],
+        urlsync : list[dict], 
         guildPlaylists : dict[str, list[str]]
     ):
     embedChannel = interaction.channel
@@ -110,6 +104,7 @@ async def play(
     # initialize queue
     queue = musicObjects.Queue()
     queue.isShuffle = shuffle
+
     if type(urlList) == list:
         for u in urlList:
             #foreach urls find the songs it links to
@@ -134,10 +129,10 @@ async def play(
     #check that queue is not empty; this is probably redundant
     if len(queue.queue) == 0:
         await interaction.followup.send(f"An error occurred while looking for song(s) please retry.", ephemeral=True)
-        mPrint("WARN", f"play function did not find any requested track {urlList}")
+        mPrint("ERROR", f"play function did not find any requested track {urlList}")
         return
 
-    mPrint('INFO',f"There are {len(queue)} songs in queue:")
+    mPrint('DEBUG',f"There are {len(queue)} songs in queue:")
 
     #make graphical interface for loading
     if precision != 0:
@@ -181,7 +176,7 @@ async def play(
         report = 7,
         clear_queue = 8,
         resend_queue = 9,
-        remove = 10,   #Currently not supported
+        remove = 10,
         move = 11,
         add_song = 12,
         loop = 13
@@ -259,6 +254,7 @@ async def play(
     # Define actions
     async def actions(action:Commands, arg1 = None, arg2 = None, arg3 = None):
         mPrint('DEBUG', f"Requested action: {action=} {arg1=} {arg2=}")
+
         if action == Commands.previous:
             mPrint('USER', 'Skipping to previous song')
             player.previous()
@@ -266,11 +262,8 @@ async def play(
         elif action == Commands.skip:
             times = arg1 if arg1 != None else 1
             mPrint('USER', f'Skipping {times} song(s)')
-            
-            if player.queue.isLooped() == 1:
-                # if looping one, remove loop
-                player.queue.setLoop(0)
-
+            if player.queue.isLooped() == 1: # if looping one, remove loop
+                player.set_loop(0)
             player.skip(times)
 
         elif action == Commands.shuffle:
@@ -308,16 +301,16 @@ async def play(
 
         elif action == Commands.loop_one:
             if player.queue.isLooped() == 1:
-                player.queue.setLoop(0)
+                player.set_loop(0)
             else:
-                player.queue.setLoop(1)
+                player.set_loop(1)
             await messageHandler.updateEmbed()
 
         elif action == Commands.loop_queue:
             if player.queue.isLooped() == 2:
-                player.queue.setLoop(0)
+                player.set_loop(0)
             else:
-                player.queue.setLoop(2)
+                player.set_loop(2)
             await messageHandler.updateEmbed()
 
         elif action == Commands.loop:
@@ -329,7 +322,7 @@ async def play(
                 else: # YES
                     arg1 = 0
 
-            player.queue.setLoop(int(arg1))
+            player.set_loop(int(arg1))
             await messageHandler.updateEmbed()
 
         elif action == Commands.resend_queue:
@@ -342,7 +335,7 @@ async def play(
             await messageHandler.updateEmbed()
         
         elif action == Commands.move:
-            player.queue.move(int(arg1), int(arg2))
+            player.move(int(arg1), int(arg2))
             await messageHandler.updateEmbed()
 
         elif action == Commands.add_song:
@@ -368,9 +361,10 @@ async def play(
             if shuffle == None and queue.isShuffle: queueshuffle(tracks)
             elif shuffle: queueshuffle(tracks)
 
+            mPrint('DEBUG', f'Adding {len(t)} track(s)')
             for t in tracks:
-                mPrint('TEST', f'Adding track: {t.title}@{index}')
-                player.queue.addTrack(t, index)
+                # mPrint('TEST', f'Adding track: {t.title}@{index}')
+                player.add_track(t, index)
                 index += 1
             
             await messageHandler.updateEmbed(pnext=index)
@@ -444,7 +438,7 @@ async def play(
             await interaction.response.send_modal(Feedback())
 
     # SLASH COMMANDS
-    def checkAuthor(interaction:discord.Interaction):
+    def checkAuthor(interaction: discord.Interaction):
         #Check that the user sent the message in the right channel and is connected in the right vc
         try:
             return interaction.channel.id == embedChannel.id and interaction.user.voice.channel.id == voiceClient.channel.id
