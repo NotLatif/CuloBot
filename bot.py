@@ -1533,7 +1533,7 @@ async def playSong(interaction : discord.Interaction, tracks : str, shuffle:bool
 
     #Start music module
     try:
-        mPrint('TEST', f'--- playing queue --- \n{playlistURLs}')
+        mPrint('TEST', f'playing input: {playlistURLs}')
         await musicBridge.play(playlistURLs, interaction, bot, tree, shuffle, precision, urlsync, playlists)
         mPrint('TEST', 'musicBridge.play() returned')
     except Exception:
