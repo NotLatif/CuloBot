@@ -59,6 +59,8 @@ Sorry for the poor documentation, I'll improve it later (maybe)
 
 1. add the bot to your server
 
+1. set your wanted configs in `config.py`
+
 1. run `bot.py`
 
 1. everything should be good

@@ -1,5 +1,10 @@
+from discord import Status
 # This file contains global configs (which affect every guild) and configs about the script.
 # Modifications are effective only after a bot restart
+
+bot_name = "CuloBot"
+bot_description = "/play"
+bot_status = Status.online
 
 language = "EN" # [IT, EN]
 
@@ -11,10 +16,10 @@ timeInTerminal = True
 
 #NOTE, if something won't print it won't log either even if you specified otherwise (printLevel <= logLevel)
 #levels: (0 will show every tag; 3 will only show ERROR)
-# 0 - DEBUG, VARS, TEST, FUNC, CMDS     < DEBUG, INFO, WARN and ERROR
-# 1 - INFO, MUSIC, USER, GAME           < INFO, WARN and ERROR
-# 2 - WARN, GAMEErr                     < WARN and ERROR
-# 3 - ERROR, FATAL, SONGERROR           < only ERROR
+# 0 - DEBUG, VARS, TEST, FUNC, CMDS     < [0, 1, 2, 3]
+# 1 - INFO, MUSIC, USER, GAME           < [1, 2, 3]
+# 2 - WARN, GAMEErr                     < [2, 3]
+# 3 - ERROR, FATAL, SONGERROR           < [3]
 
 # BOT
 
@@ -41,3 +46,9 @@ class Colors:
     green = 0x27E039
     black = 0x030303
     white = 0xf2f2f2
+
+# Enable/Disable individual modules globally (for every guild)
+reply = False 
+chess = True
+music = True
+discord_events = False # message on member join and leave 

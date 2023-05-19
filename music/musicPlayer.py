@@ -77,7 +77,10 @@ class Player():
         self.pauseStart = 0
         self.pauseEnd = 0
 
-        #flags for mongodb sync
+        # user spotify activity sync feature [WIP]
+        # self.isSpotifySync = False
+
+        # currently unused
         self.modifiersChanged = False
 
         # for future observer pattern implementation
@@ -168,8 +171,9 @@ class Player():
             mPrint('DEBUG', f'URL: {song_url}')
             if song_url == None:
                 # careful with recursion
-                self.playQueue("Expected video url, got None, trying next")
-                return  
+                
+                self.playQueue(f"Expected video url, got None, trying next\n[{self.currentTrack.title}]({self.currentTrack.url})")
+                return
 
             if self.voiceClient.is_playing(): 
                 # if this triggers something very weird happened
