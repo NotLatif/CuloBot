@@ -1,3 +1,5 @@
+from config import bot_name
+
 class it:
     nothing_changed = "Non è cambiato niente."
     done = "Fatto"
@@ -10,7 +12,7 @@ class it:
         join_msg = "Cambia il messaggio di benvenuto"
         leave_msg = "Cambia il messaggio di addio"
         respond_perc = "Imposta la percentuale di risposta del bot int(0->100)"
-        respond_to_bots = "Decidi se culobot può rispondere ad altri bot"
+        respond_to_bots = f"Decidi se {bot_name} può rispondere ad altri bot"
         respond_to_bots_perc = "Imposta la percentuale di probabilità di rispondere ad un bot int(0->100)"
         dictionary = "Mostra le parole conosciute dal bot"
         dictionary_add = "Aggiunge una parola al dizionario"
@@ -63,7 +65,7 @@ class it:
         words_bot_words = "Prole del bot:"
         words_guild_words = lambda guildName: f"Prole di {guildName}:"
 
-        module_info_embedTitle = lambda guildName: f"CuloBot modules for {guildName}"
+        module_info_embedTitle = lambda guildName: f"{bot_name} modules for {guildName}"
         module_info_embedDesc = "You can change this data using the command /module <module> [#channel] [enable]"
         module_info_no_blacklisted = "No blacklisted channels"
 
@@ -170,8 +172,8 @@ class en:
     class slash: #slash command descriptions
         join_msg = "Change the welcome message"
         leave_msg = "Change the leaving message"
-        respond_perc = "Set the culobot's messages response percentage int(0->100)"
-        respond_to_bots = "Choose whether CuloBot will respond to bots"
+        respond_perc = f"Set the {bot_name}'s messages response percentage int(0->100)"
+        respond_to_bots = f"Choose whether {bot_name} will respond to bots"
         respond_to_bots_perc = "Set the message responses to bots percentage int(0->100)"
         dictionary = "Shows the bot's known words"
         dictionary_add = "Adds a word to the dictionary"
@@ -224,8 +226,8 @@ class en:
         words_bot_words = "Global dictionary"
         words_guild_words = lambda guildName: f"{guildName}'s dictionary"
 
-        module_info_embedTitle = lambda guildName: f"CuloBot modules for {guildName}"
-        module_info_embedDesc = "You can change this data using the command /module <module> [#channel] [enable]"
+        module_info_embedTitle = lambda guildName: f"{bot_name} module blacklists for {guildName}"
+        module_info_embedDesc = "This shows in which channel each module is DISABLED\nYou can change this data using the command /module <module> [#channel] [enable]"
         module_info_no_blacklisted = "No blacklisted channels"
 
         module_disabled_in_channel = lambda moduleName: f"The module {moduleName} is disabled for:\n"

@@ -34,9 +34,12 @@ elif config.language == "EN":
     from lang import en as lang
 def mPrint(tag, value):mp(tag, 'bot', value)
 
-mPrint('WARN', "# =-----------------------------------------------= #")
-mPrint('WARN', "#  CULOBOT IS CURRENTLY IN BETA. BUGS ARE EXPECTED  #")
-mPrint('WARN', "# =-----------------------------------------------= #")
+print()
+mPrint('WARN', "# =------------------------------------------------= #")
+mPrint('WARN', "#  THIS BOT IS CURRENTLY IN BETA. BUGS ARE EXPECTED  #")
+mPrint('WARN', "# =------------------------------------------------= #")
+mPrint('WARN', "please submit issues https://github.com/NotLatif/CuloBot/issues")
+print()
 
 TOKEN = getevn.getenv('DISCORD_TOKEN', True)
 try:
@@ -211,7 +214,7 @@ class CuloBot(discord.Client):
             self.dev = None
         except NameError:
             pass
-        await bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="/play"))
+        await bot.change_presence(status=config.bot_status, activity=discord.Activity(type=discord.ActivityType.listening, name=config.bot_description))
         await tree.sync()
 
         mPrint("DEBUG", "Called on_ready")
@@ -234,12 +237,14 @@ class CuloBot(discord.Client):
             checkSettingsIntegrity(int(guild.id))
 
     async def on_member_join(self, member : discord.Member):
+        if not config.discord_events: return
         if settings[int(member.guild.id)]['responseSettings']['send_join_msg']:
             joinString:str = settings[int(member.guild.id)]['responseSettings']['join_message']
             joinString = joinString.replace('%name%', member.name)
             await member.guild.system_channel.send(joinString)
 
     async def on_member_remove(self, member : discord.Member):
+        if not config.discord_events: return
         if settings[int(member.guild.id)]['responseSettings']['send_leave_msg']:
             leaveString:str = settings[int(member.guild.id)]['responseSettings']['leave_message']
             leaveString= leaveString.replace('%name%', member.name)
@@ -249,6 +254,8 @@ class CuloBot(discord.Client):
         pass
 
     async def on_message(self, message : discord.Message):
+        if not config.reply: return
+
         if len(message.content.split())==0: return
         global settings
 
@@ -308,9 +315,13 @@ tree = app_commands.CommandTree(bot)
 
 
 #           -----           CULOBOT SLASH COMMANDS           -----       #
-
+# ======== REPLY ========= #
 @tree.command(name="join-msg", description=lang.slash.join_msg)
 async def joinmsg(interaction : discord.Interaction, message : str = None, enabled : bool = None):
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /join-msg {message}')
     guildID = int(interaction.guild.id)
 
@@ -331,6 +342,10 @@ async def joinmsg(interaction : discord.Interaction, message : str = None, enabl
 
 @tree.command(name="leave-msg", description=lang.slash.leave_msg)
 async def leavemsg(interaction : discord.Interaction, message : str = None, enabled : bool = None):
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /leave-msg {message}')
     guildID = int(interaction.guild.id)
 
@@ -351,6 +366,10 @@ async def leavemsg(interaction : discord.Interaction, message : str = None, enab
 
 @tree.command(name="respond-perc", description=lang.slash.respond_perc)
 async def responsePerc(interaction : discord.Interaction, value : int = -1):
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+
     mPrint('CMDS', f'called /respond-perc {value}')
     guildID = int(interaction.guild.id)
 
@@ -375,6 +394,10 @@ async def responsePerc(interaction : discord.Interaction, value : int = -1):
 
 @tree.command(name="respond-to-bots", description=lang.slash.respond_to_bots)
 async def botRespToggle(interaction : discord.Interaction, value : bool):
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /respond-to-bots {value}')
     guildID = int(interaction.guild.id)
         
@@ -390,6 +413,10 @@ async def botRespToggle(interaction : discord.Interaction, value : bool):
 
 @tree.command(name="respond-to-bots-perc", description=lang.slash.respond_to_bots_perc)
 async def botRespPerc(interaction : discord.Interaction, value : int = -1):
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /respond-to-bots-perc {value}')
     guildID = int(interaction.guild.id)
 
@@ -414,6 +441,10 @@ async def botRespPerc(interaction : discord.Interaction, value : int = -1):
 
 @tree.command(name="dictionary", description=lang.slash.dictionary)
 async def dictionary(interaction : discord.Interaction):
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /dictionary')
     guildID = int(interaction.guild.id)
 
@@ -457,6 +488,10 @@ async def dictionary_add(interaction : discord.Interaction, new_word : str):
     
     :param new_word: La parola che si vuole aggiungere
     """
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /dictionary add {new_word}')
     guildID = int(interaction.guild.id)
 
@@ -473,6 +508,10 @@ async def dictionary_edit(interaction : discord.Interaction, id : int, new_word 
     :param id: L'id della parola che vuoi modificare
     :param new_word: La parola che vuoi rimpiazzare
     """
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /dictionary edit {id}, {new_word}')
     guildID = int(interaction.guild.id)
 
@@ -492,6 +531,10 @@ async def dictionary_del(interaction : discord.Interaction, id : int):
 
     :param id: L'id della parola che vuoi eliminare
     """
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /dictionary del {id}')
     guildID = int(interaction.guild.id)
 
@@ -506,6 +549,10 @@ async def dictionary_del(interaction : discord.Interaction, id : int):
 
 @tree.command(name="dictionary-useglobal", description=lang.slash.dictionary_use_global)
 async def dictionary_default(interaction : discord.Interaction, value : bool ):
+    if not config.reply:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /dictionary useglobal {value}')
     guildID = int(interaction.guild.id)
 
@@ -514,6 +561,7 @@ async def dictionary_default(interaction : discord.Interaction, value : bool ):
     dumpSettings()
     return
 
+# ======== CHESS ========= #
 @tree.command(name="chess", description=lang.slash.chess)
 async def chess(interaction : discord.Interaction, challenge : Union[discord.Role, discord.User] = None):
     """
@@ -521,6 +569,10 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
     :param fen: Il layout delle pedine nella scacchiera (Se numerico indica uno dei FEN salvati)
     :param design: Il nome del design della scacchiera
     """
+    if not config.chess:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /chess: ch: {challenge}')
     guildID = int(interaction.guild.id)
 
@@ -878,6 +930,10 @@ async def chess(interaction : discord.Interaction, challenge : Union[discord.Rol
 ])
 @app_commands.describe(sub_command=lang.choices.description)
 async def chess_layout(interaction : discord.Interaction, sub_command: app_commands.Choice[str]): #, name:str=None, fen:str = None
+    if not config.chess:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /chess-layout: {sub_command.name}')
     guildID = int(interaction.guild.id)
     response = int(sub_command.value)
@@ -1037,6 +1093,10 @@ async def chess_layout(interaction : discord.Interaction, sub_command: app_comma
 ])
 @app_commands.describe(sub_command=lang.choices.description)
 async def chess_design(interaction : discord.Interaction, sub_command: app_commands.Choice[str]): #, name:str=None, fen:str = None
+    if not config.chess:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /chess-designs: {sub_command.name}')
     guildID = int(interaction.guild.id)
     response = int(sub_command.value)
@@ -1213,6 +1273,7 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
             await interaction.response.send_message(lang.chess.design_no_designs, ephemeral=True)
         return 0
 
+# ======== MUSIC ========= #
 @tree.command(name="playlist", description=lang.slash.playlist)
 @app_commands.choices(sub_command=[
         app_commands.Choice(name=lang.choices.info, value="0"),
@@ -1221,6 +1282,10 @@ async def chess_design(interaction : discord.Interaction, sub_command: app_comma
         app_commands.Choice(name=lang.choices.remove, value="3"),
 ])
 async def playlists(interaction : discord.Interaction, sub_command: app_commands.Choice[str]):
+    if not config.music:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /playlist: ')
     guildID = int(interaction.guild.id)
     response = int(sub_command.value)
@@ -1276,7 +1341,7 @@ async def playlists(interaction : discord.Interaction, sub_command: app_commands
 
                     if tracks == []:
                         embed.add_field(name='ERROR', value=': every song/playlist failed')
-                        interaction.response.send_message(embed=embed, ephemeral=True)
+                        await interaction.response.send_message(embed=embed, ephemeral=True)
 
                 trackList = ''
                 for i, t in enumerate(tracks):
@@ -1409,6 +1474,10 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
     """
     :param setting: DO NOT INSERT value FOR SHUFFLE 
     """
+    if not config.music:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /player-settings: ')
     guildID = int(interaction.guild.id)
     response = int(setting.value)
@@ -1466,6 +1535,10 @@ async def playerSettings(interaction : discord.Interaction, setting : app_comman
 @tree.command(name="play", description=lang.slash.play)
 @app_commands.describe(tracks="URL / Title / saved playlist (/playlist); use , for mutiple items")
 async def playSong(interaction : discord.Interaction, tracks : str, shuffle:bool = None):
+    if not config.music:
+        await interaction.response.send_message("This module is not available", ephemeral=True)
+        return
+    
     guildID = int(interaction.guild.id)
     await interaction.response.defer(ephemeral=True)
 
@@ -1545,22 +1618,19 @@ async def playSong(interaction : discord.Interaction, tracks : str, shuffle:bool
         await interaction.followup.send(lang.music.player.generic_error, ephemeral=True)
         mPrint('ERROR', traceback.format_exc())
 
-@tree.command(name="ping", description="Ping the bot")
-async def ping(interaction : discord.Interaction):
-    mPrint('CMDS', f'called /ping')
-
-    pingms = round(bot.latency*1000)
-    await interaction.response.send_message(f'Pong! {pingms}ms')
-    mPrint('INFO', f'ping detected: {pingms} ms')
-
+# ======== MISC ========= #
 @tree.command(name="module-info", description=lang.slash.module_info)
 @app_commands.default_permissions()
 async def module_info(interaction : discord.Interaction):
+    if (not config.reply) and (not config.chess) and (not config.music):
+        await interaction.response.send_message("There are no available modules.", ephemeral=True)
+        return
+    
     guildID = int(interaction.guild.id)
     await interaction.response.defer(ephemeral=True)
 
     embed=discord.Embed(
-        title=lang.commands.module_info_embedTitle,
+        title=lang.commands.module_info_embedTitle(guildName=interaction.guild.name),
         description=lang.commands.module_info_embedDesc,
         color=col.orange
     )
@@ -1616,10 +1686,9 @@ async def module_info(interaction : discord.Interaction):
     #Add N/A if string
     musicChannels = lang.commands.module_info_no_blacklisted if musicChannels == "" else musicChannels
 
-
-    embed.add_field(name="**Chat replies:**", value=responseChannels, inline=False)
-    embed.add_field(name="**Chess:**", value=chessChannels, inline=False)
-    embed.add_field(name="**Music Bot:**", value=musicChannels, inline=False)
+    if config.reply: embed.add_field(name="**Chat replies blacklist:**", value=responseChannels, inline=False)
+    if config.chess: embed.add_field(name="**Chess blacklist:**", value=chessChannels, inline=False)
+    if config.music: embed.add_field(name="**Music Bot blacklist:**", value=musicChannels, inline=False)
     
     await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -1636,23 +1705,35 @@ async def module_settings(interaction : discord.Interaction, modules:app_command
     :param channel: on which text channel (default=every channel)
     :param enable: whether to enable or disable the module
     """
+    if (not config.reply) and (not config.chess) and (not config.music):
+        await interaction.response.send_message("There are no available modules.", ephemeral=True)
+        return
+    
     mPrint('CMDS', f'called /module: {modules.name})')
     guildID = int(interaction.guild.id)
     response = int(modules.value)
     await interaction.response.defer(ephemeral=True)
 
-    wantedModules = ""
+    wantedModules = []
     if response == 0:
-        wantedModules = ['responseSettings', 'chessGame', 'musicbot']
+        if config.reply: wantedModules.append('responseSettings')
+        if config.chess: wantedModules.append('chessGame')
+        if config.music: wantedModules.append('musicbot')
     elif response == 1:
-        wantedModules = ['responseSettings']
+        if config.reply: wantedModules = ['responseSettings']
     elif response == 2:
-        wantedModules = ['chessGame']
+        if config.chess: wantedModules = ['chessGame']
     elif response == 3:
-        wantedModules = ['musicbot']
+       if config.music:  wantedModules = ['musicbot']
     else:
         mPrint('ERROR', f'Invalid response "{response}" for module_settings()')
+        await interaction.followup.send("There was an error with your request")
         return
+    
+    if wantedModules == []:
+        await interaction.followup.send("Module(s) not available.", ephemeral=True)
+        return
+
 
     if len(wantedModules) == 1:
         module = wantedModules[0]
@@ -1750,7 +1831,6 @@ async def feedback(interaction : discord.Interaction, category:app_commands.Choi
             except Exception:
                 await bot.dev.send(f"Someone sent a feedback: ID -> {interaction.id}")
 
-
             mPrint('INFO', message)
             with open('feedback.log', 'a') as f:
                 f.writelines(message)
@@ -1760,6 +1840,13 @@ async def feedback(interaction : discord.Interaction, category:app_commands.Choi
     await interaction.response.send_modal(Feedback())
 
     return
+
+# @tree.command(name="test", description="a testing command for user Spotify Activities")
+# async def feedback(interaction : discord.Interaction):
+#     for a in interaction.user.activities:
+#         print(a)
+#     await interaction.response.send_message('ok', ephemeral=True)
+
 
 #           -----           BOT RUN SCRIPT           -----       #
 

@@ -71,13 +71,13 @@ class Track:
         # mPrint('TEST', f"getVideoUrl \n{self.spotifyURL=}\n{urlsync=}")
         if urlsync and self.spotifyURL:
             for d in urlsync:
-                if d['spotify_url'] == self.spotifyURL:
+                if ('spotify_url' in urlsync) and (d['spotify_url'] == self.spotifyURL):
                     self.youtubeURL = d['youtube_url']
                     return self.youtubeURL
-                
+
         elif self.youtubeURL != None:
             return self.youtubeURL
-                
+
         if search == False: return None
 
         # we don't know the url but we can search it
