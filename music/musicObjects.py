@@ -12,7 +12,7 @@ def mPrint(tag, text):
 youtubeDomain = '' #LEAVE BLANK (switch from youtube_dl to yt_dlp)
 download = False
 if not os.path.isfile("music/.yt_cookies.txt"):
-    mPrint('WARN', 'file `music/.yt_cookies.txt` is missing, age restricted video will not get played')
+    mPrint('WARN', 'file `music/.yt_cookies.txt` is missing, explicit songs may get skipped.')
     mPrint('WARN', 'For info look into README.md')
     ydl_opts = {
         'writedescription': False,
